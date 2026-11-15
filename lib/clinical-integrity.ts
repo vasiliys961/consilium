@@ -2,7 +2,7 @@
  * Conservative by design: unknown study results are not evidence against a diagnosis.
  * This is NOT an exhaustive factuality validator and does not replace physician review.
  */
-const UNKNOWN_RU = /(?:\bне\s+(?:предоставлен[аоы]?|описан[аоы]?|указан[аоы]?|извест(?:ен|на|ны|но)|выполнен[аоы]?|измерен[аоы]?|получен[аоы]?|провед[её]н[аоы]?)\b|\bнет\s+(?:данных|сведений|информации|результатов)\b|\b(?:данн(?:ые|ых)|результат(?:ы|ов)|исследовани[ея]|визуализаци[яи])[^.!?;]{0,60}\bотсутству(?:ют|ет)\b)/iu;
+const UNKNOWN_RU = /(?:(?<![\p{L}])не\s+(?:предоставлен[аоы]?|описан[аоы]?|указан[аоы]?|извест(?:ен|на|ны|но)|выполнен[аоы]?|измерен[аоы]?|получен[аоы]?|провед[её]н[аоы]?)(?![\p{L}])|(?<![\p{L}])нет\s+(?:данных|сведений|информации|результатов)\b|(?<![\p{L}])(?:данн(?:ые|ых)|результат(?:ы|ов)|исследовани[ея]|визуализаци[яи])[^.!?;]{0,60}отсутству(?:ют|ет)(?![\p{L}]))/iu;
 const UNKNOWN_EN = /\b(?:not\s+(?:documented|recorded|provided|available|assessed|measured|performed|reported|known|obtained)|(?:no|without)\s+(?:data|history|documentation|results|information|imaging|ecg))\b/i;
 
 /** Move unavailable/unmeasured findings out of the opposing-evidence column. */
