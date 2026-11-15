@@ -1,4 +1,4 @@
-import {readVaultCases,writeVaultCase} from './local-vault.ts';
+import {readVaultCases,readVaultCaseById,writeVaultCase} from './local-vault.ts';
 import {clinicalReportText} from "./clinical-report.ts";
 import{materialRoute,materialKey}from'./material-routing.ts';
 import {CURRENT_MEDICATIONS_HEADING} from './drug-interaction-rules.ts';
@@ -161,12 +161,15 @@ export async function persistCase(value:ClinicalCase,remove=false):Promise<void>
  */
 export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
  return serialCaseWrite(value.id,async()=>{
-  const latest=(await readVaultCases()).find(record=>record.id===value.id);
+  const latest=await readVaultCaseById(value.id);
   if(!latest||latest.deletedAt)return false;
   if(latest.updated>value.updated)return false;
   // Date.now() can collide in a single millisecond. A newer analysis/event/file
   // must still win if timestamps are identical.
   if(latest.updated===value.updated&&(
+    caseSignature(latest)!==caseSignature(value)||
+    latest.title!==value.title||
+    latest.status!==value.status||
     latest.analyses.length>value.analyses.length||
     latest.events.length>value.events.length||
     latest.files.length>value.files.length||
@@ -185,7 +188,7 @@ export async function persistCaseDraft(
  expectedUpdated?:string,
 ):Promise<boolean>{
  return serialCaseWrite(id,async()=>{
-  const current=(await readVaultCases()).find(record=>record.id===id);
+  const current=await readVaultCaseById(id);
   if(!current||current.deletedAt)return false;
   if(expectedUpdated!==undefined&&current.updated!==expectedUpdated)return false;
   await writeVaultCase({...current,workspaceDraft:draft});
