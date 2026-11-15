@@ -4,10 +4,11 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {requestStreamedJson,type AnalysisProgressEvent} from '@/lib/analysis-stream';
 import {AnalysisProgress} from '@/app/components/analysis-progress';
-import {readCases,persistCase,protocolSource,caseContext,type ClinicalCase} from '@/lib/casebook';
-import {PROTOCOL_KINDS,protocolText,type ProtocolDocument,type ProtocolKind} from '@/packages/protocol/document';
+import {readCases,persistCase,caseContext,type ClinicalCase} from '@/lib/casebook';
+import {PROTOCOL_KINDS,protocolText,type ProtocolDocument,type ProtocolKind,type ProtocolPresentation} from '@/packages/protocol/document';
 import type {ProtocolGenerationMode} from '@/packages/protocol/generate';
 import {completedProtocolSourceId,savedStructuredProtocol} from '@/lib/protocol-two-mode';
+import {completedClinicalEvidence,originalClinicalDocument,independentProtocolSource} from '@/lib/protocol-print';
 import {protocolLanguagePlan} from '@/lib/protocol-language-flow';
 import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {downloadDocx} from '@/lib/download-docx';
@@ -22,7 +23,8 @@ export default function ProtocolModule(){
  const [kind,setKind]=useState<ProtocolKind>('encounter');
  const [locale,setLocale]=useState<WorkspaceLanguage>('ru');
  const [plannedLanguages,setPlannedLanguages]=useState<WorkspaceLanguage[]>([]);
- const [mode,setMode]=useState<ProtocolGenerationMode>('standalone');
+ const [mode,setMode]=useState<Exclude<ProtocolGenerationMode,'from-protocol'>>('standalone');
+ const [presentation,setPresentation]=useState<ProtocolPresentation>('formal');
  const [source,setSource]=useState('');
  const [document,setDocument]=useState<ProtocolDocument|null>(null);
  const [busy,setBusy]=useState(false);
@@ -32,7 +34,9 @@ export default function ProtocolModule(){
  const current=cases.find(item=>item.id===id);
  const completedId=completedProtocolSourceId(current?.analyses);
  const canFormat=Boolean(completedId);
- const model=mode==='from-analysis'?'Gemini Flash':'GPT-6.1 Sol';
+ const independent=current?independentProtocolSource(current,kind):undefined;
+ const usingSavedSol=mode==='standalone'&&presentation!=='original-analysis'&&Boolean(independent)&&(independent?.locale!==locale||(independent?.presentation??'formal')!==presentation);
+ const model=presentation==='original-analysis'?'Без модели':mode==='from-analysis'||usingSavedSol?'Gemini Flash':'GPT-6.1 Sol';
  const ui=(ru:string,en:string)=>language==='ru'?ru:en;
 
  useEffect(()=>{
@@ -53,8 +57,10 @@ export default function ProtocolModule(){
    const ready=completedProtocolSourceId(value.analyses);
    const initialMode:ProtocolGenerationMode=ready?'from-analysis':'standalone';
    setId(value.id);setMode(initialMode);
-   setSource(ready?protocolSource(value):caseContext(value));
-   setDocument(savedStructuredProtocol(value.protocols,'encounter',preferred,initialMode,ready)??null);
+   const initialPresentation:ProtocolPresentation=ready?'original-analysis':'formal';
+   setPresentation(initialPresentation);
+   setSource(ready?completedClinicalEvidence(value)??'':caseContext(value));
+   setDocument(ready?originalClinicalDocument(value,preferred):savedStructuredProtocol(value.protocols,'encounter',preferred,initialMode,ready,initialPresentation)??null);
   }).catch(()=>setNotice('Не удалось прочитать сохранённые клинические случаи.'));
  },[]);
 
@@ -72,38 +78,51 @@ export default function ProtocolModule(){
   const value=cases.find(item=>item.id===nextId);
   const ready=completedProtocolSourceId(value?.analyses);
   const nextMode:ProtocolGenerationMode=ready?'from-analysis':'standalone';
-  setId(nextId);setMode(nextMode);
-  setSource(value?(ready?protocolSource(value):caseContext(value)):'');
-  resetResult(savedStructuredProtocol(value?.protocols,kind,locale,nextMode,ready)??null);
+  const nextPresentation:ProtocolPresentation=ready?'original-analysis':'formal';
+  setId(nextId);setMode(nextMode);setPresentation(nextPresentation);
+  setSource(value?(ready?completedClinicalEvidence(value)??'':caseContext(value)):'');
+  resetResult(value&&ready?originalClinicalDocument(value,locale):savedStructuredProtocol(value?.protocols,kind,locale,nextMode,ready,nextPresentation)??null);
   const url=new URL(location.href);
   if(nextId)url.searchParams.set('case',nextId);else url.searchParams.delete('case');
   history.replaceState(history.state,'',url.pathname+url.search);
  }
- function changeMode(next:ProtocolGenerationMode){
+ function changeMode(next:Exclude<ProtocolGenerationMode,'from-protocol'>){
   if((next==='from-analysis'&&!canFormat)||!discardAllowed())return;
   setMode(next);
-  if(current)setSource(next==='from-analysis'?protocolSource(current):caseContext(current));
-  resetResult(savedStructuredProtocol(current?.protocols,kind,locale,next,completedId)??null);
+  const nextPresentation:ProtocolPresentation=next==='from-analysis'?'original-analysis':'formal';
+  setPresentation(nextPresentation);
+  if(current)setSource(next==='from-analysis'?completedClinicalEvidence(current)??'':caseContext(current));
+  resetResult(current&&next==='from-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,next,completedId,nextPresentation)??null);
  }
  function changeKind(next:ProtocolKind){
   if(!discardAllowed())return;
-  setKind(next);
-  resetResult(savedStructuredProtocol(current?.protocols,next,locale,mode,completedId)??null);
+  const nextPresentation:ProtocolPresentation=['encounter','cardiology'].includes(next)?presentation:'formal';
+  setKind(next);setPresentation(nextPresentation);
+  resetResult(savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
  }
  function changeLocale(next:WorkspaceLanguage){
   if(!discardAllowed())return;
   setLocale(next);
-  resetResult(savedStructuredProtocol(current?.protocols,kind,next,mode,completedId)??null);
+  resetResult(current&&presentation==='original-analysis'?originalClinicalDocument(current,next):savedStructuredProtocol(current?.protocols,kind,next,mode,completedId,presentation,independent?.id)??null);
   const url=new URL(location.href);url.searchParams.set('locale',next);
   history.replaceState(history.state,'',url.pathname+url.search);
  }
- async function generate(){
-  if(busy||!source.trim()||(mode==='from-analysis'&&!completedId))return;
+ function changePresentation(next:ProtocolPresentation){
+  if((next==='original-analysis'&&!canFormat)||(!['encounter','cardiology'].includes(kind)&&next!=='formal')||!discardAllowed())return;
+  setPresentation(next);
+  resetResult(current&&next==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,mode,completedId,next,independent?.id)??null);
+ }
+ async function generate(forceStrong=false){
+  if(busy||presentation==='original-analysis'||!source.trim()||(mode==='from-analysis'&&!completedId))return;
+  const formattingSavedSol=mode==='standalone'&&!forceStrong&&usingSavedSol&&independent;
+  const actualMode:ProtocolGenerationMode=formattingSavedSol?'from-protocol':mode;
+  const actualSource=formattingSavedSol?protocolText(independent):source;
   setBusy(true);setNotice('');setProgress([]);setPreview('');
   try{
    const value=await requestStreamedJson<{document:ProtocolDocument;cost:number;usageComplete?:boolean}>('/api/protocol',{
-    kind,source,locale,mode,
-    ...(mode==='from-analysis'&&completedId?{sourceAnalysisId:completedId}:{})
+    kind,source:actualSource,locale,mode:actualMode,presentation,
+    ...(mode==='from-analysis'&&completedId?{sourceAnalysisId:completedId}:{}),
+    ...(formattingSavedSol?{sourceProtocolId:independent.id}:{})
    },{onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});
    if(!value?.document?.sections?.length)throw Error('empty_protocol');
    setDocument(value.document);setCost(value.cost);setUsageComplete(value.usageComplete!==false);
