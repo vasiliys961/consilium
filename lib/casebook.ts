@@ -4,6 +4,7 @@ import{materialRoute,materialKey}from'./material-routing.ts';
 import {CURRENT_MEDICATIONS_HEADING} from './drug-interaction-rules.ts';
 import {studyReportsText} from './study-report.ts';
 import type { CaseFile, CaseResult } from './conductor';
+import { ecgEvidenceText, radiologyEvidenceText, type RadiologyModuleReport } from './module-evidence.ts';
 export type Event = { id: string; at: string; kind: 'note' | 'decision' | 'question'; text: string; editedAt?:string; revisions?:Array<{at:string;text:string}> };
 type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualReadings']>; items?: Array<{fileKey:string; reading:NonNullable<CaseResult['visualReadings']>[number]}> };
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
@@ -11,7 +12,7 @@ export type Analysis = { question?:string; kind?:AnalysisKind; clinicalContext?:
 export type ClinicalCase = {
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
   workspaceDraft?:{question:string;note:string;decision:string;tab:string};
-  moduleReports?:Array<{id:string;module:'radiology';fileKeys:string[];sources:string[];text:string;at:string}>;
+  moduleReports?:RadiologyModuleReport[];
   deletedAt?:string;
   closedAt?:string;
   decisionDraft?:{analysisId:string;text:string;at:string};
@@ -52,7 +53,7 @@ export function caseContext(value: ClinicalCase): string {
   const question = recent?.text ?? value.question;
   const medications = value.currentMedications?.split(/\r?\n/).map(line => line.trim()).filter(Boolean).join('\n');
   return [question && `Вопрос врача: ${question}`, medications && `${CURRENT_MEDICATIONS_HEADING}\n${medications}`, value.context, recent && value.question ? `Первоначальный вопрос: ${value.question}` : '',
-    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...(value.moduleReports??[]).map(report=>`Профильный модуль ${report.module} · ${report.sources.join(', ')} · ${report.at}\n${report.text}`)].filter(Boolean).join('\n\n');
+    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...(value.moduleReports??[]).map(radiologyEvidenceText)].filter(Boolean).join('\n\n');
 }
 
 export function analysisQuestion(analysis: Analysis): string {
@@ -82,6 +83,7 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
     `Discussion ${index+1} — ${analysisQuestion(analysis)}`,
     analysis.result.clinicalDraft==='generated'?analysis.result.draft.summary:'No completed clinical answer in this step.',
     analysis.result.draft.report?clinicalReportText(analysis.result.draft.report):'',
+    analysis.result.ecgEvidence ? 'ECGFounder — ранее сохранённое техническое измерение, в текущем проходе не повторено:\n'+ecgEvidenceText(analysis.result.ecgEvidence) : '',
     ...analysis.result.voices.filter(voice=>voice.status==='done').map(voice=>`${voice.id}: ${voice.text}`),
   ].filter(Boolean).join('\n')).join('\n\n');
   const sent=value.files.filter(file=>!cached.has(file)&&!moduleHandled(file)&&materialRoute(file)!=='radiology').map(file=>({...file,...(file.sha256&&!file.clientId?{clientId:`${file.sha256.slice(0,8)}-${file.sha256.slice(8,12)}-${file.sha256.slice(12,16)}-${file.sha256.slice(16,20)}-${file.sha256.slice(20,32)}`}:{})}));
@@ -113,10 +115,10 @@ const writes=new Map<string,Promise<void>>();
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{const previous=writes.get(value.id)??Promise.resolve();const next=previous.catch(()=>{}).then(()=>writeVaultCase(value,remove));writes.set(value.id,next);try{await next;}finally{if(writes.get(value.id)===next)writes.delete(value.id);}}
 export function exportCase(value: ClinicalCase): string {
   return [ `# ${caseTitle(value,'Клинический случай')}`, `ID: ${value.id}`, `Статус: ${value.status}`, value.context,
-    `Вопрос: ${value.question}`, '\n## Профильные исследования',...(value.moduleReports??[]).map(report=>`${report.sources.join(', ')}\n${report.text}`),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
+    `Вопрос: ${value.question}`, '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
-    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
+    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
 }
 
