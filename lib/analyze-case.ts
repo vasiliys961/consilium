@@ -7,7 +7,8 @@ import {terminalEvent,writeTerminalEvent,type RunEvent} from "./telemetry.ts";
 import { attachEquipment } from "../packages/attachments/attach.ts";
 import { consiliumFocus, runConsilium } from "./consilium.ts";
 import { conduct, gatewayOf, type CaseResult, type CaseFile, type ConductInput } from "./conductor.ts";
-import { MODELS,creditsFor, priceUsd, totalUsd, type CostStep } from "./cost.ts";
+import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep } from "./cost.ts";
+import { guardGeneratedClinicalText } from "./clinical-integrity.ts";
 import { imageDataUrl, settleAction, writeLightDraft } from "./draft.ts";
 import { GENETIC_CONSULTATION_INSTRUCTION } from '../packages/genomics/clinical-context.ts';
 import { geneticsCaution } from "../packages/genomics/inspect.ts";
@@ -22,6 +23,7 @@ import { interpretSpeech } from "../packages/translator/speech.ts";
 import { writeSpecialistReadings } from "../packages/specialists/read.ts";
 import { comprehendFrames, statementsOf } from "../packages/vision/comprehend.ts";
 import { assessTracing, networkObservation, networkStatements } from "../packages/ecg/founder.ts";
+import { ecgModuleEvidence } from './module-evidence.ts';
 import { isEcgSheet, sheetCaution } from "../packages/ecg/inspect.ts";
 import { bytesFromBase64 } from "../packages/ecg/open.ts";
 import { inspectPhoto } from "../packages/radiology/tiff.ts";
@@ -122,7 +124,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     const provider=String(input).includes("polza.ai")?"polza":"openrouter";
     if(isModel){emit("model.started",{model:request.model,provider});if(deps.streaming)deps.onPreview?.("");}
     let response:Response;
-    try{response=await transport(input,{...init,...(isModel&&deps.streaming?{body:JSON.stringify({...request,stream:true,stream_options:{include_usage:true}})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
+    try{response=await transport(input,{...init,...(isModel?{body:JSON.stringify({...request,usage:{include:true},...(deps.streaming?{stream:true,stream_options:{include_usage:true}}:{})})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
       if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value);}});}}
     catch(error){if(isModel)emit("model.failed",{model:request.model,provider,durationMs:Date.now()-started,reason:error instanceof Error?error.name:"transport_error"});throw error;}
     if(String(input).includes("/chat/completions")){
@@ -130,10 +132,11 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       const data=await response.clone().json().catch(()=>null);
       const usageAvailable=typeof data?.usage?.prompt_tokens==="number"&&typeof data?.usage?.completion_tokens==="number";
       const inputTokens=Number(data?.usage?.prompt_tokens)||0,outputTokens=Number(data?.usage?.completion_tokens)||0;
-      emit("model.responded",{model:request.model,provider,httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens)});
+      const charged=chargeForCall(String(data?.model??request.model??"unknown"),data?.usage);
+      emit("model.responded",{model:request.model,provider,httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens),...(charged.source==="openrouter"?{billedUsd:charged.usd}:{})});
       modelCalls.push({model:String(data?.model??request.model??"unknown"),inputTokens,outputTokens,durationMs:Date.now()-started,
         status:!response.ok||data?.error||data?.choices?.[0]?.finish_reason==='error'?"failed":data?.choices?.[0]?.finish_reason==="length"?"truncated":"received",
-        usageAvailable,usd:priceUsd(String(request.model),inputTokens,outputTokens)});
+        usageAvailable,usd:charged.usd,billingSource:charged.source});
     }
     return response;
   };
@@ -480,6 +483,9 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     called = true;
   }
 
+  const checkedDraft=guardGeneratedClinicalText(draft,note);
+  if(checkedDraft.changed){draft=checkedDraft.value;validationWarnings.push("В черновике утверждалась одышка в покое, хотя в исходных данных она не документирована. Формулировка заменена на неопределённую.");}
+
   if ((body.consilium === true || /консилиум|several opinions|second opinions/i.test(note)) && note && !blockedInterpretation && clinicalDraft === "generated") {
     emit('stage.started',{stage:'consilium'});
     const limit = AbortSignal.timeout(Math.max(1, Math.min(95000, (body.deadlineMs ?? 300000) - (Date.now() - startedAt) - 4000)));
@@ -496,7 +502,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       record: observation || null,
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
     }, councilFetch).catch(() => []);
-    const guarded = spoken;
+    const guarded = spoken.map(voice=>{const checked=guardGeneratedClinicalText(voice.text,note);if(checked.changed)validationWarnings.push(`Мнение ${voice.id}: утверждение об одышке в покое не подтверждено исходными данными.`);return {...voice,text:checked.value};});
     for (const voice of spoken) {
       if (voice.status === "done" && voice.model) {
         steps = settle(steps, voice.id, { ...voice, model: voice.model });
@@ -533,6 +539,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     id,
     draft,
     voices,
+    ...(tracing ? {ecgEvidence:ecgModuleEvidence(tracing,ledger.find(entry=>entry.source===tracing.source)?.sha256)} : {}),
     readings: specialist.readings,
     interpretation,
     citations,
@@ -544,7 +551,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       ...ledger.filter(entry => entry.status !== "read").map(entry => entry.source),
 
     ],
-    cost: { usageComplete:modelCalls.every(call=>call.usageAvailable!==false),totalUsd: modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps), credits: creditsFor(modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps)), steps, calls:modelCalls },
+    cost: { usageComplete:modelCalls.every(call=>call.usageAvailable!==false),billingComplete:modelCalls.length>0&&modelCalls.every(call=>call.billingSource==="openrouter"),totalUsd: modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps), credits: creditsFor(modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps)), steps, calls:modelCalls },
     gateway: { ...result.gateway, called:called || modelCalls.length>0 },
     redactions,
     pixelCovers,
