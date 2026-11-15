@@ -14,7 +14,7 @@ import {GeneticExtraction} from './genetic-extraction';
 import {ImageProfileSelect} from './image-profile';
 import {AnalysisProgress} from './analysis-progress';
 import {requestAnalysis,type AnalysisProgressEvent} from '@/lib/analysis-stream';
-import {commitClinicalAnalysis} from '@/lib/case-result-commit';
+import {commitClinicalAnalysis,stagePhysicianQuestion,preservePendingQuestion} from '@/lib/case-result-commit';
 import {ProductGuide,ReferenceInstructions} from './product-guide';
 import { CASE_SECTIONS, type CaseSection } from "@/lib/physician-guide";
 import { runOptionsKey, duplicateCompletedRun, repeatedRunWarning } from '@/lib/repeat-analysis';
@@ -199,7 +199,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             return;
         if(caseAnalysisInput(snapshot).pendingModules.length){await save(snapshot);router.push(moduleHref('radiology',snapshot.id));return;}
         const pendingQuestion = snapshot===current ? caseQuestion.trim() : '';
-        if(pendingQuestion)snapshot={...snapshot,events:[...snapshot.events,{id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:pendingQuestion}]};
+        if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
         setBusy(true);setProgress([]);setPreview('');goToTab('analysis');
@@ -207,11 +207,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         const input = caseAnalysisInput(snapshot, rereadImages||imageSecondOpinion);
         try {
             if(pendingQuestion&&current){
-                // Preserve the question as an editable draft BEFORE the network call.
-                // Do not commit a question event until an actual analysis result exists.
-                await persistCase({...current,workspaceDraft:{
-                    question:pendingQuestion,note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis',
-                }});
+                await preservePendingQuestion(current,pendingQuestion,eventDrafts.note,eventDrafts.decision);
             }
             const libraryQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question||caseContext(snapshot).slice(0,1000);
             const automaticEvidence=libraryOptions.enabled&&libraryOptions.automatic?await retrieveLibraryEvidence(libraryQuestion,{context:caseContext(snapshot).slice(0,3500),documentId:libraryOptions.documentId||undefined,signal:request.signal}):null;
