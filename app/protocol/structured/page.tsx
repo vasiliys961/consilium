@@ -240,6 +240,12 @@ export default function ProtocolModule(){
    </article>
   </section>}
   <style>{'@media print { @page { size: A4; margin: 15mm; } body * { visibility: hidden !important; } #opus-clinical-print-sheet, #opus-clinical-print-sheet * { visibility: visible !important; } #opus-clinical-print-sheet { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; max-width: 100% !important; font-family: Georgia, serif !important; font-size: 11pt !important; line-height: 1.45 !important; color: black !important; } #opus-clinical-print-sheet h1 { font-size: 16pt; text-align: center; margin-bottom: 12pt; } #opus-clinical-print-sheet h2 { font-size: 12pt; margin-top: 12pt; margin-bottom: 3pt; } #opus-clinical-print-sheet p { white-space: pre-wrap; margin: 0 0 7pt; } #opus-clinical-print-sheet section { break-inside: avoid-page; } }'}</style>
+  <nav aria-label={ui('Действия с протоколом','Protocol actions')} style={{display:'flex',flexWrap:'wrap',gap:12,margin:'12px 0'}}>
+   <Link href={id?'/prescriptions?case='+encodeURIComponent(id):'/prescriptions'}>{ui('Рецепты · редактировать и печатать','Prescriptions · edit and print')}</Link>
+   <Link href={id?'/drug-checker?case='+encodeURIComponent(id):'/drug-checker'}>{ui('Проверить взаимодействия','Check drug interactions')}</Link>
+   <Link href={id?'/guidelines?case='+encodeURIComponent(id):'/guidelines'}>{ui('Клинические рекомендации','Clinical guidelines')}</Link>
+   {document&&<button type="button" onClick={()=>{const text=protocolText(document);if(navigator.share)void navigator.share({title:ui('Медицинский протокол','Clinical protocol'),text}).catch(()=>{});else void navigator.clipboard.writeText(text).then(()=>setNotice(ui('Текст скопирован','Text copied'))).catch(()=>setNotice(ui('Копирование недоступно','Clipboard unavailable')));}}>{ui('Поделиться протоколом','Share protocol')}</button>}
+  </nav>
   <p><Link href={id?'/protocol/case?case='+encodeURIComponent(id)+'&locale='+encodeURIComponent(locale):'/protocol/case?locale='+encodeURIComponent(locale)}>{ui('Расширенный самостоятельный модуль протоколов (если установлен)','Advanced independent protocol application (if installed)')}</Link></p>
  </main>;
 }
