@@ -14,3 +14,17 @@ test('Russian and Global notes have independent namespaces, formats and preserve
  assert.equal(protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Draft',source:'Synthetic',locale:'ru'},session,'en'),null);
  assert.equal(protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Draft',source:'Synthetic',locale:'invalid'},session,'en'),null);
 });
+
+
+test('separate English, French and Russian saved protocols reopen only in their own language',async()=>{
+ const {protocolForEdition}=await import('./protocol-bridge.ts');
+ const eng=protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'English note',source:'Synthetic case',locale:'en'},session,'en')!;
+ const fra=protocolDocumentMessage({type:'concilium.protocol.document',session,id:'12345678-1234-1234-1234-123456789abc',text:'Note française',source:'Synthetic case',locale:'fr'},session,'en')!;
+ const rus=protocolDocumentMessage({type:'concilium.protocol.document',session,id:'abcdef12-1234-1234-1234-123456789abc',text:'Русский протокол',source:'Synthetic case'},session,'ru')!;
+ const docs=[fra,rus,eng];
+ assert.equal(protocolForEdition(docs,'en','fr')?.sections[0].text,'Note française');
+ assert.equal(protocolForEdition(docs,'en','en')?.sections[0].text,'English note');
+ assert.equal(protocolForEdition(docs,'ru','ru')?.sections[0].text,'Русский протокол');
+ assert.equal(protocolForEdition(docs,'en','es'),undefined);
+ assert.equal(protocolForEdition(docs,'en')?.locale,'fr');
+});
