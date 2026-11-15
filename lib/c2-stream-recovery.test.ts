@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { requestStreamedJson } from './analysis-stream.ts';
+import { requestStreamedJson, isCaseResultEnvelope } from './analysis-stream.ts';
+import { conduct } from './conductor.ts';
 
 function sse(event:string, data:unknown):string {
   return 'event: '+event+'\ndata: '+JSON.stringify(data)+'\n\n';
@@ -79,4 +80,18 @@ test('C2: partial multibyte SSE frame is ignored when connection closes without 
   const response=streamResponse(finiteStream([partial.slice(0,18),partial.slice(18)]));
   await assert.rejects(requestStreamedJson('/api/v1/cases',{synthetic:true},{fetch:fakeFetch(response)}),
     /Соединение закрыто до получения итогового ответа/);
+});
+
+test('C2: a terminal JSON object without a complete clinical response envelope must not be stored',()=>{
+ const partial={draft:{status:'unsigned',summary:'Provisional token text'},gateway:{called:true}};
+ assert.equal(isCaseResultEnvelope(partial),false);
+ assert.equal(isCaseResultEnvelope({}),false);
+ assert.equal(isCaseResultEnvelope(null),false);
+ const full=conduct({text:'Synthetic clinical fixture'});
+ full.clinicalDraft='unavailable';
+ assert.equal(isCaseResultEnvelope(full),true,'explicitly incomplete synthesis is a valid result if its status is preserved');
+ full.clinicalDraft='generated';
+ assert.equal(isCaseResultEnvelope(full),true);
+ const corrupted={...full,cost:{...full.cost,totalUsd:NaN}};
+ assert.equal(isCaseResultEnvelope(corrupted),false);
 });
