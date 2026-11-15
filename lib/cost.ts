@@ -24,6 +24,9 @@ const UNKNOWN_PRICE = { input: 1, output: 5 };
 
 const VISUAL = new Set(["radiology", "ultrasound", "dermatology", "histology"]);
 
+/** Explicit call-site attribution; the provider model name never determines a clinical stage. */
+export type CostCallStage = 'speech' | 'genetics' | 'imaging' | 'evidence' | 'synthesis' | 'consilium';
+
 export type CostStepId =
   | "intake"
   | "translate"
