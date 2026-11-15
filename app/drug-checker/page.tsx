@@ -9,14 +9,17 @@ import {reviewBeforeSending} from '@/lib/privacy-client';
 import type {DrugLabelSelection} from '@/lib/drug-labels';
 import type {MedicationReport} from '@/lib/medication-review';
 import type {Citation} from '@/lib/literature';
+import type {MedicationContext} from '@/lib/drug-interaction-rules';
 type Issue={name:string;suggestion:string|null;reason:string};
 type Result={report:MedicationReport;citations:Citation[];model:string};
+type Details={stopped:string;alternatives:string;context:MedicationContext};
 export default function StandaloneDrugChecker(){
  const {t,language}=useWorkspaceLanguage();
  const [current,setCurrent]=useState(''),[proposed,setProposed]=useState(''),[context,setContext]=useState('');
  const [labels,setLabels]=useState<DrugLabelSelection[]>([]),[result,setResult]=useState<Result>(),[issues,setIssues]=useState<Issue[]>([]);
+ const [details,setDetails]=useState<Details>({stopped:'',alternatives:'',context:{}});
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState('');const abort=useRef<AbortController>();
- async function review(active:string,next:string,useSelected=false){
+ async function review(active:string,next:string,useSelected=false,updatedDetails?:Details){
   const request=new AbortController();abort.current=request;setBusy(true);setProposed(next);setNotice(t('Получаем инструкции препаратов…'));setIssues([]);setResult(undefined);
   try{
    let selected=labels;
@@ -30,7 +33,16 @@ export default function StandaloneDrugChecker(){
    }
    if(!selected.length)throw Error(t('Инструкции не получены. Проверка не выполнена; платная модель не вызвана.'));
    setLabels(selected);
-   const reviewed=await reviewBeforeSending({task:'management',locale:language,sourceLocale:language,retain:false,externalSearch:false,drugLabels:selected,text:`Current medications supplied by physician:\n${active}\nProposed additions:\n${next||'(none)'}\nClinical context supplied by physician (do not infer missing conditions):\n${context||'(not supplied)'}`});
+   const contextDetails=updatedDetails??details;
+   const structured=[
+    'Stopped before starting the proposed regimen (NOT co-prescribed): '+(contextDetails.stopped||'(none)'),
+    'Mutually exclusive alternatives (NOT co-prescribed, each requires its own evidence): '+(contextDetails.alternatives||'(none)'),
+    'eGFR mL/min/1.73 m2: '+(contextDetails.context.egfr??'(unknown)'),
+    'Potassium mmol/L: '+(contextDetails.context.potassium??'(unknown)'),
+    'Decompensated cirrhosis CONFIRMED: '+(contextDetails.context.decompensatedCirrhosis===true?'yes':'not confirmed'),
+    'Severe hepatic impairment CONFIRMED: '+(contextDetails.context.severeHepaticImpairment===true?'yes':'not confirmed'),
+   ].join('\n');
+   const reviewed=await reviewBeforeSending({task:'management',locale:language,sourceLocale:language,retain:false,externalSearch:false,drugLabels:selected,text:`Current medications supplied by physician:\n${active}\nProposed additions:\n${next||'(none)'}\nClinical context supplied by physician (do not infer missing conditions):\n${context||'(not supplied)'}\nStructured medication status and organ context:\n${structured}`});
    request.signal.throwIfAborted();setNotice(t('Проверяем сочетание по полученным инструкциям…'));
    const response=await fetch('/api/medications/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(reviewed),signal:request.signal});
    if(!response.ok){const body=await response.json();throw Error(t(body.error==='verified_labels_unavailable'?'Инструкции не получены. Проверка не выполнена; платная модель не вызвана.':'Не получен подтверждённый ответ по инструкциям. Проверка не завершена.'));}
@@ -45,7 +57,7 @@ export default function StandaloneDrugChecker(){
   <h1>{t('Проверка лекарств и опасных сочетаний')}</h1>
   <p>{t('Самостоятельный модуль: введите список препаратов и предполагаемое назначение. Случай создавать не требуется.')}</p>
   <label>{t('Клинические уточнения для проверки')}<textarea disabled={busy} rows={3} value={context} onChange={event=>{setContext(event.target.value);setResult(undefined);}} placeholder={t('Возраст, функция почек и печени, беременность, аллергии, ЭКГ и другие важные сведения — если известны')}/></label>
-  <DrugInteractionChecker current={current} onCurrentChange={value=>{setCurrent(value);setResult(undefined);setIssues([]);}} onReview={(active,next)=>void review(active,next)} onProposedChange={value=>{setProposed(value);setResult(undefined);setIssues([]);}} proposed={proposed} disabled={busy}/>
+  <DrugInteractionChecker current={current} onCurrentChange={value=>{setCurrent(value);setResult(undefined);setIssues([]);}} onReview={(active,next,newDetails)=>{setDetails(newDetails);void review(active,next,false,newDetails);}} onProposedChange={value=>{setProposed(value);setResult(undefined);setIssues([]);}} proposed={proposed} disabled={busy} onDetailsChange={()=>{setResult(undefined);setIssues([]);setNotice('');}}/>
   {issues.map((issue,index)=><section key={index} role="alert"><strong>{issue.name}</strong><p>{t(issue.reason==='name'?'Название не подтверждено.':issue.reason==='unavailable'?'Сервис инструкций недоступен.':issue.reason==='too_many'||issue.reason==='limit'?'Для этой проверки выберите не более четырёх препаратов.':'Подходящая инструкция не найдена.')}</p>{issue.suggestion&&<button type="button" onClick={()=>correct(issue)}>{t('Подтвердить название:')} {issue.suggestion}</button>}</section>)}
   <details open={labels.length>0}><summary>{t('Инструкции FDA / DailyMed · добавить к проверке')}</summary><DrugLabelPicker selected={labels} onChange={value=>{setLabels(value);setResult(undefined);}} disabled={busy}/>{labels.length>0&&<button type="button" disabled={busy||!(current.trim()||proposed.trim())} onClick={()=>void review(current,proposed,true)}>{t('Проверить по выбранным инструкциям')}</button>}</details>
   {busy&&<button onClick={()=>abort.current?.abort()}>{t('Остановить проверку')}</button>}{notice&&<p role="status">{notice}</p>}
