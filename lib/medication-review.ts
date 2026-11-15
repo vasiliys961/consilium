@@ -13,7 +13,7 @@ export function medicationNames(text:string){
   const words=entry.split(/\s+/);return words.length>1&&words.every(word=>knownName(word)||nameSuggestion(word))?words:[entry];
  });
 }
-function knownName(value:string){return ['clopidogrel','moxifloxacin','warfarin','omeprazole','metformin','ibuprofen','amoxicillin','apixaban','rivaroxaban','digoxin','acetaminophen','metoprolol','amlodipine','atorvastatin'].includes(normalizeDrugQuery(value)??'');}
+function knownName(value:string){return ['clopidogrel','moxifloxacin','warfarin','omeprazole','metformin','ibuprofen','amoxicillin','apixaban','rivaroxaban','digoxin','acetaminophen','metoprolol','amlodipine','atorvastatin','bisoprolol'].includes(normalizeDrugQuery(value)??'');}
 export function nameSuggestion(value:string){
  const lower=value.toLowerCase();
  const known=['моксифлоксацин','клопидогрель','clopidogrel','moxifloxacin'];
