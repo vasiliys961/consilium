@@ -5,10 +5,10 @@ import {WORKSPACE_LANGUAGES} from './workspace-i18n.ts';
 
 const CASE='12345678-1234-4234-9234-123456789abc';
 
-test('post-analysis handoff opens the EXISTING protocol module with the saved case, not a clinical rerun',()=>{
+test('post-analysis handoff opens BUILT-IN available protocol editor with case context, not absent native app',()=>{
  const href=protocolLanguageHref(CASE,['ru']);
  const url=new URL(href,'http://127.0.0.1:3207');
- assert.equal(url.pathname,'/protocol/case');
+ assert.equal(url.pathname,'/protocol/structured');
  assert.equal(url.searchParams.get('case'),CASE);
  assert.equal(url.searchParams.get('locale'),'ru');
  assert.deepEqual(protocolLanguagePlan(url.searchParams),['ru']);
