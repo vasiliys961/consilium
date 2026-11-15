@@ -5,7 +5,7 @@ import {collectChatStream,previewText} from "./analysis-stream.ts";
 import {enrichGenomicReview,genomicRecord} from "../packages/genomics/review.ts";
 import {terminalEvent,writeTerminalEvent,type RunEvent} from "./telemetry.ts";
 import { attachEquipment } from "../packages/attachments/attach.ts";
-import { consiliumFocus, runConsilium } from "./consilium.ts";
+import { consiliumFocus, runConsilium, unavailableConsilium } from "./consilium.ts";
 import { conduct, gatewayOf, type CaseResult, type CaseFile, type ConductInput } from "./conductor.ts";
 import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep, type CostCallStage } from "./cost.ts";
 import { guardGeneratedClinicalText } from "./clinical-integrity.ts";
@@ -59,6 +59,10 @@ export interface AnalysisDependencies {
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
   readWords?: (bytes: Buffer, ext: "png" | "jpg") => Promise<WordBox[] | null>;
+  /** Test-only injection: the normal path invokes the installed local ECGFounder. */
+  assessDigitalTracing?: typeof assessTracing;
+  /** Test-only injection for an unexpected coordinator failure; normal path uses runConsilium. */
+  runCouncil?: typeof runConsilium;
 }
 
 function settle(
@@ -201,7 +205,18 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     });
     if(!file?.name)return Promise.resolve(null);
     const started=Date.now();emit('module.started',{module:'ECGFounder',provider:'local'});
-    return assessTracing({name:file.name,text:file.text,binary:file.binary},result.locale).then(value=>{emit('module.completed',{module:'ECGFounder',provider:'local',status:value?.status??'not_assessed',durationMs:Date.now()-started,estimatedUsd:0});return value;});
+    return Promise.resolve()
+      .then(()=>(deps.assessDigitalTracing??assessTracing)({name:file.name,text:file.text,binary:file.binary},result.locale))
+      .then(value=>{emit('module.completed',{module:'ECGFounder',provider:'local',status:value?.status??'not_assessed',durationMs:Date.now()-started,estimatedUsd:0});return value;})
+      .catch(()=>{
+        // A local module exception must not destroy completed imaging, source, or clinical work.
+        // Do not leak exception text, and never treat an unsuccessful classifier as normal.
+        emit('module.failed',{module:'ECGFounder',provider:'local',status:'not_assessed',durationMs:Date.now()-started});
+        return {source:file.name,status:'not_assessed' as const,cleared:[],top:null,names:[],
+          reason:result.locale==='ru'
+            ? 'ECGFounder не выполнил анализ из-за технического сбоя; запись не оценена.'
+            : 'ECGFounder failed technically; this tracing was not assessed.'};
+      });
   })();
   let ledger = await frequencyPromise;
   ledger = ledger.map((entry) => {
@@ -494,7 +509,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       limit.throwIfAborted();
       return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])}, "consilium");
     };
-    const spoken = await runConsilium(env, {
+    const spoken = await (deps.runCouncil??runConsilium)(env, {
       note,
       locale: result.locale,
       draft: draft.summary,
@@ -502,7 +517,10 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       citations,
       record: observation || null,
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
-    }, councilFetch).catch(() => []);
+    }, councilFetch).catch(() => {
+      emit('stage.failed',{stage:'consilium'});
+      return unavailableConsilium('provider_error');
+    });
     const guarded = spoken.map(voice=>{const checked=guardGeneratedClinicalText(voice.text,note);if(checked.changed)validationWarnings.push(`Мнение ${voice.id}: утверждение об одышке в покое не подтверждено исходными данными.`);return {...voice,text:checked.value};});
     for (const voice of spoken) {
       if (voice.status === "done" && voice.model) {
