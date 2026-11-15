@@ -68,6 +68,7 @@ test('C2: unexpected consilium orchestration error preserves clinical draft and 
   assert.deepEqual(result.voices.map(v=>v.status),Array(5).fill('not_assessed'));
   assert.ok(result.voices.every(v=>v.text==='' && v.failure==='provider_error'));
   assert.ok(events.some(event=>event.event==='stage.failed'&&event.stage==='consilium'));
+  assert.ok(!events.some(event=>event.event==='stage.completed'&&event.stage==='consilium'),'do not mark failed coordinator complete');
   assert.equal(modelCalls,1,'do not rerun paid synthesis to compensate for a council failure');
   const clinical=newCase();
   clinical.context='Synthetic context';
