@@ -47,3 +47,13 @@ test('unknowns are not mistaken for genuine negative examinations in English',()
  assert.deepEqual(item.opposing,['Normal troponin after serial testing']);
  assert.equal(item.missing.length,2);
 });
+
+test('prospective warning signs and missing-information questions are not rewritten as invented findings',()=>{
+ const observed='Ортопноэ, одышка при нагрузке';
+ const warning=guardUnsupportedRestDyspnea('Если появится одышка в покое — экстренная оценка.',observed);
+ assert.equal(warning.changed,false);
+ assert.equal(warning.text,'Если появится одышка в покое — экстренная оценка.');
+ const question=guardUnsupportedRestDyspnea('Уточнить: есть ли одышка в покое?',observed);
+ assert.equal(question.changed,false);
+ assert.equal(question.text,'Уточнить: есть ли одышка в покое?');
+});
