@@ -16,6 +16,7 @@ import {AnalysisProgress} from './analysis-progress';
 import {requestAnalysis,type AnalysisProgressEvent} from '@/lib/analysis-stream';
 import {ProductGuide,ReferenceInstructions} from './product-guide';
 import { CASE_SECTIONS, type CaseSection } from "@/lib/physician-guide";
+import { runOptionsKey, duplicateCompletedRun, repeatedRunWarning } from '@/lib/repeat-analysis';
 import { radiologyEvidenceText } from '@/lib/module-evidence';
 import { CaseNavigation, CaseSectionControls } from './case-navigation';
 import helpStyles from "./physician-help.module.css";
@@ -206,12 +207,18 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             const libraryQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question||caseContext(snapshot).slice(0,1000);
             const automaticEvidence=libraryOptions.enabled&&libraryOptions.automatic?await retrieveLibraryEvidence(libraryQuestion,{context:caseContext(snapshot).slice(0,3500),documentId:libraryOptions.documentId||undefined,signal:request.signal}):null;
             const libraryFiles=automaticEvidence?.files??(libraryOptions.enabled&&selectedLibrary.question===libraryQuestion?selectedLibrary.files:[]);
+            const requestOptionsKey=runOptionsKey({task:requestedTask,kind,consilium:withCouncil,secondOpinion:imageSecondOpinion,rereadImages,externalSearch,answerLocale,sourceLocale:language,retrievedSources:libraryFiles});
+            if(duplicateCompletedRun(snapshot.analyses[0],caseSignature(snapshot),requestOptionsKey)
+                && !window.confirm(repeatedRunWarning(snapshot.analyses[0],language))){
+              setNotice('Повторный запрос отменён. Предыдущее заключение сохранено.');
+              return;
+            }
             const value = await requestAnalysis({ imageProfile:snapshot.imageProfile,caseId: snapshot.id, text: input.text, files: input.files, referenceFiles: [...(snapshot.library??[]),...libraryFiles], drugLabels:snapshot.drugLabels, externalSearch, locale: answerLocale, sourceLocale: language, consilium:withCouncil,secondOpinion:imageSecondOpinion, ...(requestedTask !== 'auto' ? { task:requestedTask } : {}), retain: false },{signal:request.signal,onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});
             if (!value.draft || !value.gateway)
                 throw new Error('Сервис вернул неполный результат.');
             const newestQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question;
             const title=kind==='summary'?'Резюме разбора':newestQuestion||'Разбор материалов и клинических данных';
-            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
+            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),requestOptionsKey,materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
             const next:ClinicalCase={...snapshot,updated:entry.at,analyses:[entry,...snapshot.analyses],...(kind==='summary'&&value.clinicalDraft==='generated'?{decisionDraft:{analysisId:entry.id,at:entry.at,text:decisionDraftFrom(entry)}}:{})};
             setCurrent(next);
                 setDirty(true);
