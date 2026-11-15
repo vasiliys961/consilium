@@ -112,6 +112,9 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
         : `ECGFounder · ${analysis.result.ecgEvidence.source} — исторический результат, не подтверждённый текущим SHA-256. Прежние классы и измерения НЕ относятся к новому файлу; при необходимости выполните повторный анализ. Полные результаты остались в истории случая.`
       : '',
     ...analysis.result.voices.filter(voice=>voice.status==='done').map(voice=>`${voice.id}: ${voice.text}`),
+    ...(analysis.result.voices.some(voice=>voice.status!=='done')
+      ? [`Earlier consilium INCOMPLETE: ${analysis.result.voices.filter(voice=>voice.status!=='done').map(voice=>voice.id).join(', ')} were not assessed. Their silence is not agreement and must not be reconstructed as a clinical opinion.`]
+      : []),
   ].filter(Boolean).join('\n')).join('\n\n');
   const sent=value.files.filter(file=>!cached.has(file)&&!moduleHandled(file)&&materialRoute(file)!=='radiology').map(file=>({...file,...(file.sha256&&!file.clientId?{clientId:`${file.sha256.slice(0,8)}-${file.sha256.slice(8,12)}-${file.sha256.slice(12,16)}-${file.sha256.slice(16,20)}-${file.sha256.slice(20,32)}`}:{})}));
   return {
