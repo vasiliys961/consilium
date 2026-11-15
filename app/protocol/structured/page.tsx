@@ -65,7 +65,7 @@ export default function ProtocolModule(){
  },[]);
 
  function isSavedDraft(){
-  return !document||Boolean(current?.protocols?.some(saved=>saved.id===document.id&&JSON.stringify(saved.sections)===JSON.stringify(document.sections)));
+  return !document||(document.presentation==='original-analysis'&&!document.edited)||Boolean(current?.protocols?.some(saved=>saved.id===document.id&&JSON.stringify(saved.sections)===JSON.stringify(document.sections)));
  }
  function discardAllowed(){
   return isSavedDraft()||window.confirm(ui('Есть несохранённый протокол. Продолжить без сохранения его изменений?','You have an unsaved protocol. Discard these changes?'));
@@ -96,7 +96,7 @@ export default function ProtocolModule(){
  }
  function changeKind(next:ProtocolKind){
   if(!discardAllowed())return;
-  const nextPresentation:ProtocolPresentation=['encounter','cardiology'].includes(next)?presentation:'formal';
+  const nextPresentation:ProtocolPresentation=next==='encounter'?presentation:'formal';
   setKind(next);setPresentation(nextPresentation);
   resetResult(current&&nextPresentation==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
  }
@@ -108,7 +108,7 @@ export default function ProtocolModule(){
   history.replaceState(history.state,'',url.pathname+url.search);
  }
  function changePresentation(next:ProtocolPresentation){
-  if((next==='original-analysis'&&!canFormat)||(!['encounter','cardiology'].includes(kind)&&next!=='formal')||!discardAllowed())return;
+  if((next==='original-analysis'&&!canFormat)||(kind!=='encounter'&&next!=='formal')||!discardAllowed())return;
   setPresentation(next);
   resetResult(current&&next==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,mode,completedId,next,independent?.id)??null);
  }
@@ -174,7 +174,7 @@ export default function ProtocolModule(){
   </label>
   <label>{ui('Вид документа для просмотра и печати','Document layout for reading and printing')}
    <select disabled={busy} value={presentation} onChange={event=>changePresentation(event.target.value as ProtocolPresentation)}>
-    <option value="original-analysis" disabled={!canFormat||!['encounter','cardiology'].includes(kind)}>{ui('1. Исходный клинический разбор · бесплатно','1. Original clinical reasoning · free')}</option>
+    <option value="original-analysis" disabled={!canFormat||kind!=='encounter'}>{ui('1. Исходный клинический разбор · бесплатно','1. Original clinical reasoning · free')}</option>
     <option value="narrative" disabled={!['encounter','cardiology'].includes(kind)}>{ui('2. Экспертное клиническое заключение','2. Narrative expert conclusion')}</option>
     <option value="formal">{ui('3. Формальный протокол осмотра','3. Formal encounter protocol')}</option>
     <option value="soap" disabled={!['encounter','cardiology'].includes(kind)}>{ui('3а. Краткий SOAP · формат протокола','3a. Compact SOAP note')}</option>
