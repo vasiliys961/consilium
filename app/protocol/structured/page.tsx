@@ -98,7 +98,7 @@ export default function ProtocolModule(){
   if(!discardAllowed())return;
   const nextPresentation:ProtocolPresentation=['encounter','cardiology'].includes(next)?presentation:'formal';
   setKind(next);setPresentation(nextPresentation);
-  resetResult(savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
+  resetResult(current&&nextPresentation==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
  }
  function changeLocale(next:WorkspaceLanguage){
   if(!discardAllowed())return;
@@ -172,6 +172,17 @@ export default function ProtocolModule(){
     {PROTOCOL_KINDS.map(([key,title])=><option key={key} value={key}>{t(title)}</option>)}
    </select>
   </label>
+  <label>{ui('Вид документа для просмотра и печати','Document layout for reading and printing')}
+   <select disabled={busy} value={presentation} onChange={event=>changePresentation(event.target.value as ProtocolPresentation)}>
+    <option value="original-analysis" disabled={!canFormat||!['encounter','cardiology'].includes(kind)}>{ui('1. Исходный клинический разбор · бесплатно','1. Original clinical reasoning · free')}</option>
+    <option value="narrative" disabled={!['encounter','cardiology'].includes(kind)}>{ui('2. Экспертное клиническое заключение','2. Narrative expert conclusion')}</option>
+    <option value="formal">{ui('3. Формальный протокол осмотра','3. Formal encounter protocol')}</option>
+    <option value="soap" disabled={!['encounter','cardiology'].includes(kind)}>{ui('3а. Краткий SOAP · формат протокола','3a. Compact SOAP note')}</option>
+   </select>
+  </label>
+  <p><small>{presentation==='original-analysis'
+   ?ui('Исходный разбор отображается и печатается без нового модельного запроса. Перевод на другой язык без модели не выполняется.','Original clinical output is displayed and printable without a model call; language selection does not translate it.')
+   :ui('Оформление изменяет только представление документа, не диагностические выводы или утверждённые назначения.','Formatting changes presentation only, not clinical findings or accepted treatment.')}</small></p>
   <label>{ui('Язык протокола','Protocol language')}
    <select disabled={busy} value={locale} onChange={event=>changeLocale(event.target.value as WorkspaceLanguage)}>
     {WORKSPACE_LANGUAGES.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}
@@ -182,7 +193,7 @@ export default function ProtocolModule(){
    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
     {plannedLanguages.map(code=><button key={code} type="button" disabled={busy} aria-pressed={locale===code} onClick={()=>changeLocale(code)}>
      {WORKSPACE_LANGUAGES.find(item=>item.code===code)?.name}
-     {' · '}{savedStructuredProtocol(current?.protocols,kind,code,mode,completedId)?ui('сохранён','saved'):ui('не создан','not created')}
+     {' · '}{savedStructuredProtocol(current?.protocols,kind,code,mode,completedId,presentation,independent?.id)?ui('сохранён','saved'):ui('не создан','not created')}
     </button>)}
    </div>
   </section>}
@@ -194,24 +205,36 @@ export default function ProtocolModule(){
    ?ui('Сведения загружены из сохранённого разбора. Gemini Flash только оформляет текст. Диагноз и лечебные рекомендации не пересчитываются.','Saved clinical findings are loaded. Gemini Flash reformats the text without re-evaluating diagnosis or therapy.')
    :ui('GPT-6.1 Sol самостоятельно разбирает предоставленные сведения. Отсутствующие данные не считаются нормальными.','GPT-6.1 Sol assesses the supplied information; missing clinical facts are never presumed normal.')}
    {' '}{ui('Перед отправкой текст проходит проверку обезличивания. Изменение языка не вызывает модель.','Data is reviewed for privacy before sending. Changing language does not call a model.')}</small></p>
-  <button disabled={busy||!source.trim()||(mode==='from-analysis'&&!completedId)} onClick={()=>void generate()}>
-   {busy?ui('Оформляем протокол…','Generating protocol…'):mode==='from-analysis'?ui('Оформить готовый разбор','Format completed analysis')+' · Gemini Flash':ui('Составить самостоятельный протокол','Draft independent protocol')+' · GPT-6.1 Sol'}
-  </button>
+  {presentation==='original-analysis'?<p><strong>{ui('Исходный документ готов бесплатно — его уже можно редактировать, печатать и сохранять.','Original note is ready for free: review, print or save it now.')}</strong></p>:<>
+   <button disabled={busy||!source.trim()||(mode==='from-analysis'&&!completedId)} onClick={()=>void generate()}>
+    {busy?ui('Оформляем документ…','Preparing note…'):mode==='from-analysis'?ui('Оформить сохранённый разбор','Format saved clinical analysis')+' · Gemini Flash':usingSavedSol?ui('Переоформить ранее сохранённый Sol','Reformat saved Sol note')+' · Gemini Flash':ui('Составить самостоятельный протокол','Generate independent protocol')+' · GPT-6.1 Sol'}
+   </button>
+   {usingSavedSol&&<><p><small>{ui('Для нового формата используется уже сохранённый результат GPT-6.1 Sol. Повторный дорогой анализ не нужен.','The saved GPT-6.1 Sol note is reused for this layout; no repeat expensive reasoning.')}</small></p>
+   <button type="button" disabled={busy||!source.trim()} onClick={()=>void generate(true)}>{ui('Повторно проанализировать новые данные','Analyze new evidence again')} · GPT-6.1 Sol</button></>}
+  </>}
   {busy&&<AnalysisProgress events={progress} preview={preview}/>}
   {!usageComplete&&<p>{t('Не все модели передали данные о токенах; расчётная стоимость неполная.')}</p>}
   {cost!==null&&<p>{t('Расчётная стоимость')}: {'$'+cost.toFixed(6)} · {model} ({ui('оценка, не квитанция','estimate, not a receipt')})</p>}
   {notice&&<p role="status">{notice}</p>}
   {document&&!busy&&<section aria-label={ui('Редактируемый протокол','Editable protocol')}>
-   <h2>{t('Черновик · проверьте и отредактируйте')}</h2>
-   <small>{WORKSPACE_LANGUAGES.find(item=>item.code===document.locale)?.name??document.locale} · {document.generationMode==='from-analysis'?ui('Оформление готового разбора','Formatting completed analysis'):ui('Самостоятельный протокол','Independent protocol')}</small>
+   <h2>{presentation==='original-analysis'?ui('Исходный разбор · без переформулирования','Original clinical analysis · unchanged'):t('Черновик · проверьте и отредактируйте')}</h2>
+   <small>{WORKSPACE_LANGUAGES.find(item=>item.code===document.locale)?.name??document.locale} · {document.presentation==='original-analysis'?ui('Без модельных запросов','No model calls'):document.generationMode==='from-analysis'||document.generationMode==='from-protocol'?ui('Оформление готового текста','Formatting completed text'):ui('Самостоятельный протокол','Independent protocol')}</small>
    {document.sections.map((part,i)=><label key={part.id}>{part.title}
     <textarea rows={5} value={part.text} onChange={event=>setDocument(old=>old&&({...old,edited:true,sections:old.sections.map((value,index)=>index===i?{...value,text:event.target.value}:value)}))}/>
    </label>)}
    <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
     <button disabled={!id} onClick={()=>void save()}>{t('Сохранить протокол в случай')}</button>
+    <button type="button" onClick={()=>window.print()}>{ui('Печать / сохранить PDF','Print / save PDF')}</button>
     <button onClick={()=>void downloadDocx(t('Протокол осмотра'),protocolText(document),document.locale).catch(()=>setNotice(t('Не удалось создать DOCX')))}>{t('Бланк DOCX')}</button>
    </div>
+   <article id="opus-clinical-print-sheet" style={{display:'none'}}>
+    <h1>{document.presentation==='original-analysis'?ui('КЛИНИЧЕСКИЙ РАЗБОР','CLINICAL REVIEW'):document.presentation==='narrative'?ui('ЭКСПЕРТНОЕ КЛИНИЧЕСКОЕ ЗАКЛЮЧЕНИЕ','EXPERT CLINICAL CONCLUSION'):document.presentation==='soap'?'SOAP':ui('ПРОТОКОЛ ОСМОТРА','CLINICAL ENCOUNTER NOTE')}</h1>
+    <p>{ui('Дата подготовки','Prepared')}: {new Date(document.created).toLocaleDateString(document.locale)}. {ui('Рабочий черновик для проверки лечащим врачом','Working draft for physician review')}.</p>
+    {document.sections.map(part=><section key={part.id}><h2>{part.title}</h2><p>{part.text}</p></section>)}
+    <p>{ui('Не является подписанным медицинским документом. Решения и назначения утверждаются врачом отдельно.','Unsigned draft. Clinical decisions and prescriptions require physician approval.')}</p>
+   </article>
   </section>}
+  <style>{'@media print { @page { size: A4; margin: 15mm; } body * { visibility: hidden !important; } #opus-clinical-print-sheet, #opus-clinical-print-sheet * { visibility: visible !important; } #opus-clinical-print-sheet { display: block !important; position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; max-width: 100% !important; font-family: Georgia, serif !important; font-size: 11pt !important; line-height: 1.45 !important; color: black !important; } #opus-clinical-print-sheet h1 { font-size: 16pt; text-align: center; margin-bottom: 12pt; } #opus-clinical-print-sheet h2 { font-size: 12pt; margin-top: 12pt; margin-bottom: 3pt; } #opus-clinical-print-sheet p { white-space: pre-wrap; margin: 0 0 7pt; } #opus-clinical-print-sheet section { break-inside: avoid-page; } }'}</style>
   <p><Link href={id?'/protocol/case?case='+encodeURIComponent(id)+'&locale='+encodeURIComponent(locale):'/protocol/case?locale='+encodeURIComponent(locale)}>{ui('Расширенный самостоятельный модуль протоколов (если установлен)','Advanced independent protocol application (if installed)')}</Link></p>
  </main>;
 }
