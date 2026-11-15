@@ -47,6 +47,8 @@ test('C3: current, proposed, stopped and alternative treatment are not mistaken 
  const stopped=checkMedicationRegimen({current:'warfarin\nibuprofen',stopped:'варфарин'});
  assert.equal(stopped.alerts.length,0);
  assert.deepEqual(stopped.stopped,['варфарин']);
+ const stillActive=checkMedicationRegimen({current:'warfarin + naproxen',stopped:'ibuprofen'});
+ assert.equal(stillActive.alerts.length,1,'Stopping ibuprofen must not hide a warfarin–naproxen risk');
 });
 test('C3: same drug, different renal context changes action; liver warnings require stated context',()=>{
  const low=checkMedicationRegimen({current:'metformin',context:{egfr:26}});
