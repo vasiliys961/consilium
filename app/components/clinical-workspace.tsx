@@ -14,6 +14,7 @@ import {GeneticExtraction} from './genetic-extraction';
 import {ImageProfileSelect} from './image-profile';
 import {AnalysisProgress} from './analysis-progress';
 import {requestAnalysis,type AnalysisProgressEvent} from '@/lib/analysis-stream';
+import {commitClinicalAnalysis} from '@/lib/case-result-commit';
 import {ProductGuide,ReferenceInstructions} from './product-guide';
 import { CASE_SECTIONS, type CaseSection } from "@/lib/physician-guide";
 import { runOptionsKey, duplicateCompletedRun, repeatedRunWarning } from '@/lib/repeat-analysis';
@@ -227,12 +228,10 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             const newestQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question;
             const title=kind==='summary'?'Резюме разбора':newestQuestion||'Разбор материалов и клинических данных';
             const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),requestOptionsKey,materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
-            const next:ClinicalCase={...snapshot,updated:entry.at,analyses:[entry,...snapshot.analyses],...(kind==='summary'&&value.clinicalDraft==='generated'?{decisionDraft:{analysisId:entry.id,at:entry.at,text:decisionDraftFrom(entry)}}:{}),
-                workspaceDraft:{question:pendingQuestion?'':caseQuestion,note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis'}};
-            // A completed response is valuable clinical work. Commit it to the
-            // encrypted local vault BEFORE reporting success or clearing the question.
-            let stored=true;
-            try{await persistCase(next);}catch{stored=false;}
+            const {value:next,stored}=await commitClinicalAnalysis(snapshot,entry,{
+                question:pendingQuestion?'':caseQuestion,
+                note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis',
+            });
             setCurrent(next);
             if(pendingQuestion)setCaseQuestion('');
             if(stored)setCases(old=>[next,...old.filter(item=>item.id!==next.id)]);
