@@ -113,9 +113,11 @@ function treatmentContext(report?: ClinicalReport): string {
 }
 
 function packet(input: ConsiliumInput, prior: ConsiliumVoice[]): string {
-  const sources = input.citations
+  // Exact duplicate reference excerpts waste tokens in all five role prompts.
+  // Keep every distinct source statement unchanged; deduplicate only identical lines.
+  const sources = [...new Set(input.citations
     .map((citation) => `${citation.passageId ?? (citation.pmid ? `pmid:${citation.pmid}` : citation.url ?? "no-source-key")} | ${citation.title} | ${citation.paragraph ? "Full-text excerpt" : citation.excerpt ? "Excerpt" : citation.abstract ? "Abstract" : "Bibliographic record"} | ${citation.excerpt ?? citation.abstract ?? "title only, not verified supporting evidence"}`)
-    .filter(Boolean)
+    .filter(Boolean))]
     .join("\n");
   const earlier = prior
     .filter((voice) => voice.text)
