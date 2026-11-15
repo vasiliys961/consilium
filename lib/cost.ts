@@ -24,6 +24,9 @@ const UNKNOWN_PRICE = { input: 1, output: 5 };
 
 const VISUAL = new Set(["radiology", "ultrasound", "dermatology", "histology"]);
 
+/** Explicit call-site attribution; the provider model name never determines a clinical stage. */
+export type CostCallStage = 'speech' | 'genetics' | 'imaging' | 'evidence' | 'synthesis' | 'consilium';
+
 export type CostStepId =
   | "intake"
   | "translate"
@@ -54,6 +57,18 @@ export function priceUsd(model: string, inputTokens: number, outputTokens: numbe
   const output = Number.isFinite(outputTokens) ? Math.max(0, outputTokens) : 0;
   const usd = (input / 1_000_000) * rates.input + (output / 1_000_000) * rates.output;
   return Math.round(usd * 1_000_000) / 1_000_000;
+}
+
+/** OpenRouter's usage.cost is the billed amount for THIS call; token rates are only a fallback. */
+export function chargeForCall(model:string, usage:unknown): {usd:number;source:'openrouter'|'estimate'} {
+ const record=usage && typeof usage==='object' ? usage as Record<string,unknown> : {};
+ const billed=record.cost;
+ if(typeof billed==='number' && Number.isFinite(billed) && billed>=0) {
+  return {usd:Math.round(billed*1_000_000)/1_000_000,source:'openrouter'};
+ }
+ const input=typeof record.prompt_tokens==='number'?record.prompt_tokens:0;
+ const output=typeof record.completion_tokens==='number'?record.completion_tokens:0;
+ return {usd:priceUsd(model,input,output),source:'estimate'};
 }
 
 function planned(id: CostStepId, model: string): CostStep {
