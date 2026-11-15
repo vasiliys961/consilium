@@ -49,3 +49,11 @@ test('full clinical reasoning includes conditional treatment options; interpreta
  assert.match(REPORT_INSTRUCTION,/or imply that a physician accepted any proposal/);
  assert.doesNotMatch(REPORT_INSTRUCTION,/for clinical tasks management must be empty/);
 });
+
+test('new patient facts after an analysis trigger a visible staleness warning, without pretending the analysis was rerun',()=>{
+ const previous={...caseFixture.analyses[0],inputSignature:'synthetic-previous-case-signature'};
+ const updated={...caseFixture,analyses:[previous]} as ClinicalCase;
+ const source=completedClinicalEvidence(updated)!;
+ assert.match(source,/ДАННЫЕ СЛУЧАЯ ИЗМЕНИЛИСЬ ПОСЛЕ РАЗБОРА/);
+ assert.match(originalClinicalDocument(updated)!.sections[0].text,/после разбора данные случая изменились/);
+});
