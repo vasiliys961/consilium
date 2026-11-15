@@ -14,7 +14,7 @@ test('a proposed active ingredient is checked against current drugs, including a
 test('numbered prescriptions and plus-separated names are parsed; unsupported drugs are visible',()=>{
  assert.equal(knownDrugInteractions('1. таб. Варфарин 5 мг + Ибупрофен 200 мг').length,1);
  const coverage=localDrugCoverage('Верошпирон 25 мг, Лозартан 50 мг, Метформин');
- assert.equal(coverage.recognized.length,2);assert.deepEqual(coverage.unrecognized,['Метформин']);assert.equal(coverage.ruleCount,13);
+ assert.equal(coverage.recognized.length,3);assert.deepEqual(coverage.unrecognized,[]);assert.equal(coverage.ruleCount,13);
 });
 
 test('C3: risk matrix has source-backed actionable signals and avoids route/lookalike false positives',()=>{
