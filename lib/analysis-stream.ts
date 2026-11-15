@@ -62,4 +62,22 @@ export async function requestStreamedJson<T>(url:string,body:unknown,options:{si
  throw new Error('Соединение закрыто до получения итогового ответа. Предварительный текст не является заключением.');
 }
 
-export async function requestAnalysis(body:ConductInput,options:Parameters<typeof requestStreamedJson>[2]={}){const reviewed=await reviewBeforeSending(body);return requestStreamedJson<CaseResult>('/api/v1/cases',reviewed,options);}
+/** Runtime check: TypeScript's generic T does not validate a network payload. */
+export function isCaseResultEnvelope(value:unknown):value is CaseResult {
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
+ const v=value as Partial<CaseResult>;
+ return (v.clinicalDraft==='generated'||v.clinicalDraft==='unavailable')
+  && v.draft?.status==='unsigned'&&typeof v.draft.summary==='string'
+  && Array.isArray(v.draft.statements)&&Array.isArray(v.ledger)
+  && Array.isArray(v.voices)&&Array.isArray(v.unassessed)
+  && Array.isArray(v.citations)&&Array.isArray(v.readings)
+  && typeof v.gateway?.called==='boolean'
+  && typeof v.cost?.totalUsd==='number'&&Number.isFinite(v.cost.totalUsd);
+}
+
+export async function requestAnalysis(body:ConductInput,options:Parameters<typeof requestStreamedJson>[2]={}){
+ const reviewed=await reviewBeforeSending(body);
+ const result=await requestStreamedJson<unknown>('/api/v1/cases',reviewed,options);
+ if(!isCaseResultEnvelope(result))throw new Error('Сервис вернул неполный результат разбора. Черновик не сохранён как заключение.');
+ return result;
+}
