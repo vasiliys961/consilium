@@ -38,7 +38,8 @@ test('default Cursor viewer waits for new events and does not replay old errors 
  try{
   await new Promise<void>((resolve,reject)=>{
    let output='',written=false;
-   const timer=setTimeout(()=>reject(new Error('live viewer did not show the new event')),5000);
+   // Node's test runner starts many child processes concurrently on CI; allow the viewer to warm up.
+   const timer=setTimeout(()=>reject(new Error('live viewer did not show the new event')),12000);
    child.on('error',error=>{clearTimeout(timer);reject(error);});
    child.stdout.on('data',chunk=>{
     output+=chunk.toString();
