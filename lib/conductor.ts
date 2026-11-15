@@ -138,7 +138,7 @@ export interface CaseResult {
   ledger: LedgerEntry[];
   unassessed: string[];
   citations: Citation[];
-  cost: { usageComplete?:boolean; billingComplete?:boolean; totalUsd: number; credits: number; steps: CostStep[]; calls?: Array<{model:string;inputTokens:number;outputTokens:number;durationMs:number;status:"received"|"truncated"|"failed";usageAvailable?:boolean;usd:number;billingSource?:'openrouter'|'estimate'}> };
+  cost: { usageComplete?:boolean; billingComplete?:boolean; totalUsd: number; credits: number; steps: CostStep[]; calls?: Array<{model:string;inputTokens:number;outputTokens:number;durationMs:number;status:"received"|"truncated"|"failed";stage?: import('./cost.ts').CostCallStage;usageAvailable?:boolean;usd:number;billingSource?:'openrouter'|'estimate'}> };
   gateway: { provider: GatewayProvider; called: boolean };
   attachment: string | null;
   retained: boolean;
