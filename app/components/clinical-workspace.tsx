@@ -14,8 +14,11 @@ import {GeneticExtraction} from './genetic-extraction';
 import {ImageProfileSelect} from './image-profile';
 import {AnalysisProgress} from './analysis-progress';
 import {requestAnalysis,type AnalysisProgressEvent} from '@/lib/analysis-stream';
+import {commitClinicalAnalysis,stagePhysicianQuestion,preservePendingQuestion} from '@/lib/case-result-commit';
 import {ProductGuide,ReferenceInstructions} from './product-guide';
 import { CASE_SECTIONS, type CaseSection } from "@/lib/physician-guide";
+import { runOptionsKey, duplicateCompletedRun, repeatedRunWarning } from '@/lib/repeat-analysis';
+import { radiologyEvidenceText } from '@/lib/module-evidence';
 import { CaseNavigation, CaseSectionControls } from './case-navigation';
 import helpStyles from "./physician-help.module.css";
 import {downloadDocx} from '@/lib/download-docx';
@@ -28,9 +31,10 @@ import { workflowGuide } from "@/lib/workflow-guide";
 import { WorkflowGuideView } from "@/app/components/workflow-guide";
 import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
+import type {MedicationContext} from '@/lib/drug-interaction-rules';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
-import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, decisionDraftFrom, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
+import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, persistCaseAutosave, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
 import { prepareFile } from '@/lib/case-intake';
 import type { CaseTask } from '@/lib/case-plan';
 import type { CaseResult, CaseFile } from '@/lib/conductor';
@@ -133,11 +137,17 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const draftSnapshot=current?{...current,workspaceDraft:{question:caseQuestion,note:eventDrafts.note,decision:eventDrafts.decision,tab}}:null;
     const latestDraft=useRef(draftSnapshot);latestDraft.current=draftSnapshot;
     const flushed=useRef<string>('');
-    const flushDraft=async()=>{const value=latestDraft.current;if(value){await persistCase(value);flushed.current=JSON.stringify([value.id,value.updated,value.workspaceDraft]);}};
+    const flushDraft=async()=>{const value=latestDraft.current;if(value){const applied=await persistCaseAutosave(value);if(applied)flushed.current=JSON.stringify([value.id,value.updated,value.workspaceDraft]);}};
     useEffect(()=>registerVaultFlush(flushDraft),[]);
     useEffect(()=>()=>{void flushDraft().catch(()=>{});},[]);
     useEffect(()=>{if(!current||busy||uploading)return;const record=draftSnapshot!,signature=JSON.stringify([record.id,record.updated,record.workspaceDraft]);if(flushed.current===signature)return;
-      const timer=setTimeout(()=>{void persistCase(record).then(()=>{flushed.current=signature;if(latestDraft.current?.id===record.id){setCases(values=>[record,...values.filter(x=>x.id!==record.id)]);setDirty(false);}}).catch(()=>setNotice('Автосохранение не удалось. Сохраните или экспортируйте случай перед переходом.'));},250);
+      const timer=setTimeout(()=>{void persistCaseAutosave(record).then(async applied=>{
+        if(!applied)return; // A newer analysis/attachment already superseded this snapshot.
+        if(latestDraft.current?.id!==record.id||JSON.stringify([latestDraft.current.id,latestDraft.current.updated,latestDraft.current.workspaceDraft])!==signature)return;
+        const saved=await readCases(true);
+        if(latestDraft.current?.id!==record.id||JSON.stringify([latestDraft.current.id,latestDraft.current.updated,latestDraft.current.workspaceDraft])!==signature)return;
+        flushed.current=signature;setCases(saved);setDirty(false);
+      }).catch(()=>setNotice('Автосохранение не удалось. Сохраните или экспортируйте случай перед переходом.'));},250);
       return()=>clearTimeout(timer);
     },[current,caseQuestion,eventDrafts,tab,busy,uploading]);
     useEffect(()=>{const refresh=()=>{const id=latestDraft.current?.id;if(id)void readCases(true).then(values=>{const fresh=values.find(x=>x.id===id);if(fresh){setCases(values);setCurrent(fresh);}});};window.addEventListener('concilium-case-updated',refresh);return()=>window.removeEventListener('concilium-case-updated',refresh);},[]);
@@ -191,34 +201,73 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     }
     const payloadTooLarge = current && JSON.stringify([...current.files.filter(file=>materialRoute(file)!=='radiology'),...(current.library??[])]).length > 12000000;
     const canAnalyze = Boolean(current && !current.deletedAt && current.status==='active' && configured && !busy && !uploading && !payloadTooLarge);
-    async function analyze(snapshot = current, requestedTask = task, withCouncil = consilium, kind:AnalysisKind = 'analysis') {
+    async function analyze(snapshot = current, requestedTask = task, withCouncil = consilium, kind:AnalysisKind = 'analysis', explicitQuestion?:string) {
         if (!snapshot || !canAnalyze || analysisRequest.current)
             return;
-        if(caseAnalysisInput(snapshot).pendingModules.length){await save(snapshot);router.push(moduleHref('radiology',snapshot.id));return;}
-        if(snapshot===current&&caseQuestion.trim()){snapshot={...snapshot,events:[...snapshot.events,{id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:caseQuestion.trim()}]};setCaseQuestion('');}
+        const originalSnapshot=snapshot;
+        const pendingQuestion=(explicitQuestion??(snapshot===current?caseQuestion:'')).trim();
+        if(caseAnalysisInput(snapshot).pendingModules.length){
+            // The Radiology detour must not discard the physician's unsent
+            // question or new observations before navigating to the module.
+            try{
+                if(pendingQuestion){
+                    setCaseQuestion(pendingQuestion);
+                    await preservePendingQuestion(snapshot,pendingQuestion,eventDrafts.note,eventDrafts.decision);
+                }else if(!(await save(snapshot)))return;
+                router.push(moduleHref('radiology',snapshot.id));
+            }catch{setNotice('Не удалось сохранить вопрос перед переходом к Radiology. Останьтесь в случае и экспортируйте материалы.');}
+            return;
+        }
+        if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
         setBusy(true);setProgress([]);setPreview('');goToTab('analysis');
         setNotice('');
         const input = caseAnalysisInput(snapshot, rereadImages||imageSecondOpinion);
         try {
+            if(pendingQuestion){
+                // Record the pending request in the editable draft. The staged
+                // question event stays in memory until a complete response arrives.
+                await preservePendingQuestion(originalSnapshot,pendingQuestion,eventDrafts.note,eventDrafts.decision);
+            }
             const libraryQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question||caseContext(snapshot).slice(0,1000);
             const automaticEvidence=libraryOptions.enabled&&libraryOptions.automatic?await retrieveLibraryEvidence(libraryQuestion,{context:caseContext(snapshot).slice(0,3500),documentId:libraryOptions.documentId||undefined,signal:request.signal}):null;
             const libraryFiles=automaticEvidence?.files??(libraryOptions.enabled&&selectedLibrary.question===libraryQuestion?selectedLibrary.files:[]);
+            const requestOptionsKey=runOptionsKey({task:requestedTask,kind,consilium:withCouncil,secondOpinion:imageSecondOpinion,rereadImages,externalSearch,answerLocale,sourceLocale:language,retrievedSources:libraryFiles});
+            const latest=originalSnapshot.analyses[0];
+            // Repeating the same completed question must warn before any paid
+            // request, even when the UI stages a new question event for that run.
+            const sameQuestion=Boolean(pendingQuestion && latest?.question===pendingQuestion && kind!=='summary');
+            const comparableSignature=sameQuestion?caseSignature(originalSnapshot):caseSignature(snapshot);
+            if(duplicateCompletedRun(latest,comparableSignature,requestOptionsKey)
+                && !window.confirm(repeatedRunWarning(latest,language))){
+              setNotice('Повторный запрос отменён. Предыдущее заключение сохранено.');
+              return;
+            }
             const value = await requestAnalysis({ imageProfile:snapshot.imageProfile,caseId: snapshot.id, text: input.text, files: input.files, referenceFiles: [...(snapshot.library??[]),...libraryFiles], drugLabels:snapshot.drugLabels, externalSearch, locale: answerLocale, sourceLocale: language, consilium:withCouncil,secondOpinion:imageSecondOpinion, ...(requestedTask !== 'auto' ? { task:requestedTask } : {}), retain: false },{signal:request.signal,onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});
             if (!value.draft || !value.gateway)
                 throw new Error('Сервис вернул неполный результат.');
             const newestQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question;
             const title=kind==='summary'?'Резюме разбора':newestQuestion||'Разбор материалов и клинических данных';
-            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
-            const next:ClinicalCase={...snapshot,updated:entry.at,analyses:[entry,...snapshot.analyses],...(kind==='summary'&&value.clinicalDraft==='generated'?{decisionDraft:{analysisId:entry.id,at:entry.at,text:decisionDraftFrom(entry)}}:{})};
+            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),requestOptionsKey,materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
+            const {value:next,stored}=await commitClinicalAnalysis(snapshot,entry,{
+                question:pendingQuestion?'':caseQuestion,
+                note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis',
+            });
             setCurrent(next);
-                setDirty(true);
+            if(pendingQuestion)setCaseQuestion(value=>value.trim()===pendingQuestion?'':value);
+            if(stored)setCases(old=>[next,...old.filter(item=>item.id!==next.id)]);
+            setDirty(!stored);
             setRereadImages(false);
-            setNotice(value.clinicalDraft === 'generated' ? t("Черновик готов. Проверьте источники и ограничения перед решением.") : value.draft.summary);
+            setNotice(!stored
+                ? 'Ответ получен, но не сохранён в браузере. Экспортируйте случай сейчас; не закрывайте страницу.'
+                : value.clinicalDraft === 'generated' ? t("Черновик готов. Проверьте источники и ограничения перед решением.") : value.draft.summary);
         }
         catch (e) {
-            setNotice(request.signal.aborted ? 'Разбор остановлен.' : e instanceof Error ? e.message : t("Нет соединения с сервисом."));
+            // Previews are unverified partial tokens and never become a case result.
+            // The doctor question remains in the editor (and was preserved locally).
+            setPreview('');
+            setNotice(request.signal.aborted ? 'Разбор остановлен. Вопрос сохранён для повторного запуска.' : e instanceof Error ? e.message : t("Нет соединения с сервисом."));
         }
         finally {
             analysisRequest.current = undefined;
@@ -240,28 +289,41 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         if (!current || !eventText.trim())
             return;
         if(editingCurrent&&editingEvent){const next=reviseCaseEvent(current,editingEvent,eventText);void storeTransition(next,'Правка сохранена. Предыдущий текст доступен в истории правок.').then(saved=>{if(saved){setEditingEvent(undefined);setEventDrafts(value=>({...value,[eventKind]:''}));}});return;}
-        const events: Event[] = [...current.events, { id: crypto.randomUUID(), at: new Date().toISOString(), kind:eventKind, text: eventText.trim() }];
-        update({ events });
+        const at=new Date().toISOString();
+        const events: Event[] = [...current.events, { id: crypto.randomUUID(), at, kind:eventKind, text: eventText.trim() }];
+        const snapshot:ClinicalCase={...current,events,updated:at};
+        setCurrent(snapshot);
+        setDirty(true);
         setEventDrafts(value => ({...value,[eventKind]:''}));
         if (andAnalyze) {
-          if(eventKind==='note')events.push({id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:caseQuestion.trim()||'Динамика: что изменилось с учётом новых данных и как это влияет на дальнейшую тактику?'});
-          void analyze({...current, events},task,consilium,'analysis');
+          const requestQuestion=caseQuestion.trim()||
+            (eventKind==='note'
+              ? 'Динамика: что изменилось с учётом новых данных и как это влияет на дальнейшую тактику?'
+              : 'Оцените последствия нового решения врача для дальнейшего ведения.');
+          setCaseQuestion(requestQuestion);
+          // The observation/decision is a real physician event, but the extra
+          // AI question is NOT committed until a completed response arrives.
+          void analyze(snapshot,task,consilium,'analysis',requestQuestion);
         }
     }
-    function reviewMedications(active:string,proposed:string){if(!current||!canAnalyze)return;
-      const question=['Проверьте лекарственные взаимодействия и риски только для перечисленных препаратов. Отдельно оцените подтверждённые сочетания, недостающие данные и источники; не считайте отсутствие найденного правила доказательством совместимости.',`Текущий список, сообщённый врачом:\n${active||'(не указан)'}`,`Предполагаемое назначение, ещё не принято:\n${proposed||'(не указано)'}`].join('\n\n');
-      const snapshot={...current,currentMedications:active,events:[...current.events,{id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question' as const,text:question}]};
-      void analyze(snapshot,'management',false,'question');
+    function reviewMedications(active:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext}){if(!current||!canAnalyze)return;
+      const question=['Проверьте лекарственные взаимодействия и риски только для перечисленных препаратов. Отдельно оцените подтверждённые сочетания, недостающие данные и источники; не считайте отсутствие найденного правила доказательством совместимости.',`Текущий список, сообщённый врачом:\n${active||'(не указан)'}`,`Предполагаемое назначение, ещё не принято:\n${proposed||'(не указано)'}`,`Отменяются до назначения (НЕ считать текущим совместным приёмом):\n${details.stopped||'(нет)'}`,`Альтернативы, взаимоисключающие схемы (НЕ объединять):\n${details.alternatives||'(нет)'}`,`Данные для лекарственной безопасности: СКФ ${details.context.egfr??'неизвестна'} мл/мин/1,73 м²; калий ${details.context.potassium??'неизвестен'} ммоль/л; декомпенсированный цирроз ${details.context.decompensatedCirrhosis===true?'подтверждён':'не подтверждён'}; тяжёлая печёночная недостаточность ${details.context.severeHepaticImpairment===true?'подтверждена':'не подтверждена'}.`].join('\n\n');
+      const snapshot:ClinicalCase={...current,currentMedications:active,updated:new Date().toISOString()};
+      setCurrent(snapshot);
+      setDirty(true);
+      setCaseQuestion(question);
+      void analyze(snapshot,'management',false,'question',question);
     }
     function askCase(kind: 'question' | 'management' | 'council' | 'summary') {
         if (!current || !canAnalyze) return;
         const defaults={management:'Какие варианты лечебной тактики подходят к этому случаю и что проверить перед назначением?',council:'Консилиум: разберите нерешённые вопросы, разногласия и следующий шаг.',summary:'Резюме всей дискуссии: кратко сопоставьте все этапы, новые данные и разногласия. Укажите выводы, следующий шаг, условия изменения тактики и оставшиеся вопросы. Подготовьте проект решения для врача, не выдавая его за принятое решение.',question:''};
         const question=kind==='summary'?[defaults.summary,caseQuestion.trim()].filter(Boolean).join('\n'):caseQuestion.trim()||defaults[kind];
         if (!question) return;
-        const events: Event[] = [...current.events, {id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:question}];
-        update({events});
-        setCaseQuestion('');
-        void analyze({...current,events}, kind === 'management' || kind === 'summary' ? 'management' : 'auto', kind === 'council' || consilium,kind);
+        // Never clear the clinician's question or record a completed event
+        // merely because a button was pressed. The request can still fail.
+        setCaseQuestion(question);
+        void analyze(current,kind === 'management' || kind === 'summary' ? 'management' : 'auto',
+          kind === 'council' || consilium,kind,question);
     }
     const changeCase = (value: ClinicalCase | null) => {
         if(home && value){router.push(`/workspace?case=${encodeURIComponent(value.id)}`);return;}
@@ -309,14 +371,14 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
    {section === 'cases' && current && <>
     <button className={styles.back} disabled={busy} onClick={() => changeCase(null)}>{t("← Все случаи")}</button>
     <div className={styles.heading}><div><p className={styles.eyebrow}>{t("СЛУЧАЙ ·")}{current.id.slice(0, 8)} {dirty ? t("· СОХРАНЯЕМ") : ''}</p><h1>{caseTitle(current,t('Новый клинический случай'))}</h1><p>{t("Создан")} {date(current.created)} · {current.status === 'active' ? t("В работе") : t("Завершён")}</p></div><div className={styles.actions}><button disabled={busy} onClick={() => download(exportCase(current), `case-${current.id.slice(0, 8)}.md`, 'text/markdown')}>{t("↓ Экспорт")}</button><button disabled={busy} onClick={()=>void downloadDocx(current.title||t("Протокол осмотра"),exportCase(current),answerLocale).catch(()=>setNotice(t("Не удалось создать DOCX")))}>{t("Бланк DOCX")}</button><Link className={styles.primary} href={`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`} onClick={event=>{if(dirty||!cases.some(item=>item.id===current.id)){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`);});}}}>{t("Протокол осмотра")}</Link><Link href={`/radiology?case=${encodeURIComponent(current.id)}`} onClick={event=>{if(dirty){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/radiology?case=${encodeURIComponent(current.id)}`);});}}}>{t("Opus Radiology")}</Link><button className={styles.primary} disabled={busy || uploading} onClick={() => void save()}>{t("Сохранить случай")}</button></div></div>
-    <CaseConnections/>{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{report.text}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
+    <CaseConnections/>{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{radiologyEvidenceText(report)}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
     <button type="button" disabled={busy||saving} onClick={()=>void moveToTrash(current)}>{t('🗑 В корзину')}</button>
     <details className={privacyStyles.localPatient}><summary>{t('Данные пациента · только локально')}</summary><p>{t('Эти поля сохраняются вместе со случаем только в этом браузере. Используйте их для связи кода случая с пациентом. Они не включаются в запросы моделям.')}</p>{(['name','birthDate','identifiers','dates'] as const).map((field,index)=><label key={field}>{t(['ФИО пациента','Дата рождения','Контакты и идентификаторы','Точные даты исследований'][index])}<input disabled={busy} type={field==='birthDate'?'date':'text'} value={current.privatePatient?.[field]??''} onChange={e=>update({privatePatient:{name:'',birthDate:'',identifiers:'',dates:'',...current.privatePatient,[field]:e.target.value}})}/></label>)}</details>
     <PhoneImport disabled={busy||uploading||current.status==='closed'} locale={language} onFile={async (file) => { const transfer = new DataTransfer(); transfer.items.add(file); await addFiles(transfer.files); }}/>
     <CaseNavigation index={tabIndex} navRef={caseNav} fileCount={current.files.length} busy={busy} onNavigate={goToTab}/>
     {noticeBox}
     <div className={styles.caseGrid}><section id="case-section-content" className={styles.panel}>{tab!=='analysis'&&<CaseTabHint text={CASE_SECTIONS[tabIndex].hint}/>}
-    {tab === 'context' && <><h2>{t("Клинический контекст")}</h2><p className={styles.muted}>{t("Используйте код случая вместо ФИО и других идентификаторов пациента.")}</p><label>{t("Название случая")}<input disabled={busy} value={current.title} placeholder={t("Например: повторный приём · случай 024")} onChange={e => update({ title: e.target.value })}/></label><label>{t("Жалобы, анамнез и данные осмотра")}<textarea rows={8} disabled={busy} value={current.context} placeholder={t("Возраст, симптомы и сроки, анамнез, препараты и дозы, аллергии, жизненные показатели…")} onChange={e => update({ context: e.target.value })}/></label><label>{t("На какой вопрос нужно ответить?")}<textarea rows={3} disabled={busy} value={current.question} placeholder={t("Дифференциальный диагноз, дополнительное обследование, варианты лечения и мониторинг…")} onChange={e => update({ question: e.target.value })}/></label><DrugInteractionChecker key={current.id+'-interactions'} onReview={canAnalyze?reviewMedications:undefined} current={current.currentMedications??''} onCurrentChange={currentMedications=>update({currentMedications})} disabled={busy}/><DrugLabelPicker key={current.id} selected={current.drugLabels} onChange={drugLabels=>update({drugLabels})} disabled={busy}/></>}
+    {tab === 'context' && <><h2>{t("Клинический контекст")}</h2><p className={styles.muted}>{t("Используйте код случая вместо ФИО и других идентификаторов пациента.")}</p><label>{t("Название случая")}<input disabled={busy} value={current.title} placeholder={t("Например: повторный приём · случай 024")} onChange={e => update({ title: e.target.value })}/></label><label>{t("Жалобы, анамнез и данные осмотра")}<textarea rows={8} disabled={busy} value={current.context} placeholder={t("Возраст, симптомы и сроки, анамнез, препараты и дозы, аллергии, жизненные показатели…")} onChange={e => update({ context: e.target.value })}/></label><label>{t("На какой вопрос нужно ответить?")}<textarea rows={3} disabled={busy} value={current.question} placeholder={t("Дифференциальный диагноз, дополнительное обследование, варианты лечения и мониторинг…")} onChange={e => update({ question: e.target.value })}/></label><DrugInteractionChecker key={current.id+'-interactions'} onReview={canAnalyze?reviewMedications:undefined} reviewLabel="Разобрать через полный консилиум (дороже, чем Flash-проверка)" current={current.currentMedications??''} onCurrentChange={currentMedications=>update({currentMedications})} disabled={busy}/><DrugLabelPicker key={current.id} selected={current.drugLabels} onChange={drugLabels=>update({drugLabels})} disabled={busy}/></>}
     {tab === 'materials' && <><h2>{t("Материалы случая")}</h2><p className={styles.muted}>{t("PDF, DOCX, XLSX, TXT, CSV, XML, JSON, VCF, JPG/PNG/WebP, TIFF, DICOM, ZIP, цифровая ЭКГ, короткое аудио и видео. До 8 МБ на файл, до 12 МБ на запрос.")}</p><input ref={picker} hidden type="file" multiple onChange={e => { void addFiles(e.target.files); e.target.value = ''; }}/><button className={styles.dropzone} disabled={busy || uploading} onClick={() => picker.current?.click()}><strong>{uploading ? t("Читаем материалы…") : t("＋ Выбрать файлы")}</strong><span>{t("Извлекаем данные перед отправкой на разбор")}</span></button>{current.files.map((f, i) => <div className={styles.fileRow} key={f.sha256}><div><strong>{f.name}</strong><small>{Math.round((f.bytes || 0) / 1024)}{t("КБ ·")}{f.text ? `${f.text.length} символов извлечено` : t("Изображение")}</small></div><Link href={moduleHref(materialRoute(f)==='radiology'?'radiology':materialRoute(f)==='ecg'?'ecg':'workbench',current.id)}>{t(materialRoute(f)==='radiology'?'Открыть в Opus Radiology':materialRoute(f)==='ecg'?'Открыть в модуле ЭКГ':'Открыть в станции')}</Link><button disabled={busy || uploading} onClick={() => update({ files: current.files.filter((_, j) => i !== j) })} aria-label={`${t("Удалить")} ${f.name}`}>{t("Удалить")}</button></div>)}<>{current.files.filter(f=>/\.vcf(?:\.gz)?$/i.test(f.name)).map(f=><GeneticExtraction key={f.sha256} file={f}/>)}</>
             <details className={helpStyles.referencePanel} open={Boolean(current.library?.length)}><summary>{t("Рекомендации и статьи · необязательно")}</summary><ReferenceInstructions expanded/><input ref={libraryPicker} hidden type="file" multiple accept=".pdf,.docx,.txt,.md" onChange={e => { void addFiles(e.target.files, true); e.target.value = ''; }}/><button disabled={busy || uploading} onClick={() => libraryPicker.current?.click()}>{t("Добавить руководство или статью")}</button>{current.library?.map((file, i) => <div className={styles.fileRow} key={file.sha256}><span>{file.name}</span><button disabled={busy} onClick={() => update({ library: current.library?.filter((_, j) => j !== i) })}>{t("Удалить")}</button></div>)}</details><p className={styles.muted}>{t("DICOM, архивы, сигналы ЭКГ и видео:")}<Link href={current?moduleHref('workbench',current.id):'/workbench'}>{t("расширенная станция ↗")}</Link>{t("Из случая открывайте модуль или станцию по кнопкам: случай и загруженные материалы передаются автоматически. Повторно выбирать случай и загружать тот же файл не нужно.")}</p></>}
     {tab === 'analysis' && <>
