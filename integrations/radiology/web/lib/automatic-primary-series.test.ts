@@ -1,0 +1,126 @@
+import {strict as assert} from "node:assert";
+import {suggestPrimaryDicomSeries,canAutoPrepareLocalVision,canUseVisionOnlyAsPrimary} from "./automatic-primary-series.ts";
+import type {DicomSeries,TechnicalDicomMetadata} from "./dicom-series.ts";
+
+// Realistic numeric DICOM identifiers and affine geometry are required by
+// the shared frame planner, not merely truthy UID placeholders.
+const uid=(value:string)=>"1.2.826.0.1.3680043.10.543."+
+ String([...value].reduce((n,c)=>(n*37+c.charCodeAt(0))%1000000000,7));
+const series=(key:string,modality:string,region:TechnicalDicomMetadata["bodyRegion"],
+ count:number,ready:boolean,role:TechnicalDicomMetadata["imageRole"]="PRIMARY",
+ study="public-study"):DicomSeries=>({
+ key,label:key,modality,volumeReady:ready,spatiallySorted:ready,
+ sliceSpacingMm:ready?1:null,warning:null,
+ members:Array.from({length:count},(_,i)=>({
+  id:`${key}-${i}`,name:`img-${i}.dcm`,
+  metadata:{
+   modality,bodyRegion:region,imageRole:role,numberOfFrames:1,
+   studyUid:uid(study),seriesUid:uid(key),sopInstanceUid:`${uid(key)}.${i+1}`,
+   frameOfReferenceUid:uid("public-frame"),
+   imagePositionPatient:[0,0,i],imageOrientationPatient:[1,0,0,0,1,0],
+  } as TechnicalDicomMetadata,
+ })),
+});
+const select=(items:DicomSeries[])=>suggestPrimaryDicomSeries(items,
+ new Set(items.flatMap(s=>s.members.map(m=>m.id))));
+assert.equal(select([]).key,null);
+const scout=series("scout","CT","CHEST",1,false,"LOCALIZER");
+const chest=series("diagnostic-chest","CT","CHEST",103,true);
+assert.deepEqual([select([scout,chest]).key,select([scout,chest]).runnable],
+ ["diagnostic-chest",true],"Original diagnostic volume must beat localizer");
+const derived=series("reconstruction","CT","CHEST",220,true,"DERIVED");
+assert.equal(select([derived,chest]).key,chest.key,"Never prefer derived CT over original");
+const unknown=series("unknown-anatomy","CT",null,256,true);
+assert.equal(select([unknown,chest]).key,chest.key,"Unknown anatomy cannot be silently declared chest");
+const onlyUnknown=select([scout,unknown]);
+assert.equal(onlyUnknown.key,unknown.key);
+assert.equal(onlyUnknown.runnable,false,"Unknown anatomy cannot trigger native inference");
+const other=series("abdomen","CT","ABDOMEN",120,true);
+const multiple=select([chest,other]);
+assert.equal(multiple.ambiguity,true,"Competing diagnostic series must be disclosed");
+assert.equal(multiple.key,other.key,"Choose larger complete native volume when multiple are eligible");
+const incomplete=new Set(chest.members.slice(1).map(m=>m.id));
+assert.equal(suggestPrimaryDicomSeries([chest,scout],incomplete).runnable,false,
+ "Missing original pixels must never be called runnable");
+assert.equal(canAutoPrepareLocalVision(chest),true,
+ "Original CT can prepare local PNG samples without cloud permission");
+assert.equal(canAutoPrepareLocalVision(series("brain","MR","HEAD",28,true)),true);
+assert.equal(canAutoPrepareLocalVision(scout),false);
+assert.equal(canAutoPrepareLocalVision(derived),true,
+ "A geometry-verified derived reconstruction may prepare reviewed PNGs without enabling quantitative models");
+assert.equal(canAutoPrepareLocalVision(series("broken","MR","HEAD",30,false)),false);
+assert.equal(canAutoPrepareLocalVision(series("xray","DX","CHEST",1,false)),false);
+const radiograph=series("xray-ready","DX","CHEST",1,false);
+radiograph.members[0].metadata.rows=2048;
+radiograph.members[0].metadata.columns=2048;
+assert.equal(canAutoPrepareLocalVision(radiograph),true,
+ "A single DICOM radiograph prepares a local image for Gemini and Opus");
+assert.equal(canAutoPrepareLocalVision({...chest,members:chest.members.map((m,i)=>i===0?
+ {...m,metadata:{...m.metadata,studyUid:null}}:m)}),false);
+assert.equal(canAutoPrepareLocalVision({...chest,members:chest.members.map((m,i)=>i===1?
+ {...m,metadata:{...m.metadata,seriesUid:uid("other-series")}}:m)}),false,
+ "Mixed SeriesInstanceUID must not auto-open Vision");
+assert.equal(canAutoPrepareLocalVision({...chest,members:chest.members.map((m,i)=>i===1?
+ {...m,metadata:{...m.metadata,sopInstanceUid:chest.members[0].metadata.sopInstanceUid}}:m)}),false,
+ "Duplicate SOPInstanceUID must not auto-open Vision");
+assert.equal(canAutoPrepareLocalVision({...chest,members:chest.members.map((m,i)=>i===1?
+ {...m,metadata:{...m.metadata,imageOrientationPatient:null}}:m)}),false,
+ "Missing physical affine must not auto-open Vision");
+const pelvis=series("pelvis","CT","PELVIS",100,true);
+const knee=series("knee","MR","EXTREMITY",28,true);
+const allIds=(study:DicomSeries)=>new Set(study.members.map(m=>m.id));
+const skull=series("skull","DX","HEAD",1,false);
+skull.members[0].metadata.rows=2048;
+skull.members[0].metadata.columns=2048;
+assert.equal(canUseVisionOnlyAsPrimary(skull,allIds(skull)),true,
+ "A non-chest radiograph is still analyzed as an image");
+const oneFile=series("one-slice","CT","ABDOMEN",1,false);
+oneFile.members[0].metadata.rows=512;
+oneFile.members[0].metadata.columns=512;
+assert.equal(canAutoPrepareLocalVision(oneFile),true,
+ "A single CT or MR file can be reviewed without a spatial volume");
+assert.equal(canUseVisionOnlyAsPrimary(oneFile,allIds(oneFile)),true);
+assert.equal(select([oneFile]).visionOnly,true);
+assert.equal(select([oneFile]).runnable,false,"One file must not start a volume detector");
+assert.equal(canUseVisionOnlyAsPrimary(pelvis,allIds(pelvis)),true,
+ "Verified CT pelvis without a local detector must have a universal Vision path");
+assert.equal(canUseVisionOnlyAsPrimary(knee,allIds(knee)),true,
+ "Verified MRI of a joint must remain reviewable even without a native detector");
+assert.equal(canUseVisionOnlyAsPrimary(chest,allIds(chest)),false,
+ "Original chest model route takes precedence over Vision-only fallback");
+assert.equal(canUseVisionOnlyAsPrimary(derived,allIds(derived)),true);
+assert.equal(select([derived]).runnable,false,"DERIVED never becomes native model eligibility");
+assert.equal(select([derived]).visionOnly,true,"Valid source-linked DERIVED frames retain independent Vision");
+assert.equal(canUseVisionOnlyAsPrimary(pelvis,new Set()),false,
+ "Vision-only must reject missing source pixels");
+assert.equal(canUseVisionOnlyAsPrimary({...pelvis,spatiallySorted:false},allIds(pelvis)),false);
+// Selection must treat source-verified universal Vision as a real local route,
+// without ever claiming that a trained disease detector has executed.
+const eligibleFallback=select([scout,derived,pelvis]);
+assert.equal(eligibleFallback.key,pelvis.key,
+ "Verified pelvis CT must outrank scout and an oversized derived reconstruction");
+assert.equal(eligibleFallback.runnable,false,
+ "Universal Vision must not be mislabeled as native pathology inference");
+assert.equal(eligibleFallback.visionOnly,true);
+assert.match(eligibleFallback.reason,/Gemini\/Opus без патологического детектора/);
+const primaryNative=select([pelvis,chest]);
+assert.equal(primaryNative.key,chest.key,"Native model route takes priority when present");
+assert.equal(primaryNative.runnable,true);
+assert.equal(primaryNative.visionOnly,false);
+assert.equal(primaryNative.ambiguity,true,
+ "Competing viable Vision and native series need an explicit selection warning");
+const twoVision=select([knee,pelvis]);
+assert.equal(twoVision.key,pelvis.key);
+assert.equal(twoVision.visionOnly,true);
+assert.equal(twoVision.ambiguity,true);
+const badGeometry={...pelvis,spatiallySorted:false,volumeReady:false};
+const invalidUid={...pelvis,members:pelvis.members.map((m,i)=>i===0?
+ {...m,metadata:{...m.metadata,sopInstanceUid:"not-a-valid-uid"}}:m)};
+assert.equal(select([scout,badGeometry]).visionOnly,false);
+assert.equal(select([scout,invalidUid]).visionOnly,false);
+assert.equal(suggestPrimaryDicomSeries([pelvis],
+ new Set(pelvis.members.slice(1).map(m=>m.id))).visionOnly,false,
+ "Missing original pixel file must not be presented as a runnable Vision study");
+assert.equal(onlyUnknown.visionOnly,true,
+ "Valid but unknown anatomy can use the independent Vision route");
+console.log("PASS automatic native DICOM primary series selection and fail-closed routes");

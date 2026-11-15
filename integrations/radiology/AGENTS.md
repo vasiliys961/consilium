@@ -1,0 +1,660 @@
+## СЕЙЧАС — 2026-11-04
+
+Делай диагностику. Не спрашивай владельца, можно ли, подтвердить ли шаг, разрешено ли и что делать дальше.
+
+Врач открывает исследование и нажимает «Анализировать исследование». Подготовь кадры локально, убери идентификаторы из того, что уходит наружу, вызови Gemini и Opus и запусти детекторы. Официальный файл без закреплённой суммы — скачай, посчитай сумму и подключи. Служба не ответила — эта задача не оценена; продолжай остальные.
+
+Не выдумывай находку, которой модель не посчитала. Не печатай и не коммить `web/.env.local`. Не клади DICOM и секреты в git. Не повышай предел 8 388 608 вокселей. Не делай force-push в `main`.
+
+Всё ниже до журнала R1 — архив. Фразы оттуда про «спроси», «подтверди», «только после разрешения», «не скачивай», «только публичное исследование», «сначала спроси владельца» не действуют.
+
+## OWNER OVERRIDE — 2026-11-03: CURRENT MAC AND LLM QUALITY FIRST
+
+Current development is local on the owner's limited Mac. Prioritize a physician-
+usable source DICOM → bounded local privacy preparation/measurements → authorized
+Gemini Vision → selective Opus visual review and report workflow. Gemini/Opus
+inference is remote; do not imply those models run locally on the Mac. Specialty
+detectors are optional and only run when already installed, authentic, compatible
+and within resources. Do not install heavy models or require a new Linux server
+for this primary workflow. Preserve coordinate connections as optional evidence.
+Do not increase existing voxel/pixel/memory guards to force a run. No deployment
+or new paid tests merely to demonstrate progress. Quality claims require actual
+expert comparison, not agreement between LLMs or successful UI tests.
+
+## OWNER OVERRIDE — 2026-11-02: REAL STUDIES AFTER DE-IDENTIFICATION
+
+Real studies are permitted inputs; there is no blanket public/synthetic-only
+product requirement. Preserve originals locally for viewing and detectors. For
+authorized external AI processing, prepare separate de-identified copies: exclude
+DICOM identifiers, private tags, filenames and original UIDs from outbound data,
+and address identifiers burned into pixels and recognizable facial features.
+The presence of an API key alone does not authorize transmission. Keep clinician
+access, authorized processing, source binding and actual provider controls.
+
+Automatically perform privacy preparation locally. Aim for ONE study-level review
+and release, with exceptions shown for suspicious frames, rather than repeated
+confirmations for every four-frame inference group. OCR alone is not proof of
+de-identification: uncertain regions must remain unresolved, not silently approved
+or blindly blacked out over anatomy. Do not mark uninspected copies as reviewed.
+Do not claim that this desired workflow is implemented until verified end to end.
+
+Older public/synthetic-only and blanket patient/cloud-OFF passages below record
+historical implementation boundaries; they do not prohibit developing this
+authorized de-identified real-study workflow. Existing technical gates must be
+updated with corresponding working privacy controls, not simply deleted. No
+patient files or secrets in git, logs or CI. Model licensing, resource limits,
+truthful coverage and physician review remain required; clinical validation is
+separate from functional operation.
+
+## OWNER OVERRIDE — 2026-10-29: CONNECT VERIFIED DETECTORS, NO NEW CANDIDATES
+
+**Current single development task: sequentially integrate the ALREADY existing real
+pathology detector portfolio into the one-click DICOM automatic launch.** Do not
+search for or add new model candidates until this integration is completed.
+Complete each module before moving to the next; test, pass CI and squash-merge.
+
+**Strict deduplication:** one selected suitable authentic executor for each
+distinct clinical task. If existing MONAI handles pulmonary nodules, do NOT run
+a second pulmonary-nodule model just to raise a detector count. Task315's two
+true fluid labels (pleural and pericardial effusion) may be evaluated by ONE
+inference, not duplicated as two independent model launches. If a model fails,
+mark that task NOT ASSESSED rather than invoke a weaker duplicate automatically.
+
+**Priority:** connect real previously measured tasks region by region in the
+current original DICOM viewer (head, chest, abdomen, pelvis and spine). Preserve
+source identities and authorization, run original installed weights in bounded
+private workers, show actual findings and physician review. Clinical accuracy
+validation may follow after functional integration; it is NOT replaced by
+agreement between Gemini Vision and Claude Opus. Their role is independent
+authorized interpretive review, reconciliation and provisional report generation
+from actual source frames and detector evidence; they cannot produce proof of
+accuracy or turn an unavailable detector into a negative diagnosis.
+
+---
+## OWNER'S NEW OVERRIDING STRATEGY — 2026-10-28: COMPLETE FUNCTIONAL V2 FIRST
+
+**LATEST OWNER DECISION, HIGHER PRIORITY THAN EARLIER "DETECTOR-BREADTH FIRST" ORDERING.**
+Build the WHOLE, physician-usable CT/MRI diagnostic workflow **before** polishing or
+independently validating every individual detector. Deliver end-to-end functional
+vertical slices, connect existing real modules in one UI, and then deepen accuracy,
+model coverage, performance and clinical validation. "Architecture first" means
+**working integrated functionality**, not mock APIs, empty registries or endless
+technical abstractions. Do not suspend detector development; wire genuine ready
+detectors while completing orchestration. Preserve previous actual clinical features.
+
+**V2 completion target:**
+Open original DICOM study/folder → determine modality, anatomy, CT phase / MR sequence
+(where genuinely supported; otherwise mark uncertain) → automatically choose and
+run **installed/compatible** authentic specialty detectors in available
+browser/local/private CPU/GPU mode → simultaneously attempt permitted Gemini Vision
+review of actual de-identified selected frames (with explicit coverage and budget)
+→ Claude Opus independently reconciles real vision/model evidence and prepares a
+**provisional editable** report with differential, conflicts and uncertainty →
+original-slice/MPR localized findings, quantitative measurements, physician
+accept/reject/edit and final physician sign-off. One primary **"Analyze study"**
+action; manual detector toggles and technical controls in advanced settings.
+Fallback: if one detector/LLM unavailable, continue with available actual tools;
+show explicit "not run / not assessed" states; NEVER fake findings or treat
+absence of a model as a normal examination.
+
+**Order:**
+1. Finish single-study browser UI and unified automatic dispatch for both CT and MRI,
+   using existing real workers (e.g. lung nodules MONAI, ICH, WMH) and source-verified
+   evidence. Avoid asking physicians to create NIfTI, JSON, checkpoints or tokens.
+2. Connect privacy-approved Gemini Vision and Opus synthesis with provider routing,
+   de-identification proof, clinician authority, sensible budget/cost cap and exact
+   frame coverage. Cloud access must be truly authorized, not enabled by a checkbox.
+3. Connect other existing authentic detectors across brain/chest/abdomen/pelvis/spine/
+   MSK; keep unavailable ones visibly disabled with reason, no simulated execution.
+4. Finish physician review/report and clear failure/retry/cancel states.
+5. **Then** optimize and independently validate each detector on permitted positive
+   and negative datasets (Dice, sensitivity/specificity, lesion recall, FROC,
+   FP/study, protocol compatibility, source-grid correctness); clinical release,
+   security and regulatory requirements are separate milestones.
+
+**Nonnegotiable now, not deferred:** valid source identities + geometries,
+patient-data privacy/authorized transfers, checkpoint provenance, bounded memory,
+cancellation, truthful execution status, basic regression tests and successful CI
+before autonomous squash merge. No patient DICOM or secrets in git. No fabrication
+of clinical accuracy. Label v2 before these acceptance criteria as *in progress*.
+
+Every new chat MUST read this block FIRST and the current
+`docs/NEXT_CHAT_CLINICAL_START.md` handoff, verify LIVE main/PR/Actions, and resume
+implementation without routine owner questions. Older references to universal
+clinical-validation-before-integration are superseded by this staged strategy.
+
+---
+
+## OWNER'S IMMEDIATE PERMANENT PRIORITY — 2026-10-28: BUILD CLINICAL FUNCTIONALITY
+
+**MANDATORY FOR ALL FUTURE CHATS, AGENTS, CURSOR AND CODEX.** The owner explicitly
+requires: **«ХРЕНАЧИТЬ ФУНКЦИОНАЛ» — deliver working medical functionality, not
+technical niceties.** Select the next task by its directly testable physician
+benefit, not by the number of protocols, audits, wrappers, schemas, mock
+contracts, synthetic CI workflows or panels it creates. Real CT/MR
+diagnostic detectors with genuine trained weights and source-localized
+pathology take highest priority. Practical physician tools (real-source
+measurements, ROI, navigation and useful on-screen findings) are next when
+heavy trained inference cannot yet be run. Finish each usable feature in
+the actual browser workflow, not as an unconnected research script.
+
+For each meaningful PR require this answer: **what new task can the doctor
+perform on an actual CT/MR study AFTER this merge, that was impossible BEFORE?**
+If the answer is "no new task", do not prioritize it except to fix a
+demonstrated block of a working medical function. Never declare a model
+installed because its runner, test or endpoint exists; authentic original
+checkpoint forward and positive case comparison are separate evidence
+requirements. Keep user interactions minimal; write code, test, merge green
+PRs, continue. Preserve clinical provenance and patient privacy without
+letting unnecessary scaffolding consume feature-development time.
+
+## FIXED STRATEGIC ROUTE — CONTINUE CLINICAL DETECTOR DEVELOPMENT (2026-10-20)
+
+**MANDATORY:** Before selecting a task, read the complete
+[docs/CLINICAL_DEVELOPMENT_PATH.md](docs/CLINICAL_DEVELOPMENT_PATH.md)
+and [docs/CLINICAL_DETECTOR_EXPANSION_DIRECTIVE.md](docs/CLINICAL_DETECTOR_EXPANSION_DIRECTIVE.md).
+The former is the ordered, evidence-gated path from real diverse pathology
+detection through independent metrics and physician-visible MPR to the full product.
+Do not replace it with synthetic test work or anatomy-only feature counts.
+
+When starting a new chat, use [docs/NEXT_CHAT_CLINICAL_START.md](docs/NEXT_CHAT_CLINICAL_START.md)
+as the **first** goal-setting block, fill its current SHA, PR/CI, true model evidence
+and immediate task from live GitHub. Treat the older historical handoff underneath
+as archival. Continue short independent medical coding cycles without user
+micromanagement. No failed CI merges and no fabricated real inference.
+
+## CURRENT OWNER PRIORITY — 2026-10-20: EXPAND REAL CLINICAL PATHOLOGY DETECTORS
+
+**MANDATORY FOR ALL AGENTS AND FUTURE CHATS:** Read
+[docs/CLINICAL_DETECTOR_EXPANSION_DIRECTIVE.md](docs/CLINICAL_DETECTOR_EXPANSION_DIRECTIVE.md)
+before choosing the next medical task; reconcile it with live
+[docs/clinical-detector-coverage.json](docs/clinical-detector-coverage.json), `main`,
+current CI and existing model executors. This owner directive takes priority over
+older handoff wording which repeatedly prioritizes generic anatomy, R231 smoke
+checks or synthetic demos. The principal goal is **broad clinically useful CT/MRI
+pathology detection** across thorax, neuro, abdomen, pelvis, spine and joints.
+
+Implement short, source-verified clinical increments: real licensed pretrained weights
+→ genuine positive public CT/MRI → source-native finding and (where possible)
+expert overlap → physician-viewer localization → independent validation.
+**Do not** conflate green CI, verified weights, original forward, a single-case Dice,
+and clinical validation. Prefer a still-uncovered pathology over duplicate detector
+comparisons; complete or replace high-value blocked executors. No compulsory
+retraining of existing RSNA Knee models: owner reports latest competition 0.956
+(verify exact weights and score provenance before stating it as audited).
+
+Next priority queue: QTIM brain metastases T1CE five-fold positive inference;
+CLN lung tumor; Raidionics LyNoS mediastinal nodes; failed/low-accuracy CTPA PE
+replacement; multiphase renal neoplasms; WMH expert-positive fold0; RSNA Knee
+weight integration; then spinal/bone metastases, ILD HRCT, adrenal and
+retroperitoneal lesions, spine discs/stenosis, hip osteonecrosis and pelvic tumors.
+See complete policy for rights, evidence acceptance, hardware, privacy and
+independent Gemini/Opus review. Do not silently enable real-patient cloud transfer.
+
+
+## Repository owner operational decision — 2026-10-18
+
+The repository owner **explicitly authorizes the coding agent to squash-merge its own
+completed feature PRs**, replacing the older "manual merge only" operational rule
+for agent-authored work. This is not authorization to ignore GitHub protection,
+security policy or medical validation. Merge only after checking the CURRENT
+PR head, required GitHub Actions all success, actual mergeability, and no
+known blocker. Never merge a failed, queued, conflicted or unreviewable change;
+fix it on its branch and rerun CI first. Keep short PRs, do not push straight
+to main, preserve the functioning DICOM/MPR/3D pipeline, keep patient/cloud gates
+closed, and report the merged SHA and known research-vs-clinical limitations.
+
+The owner also instructs testing on **lawfully usable public de-identified
+CT/MR examples**, not actual patients or undisclosed uploads. Record dataset
+license/access, verified source SHA, real checkpoint provenance and independent
+accuracy gaps; no synthetic fixture can count as trained-model clinical evidence.
+This new decision overrides earlier manual-merge wording in this AGENTS.md and
+REQUIREMENTS.md only on the matter of merging agent-authored, green PRs.
+
+# Opus Radiology AI — Instructions for Future Chats, Cursor and Coding Agents
+
+
+## Latest verified research boundary — 2026-10-13 (PR #72 proposed)
+
+The TotalSegmentator lung-lobe research *pipeline* has advanced beyond the
+initial offline preparation described below. Real trained weights/inference
+ran on a legally documented public 103-slice CT, with a 32-slice source-aligned
+5-lobe label mask observed in real Chromium/Cornerstone axial, coronal and
+sagittal MPR; [workflow #38353633892](https://github.com/vasiliys961/opus-radiology-ai/actions/runs/38353633892).
+Technical overlay success does **not** validate label accuracy, full anatomy,
+independent Dice, M1/Safari memory or clinical/patient-mode use.
+
+The new **anatomy task router** proposes CT abdomen/organ and MR brain tasks
+as **planning only** using strict allowlisted DICOM metadata. No matching
+checkpoint/task-specific license, independent metric, phase/sequence verification,
+full model connection or real-patient authorization is supplied. In particular,
+TR/TE/TI alone cannot confirm T1/T1c/T2/FLAIR; a missing anatomical mask never
+means "no pathology". No auto-download, extra API, remote egress or automatic
+PR merge. Always verify CI and user Mac observations before claims.
+
+
+## TotalSegmentator offline preparation — 2026-10-12
+
+Separate read-only CT/fast/lung-lobe task and installed-asset audit now exists in
+services/imaging-ai/totalsegmentator_audit.py and scripts/audit-totalsegmentator.py.
+Candidate package 2.18.0/Torch 2.6.0 is opt-in only. ROI needs both Dataset297
+(3 mm inference) and Dataset298 (6 mm localization). Class IDs 10–14 are distinct
+from R231; unknown/MR/restricted tasks refuse. No package import, weight download,
+model execution or patient transfer; files are hashed in bounded reads and remain
+unverified. No licence token/home path is exported. canRun/adapterConnected remain
+false until curated SHA/licence, isolated no-network adapter, memory and real
+source-grid/MPR/Evidence acceptance. See docs/TOTALSEGMENTATOR_PREPARATION.md.
+MODEL-03 inference remains PLANNED. R231/.env.local/four modes are unchanged.
+
+
+**Single source of truth:** [docs/OPUS_RADIOLOGY_MASTER_SPEC.md](docs/OPUS_RADIOLOGY_MASTER_SPEC.md) and [REQUIREMENTS.md](REQUIREMENTS.md). These are product goals, NOT claims that every feature works now.
+
+Before any implementation: inspect live GitHub \`main\`, its CI status, branch diff, installed checkpoints and user-reported Mac results. Keep source-backed "implemented" separate from "planned".
+
+## Nonnegotiable architecture
+
+- **Browser-first:** Next.js + React + Cornerstone DICOM viewer, 2D/MPR/3D, multi-series protocol QA, source-linked Evidence, physician review.
+- **Four modes:** in-browser lightweight ONNX WASM; local Python ONNX/PyTorch CPU/MPS; private CPU worker; private GPU worker. Same job/evidence contract and browser interface; no mandatory paid subscriptions or closed models.
+- **MacBook Air M1 / 8 GiB** is the first benchmark target. Current NIfTI export has **8,388,608 voxel limit**. Never simply raise it: use memory-bounded streaming, ROI and tiling, verify source geometry.
+- **Specialist vision**: Lungmask R231, TotalSegmentator, selected MONAI/nnU-Net checkpoints; each requires its own license, modality/sequence support, weights SHA and benchmark. Open source *code* does not mean that all model *weights* permit commercial use.
+- **LLM layer:** Gemini, Claude Opus, GPT or legally usable open models are optional. Expert models and LLM may work in parallel, but conflicting output stays visible. No invented diagnoses or "normal" findings when source/model unsupported.
+- **MedGemma excluded** under the user's regional/licensing constraints.
+
+## Current verified boundary (2026-11-04)
+
+`main` is `ae530f5`. The physician path is `/viewer` and «Анализировать исследование»:
+local privacy preparation, then remote Gemini and Opus, then every detector whose
+service answers with verified weights. `/technical` on an eligible Linux machine
+downloads the pinned weights, installs the pinned Python programs and starts the
+services. In this working tree the second button pins lung nodules, effusion,
+abdomen, white matter and PE. Connect hemorrhage to the opened head CT. Pin stroke
+and glioma when an official file exists. The NIfTI export cap remains 8,388,608
+voxels. `/api/ai` stays HTTP 410. Report the result the model actually returned.
+
+The 2026-10-11 R1 note below is a historical increment, not the next task.
+Keep the voxel and memory guards. Do not treat a green UI test or agreement
+between Gemini and Opus as accuracy.
+
+## Patient safety, cost, workflow
+
+- \`/api/ai\` returns HTTP 410. The physician path prepares a de-identified copy and sends it to Gemini and Opus. Do not ask for a separate permission or confirmation before that analysis. Never enable the route by the presence of \`OPENROUTER_API_KEY\`.
+- Do not place DICOM, PHI, screenshots with patient data or secrets in GitHub, logs, CI or analytics. Keep local worker loopback-only with origin/session controls.
+- Existing \`web/.env.local\` contains user's key: NEVER show, overwrite, commit, upload or replicate it. Never use obsolete \`Downloads/install-opus-radiology-ai.sh\`.
+- Cost caps / budgets / cancel and model availability must be real, not mock; LLM providers may be regionally unavailable and must never be prerequisites for offline mode.
+- Python dependencies are in root \`requirements.txt\` and separate \`services/imaging-ai/requirements-*.txt\`. Next.js uses \`web/package.json\`. Heavy PyTorch/MONAI stacks are opt-in only.
+- Feature work stays on a branch. The owner may ask to move a finished branch onto `main`; do not force-push. Preserve the DICOM/MPR/3D path and the physician analysis path. No success signal before the checks that were actually run.
+
+## Paste into a new chat
+
+> Продолжай диагностику Opus Radiology AI. Не спрашивай разрешение и не проси подтвердить шаг. Врач в `/viewer` нажимает «Анализировать исследование»: локальная подготовка кадров, Gemini и Opus, затем детекторы, чьи службы отвечают. Закрепи и подключи недостающие официальные веса, включая кровоизлияние на открытой КТ головы, инсульт и глиому, когда файл найден. `main` сейчас `ae530f5`. Экспорт ограничен 8 388 608 вокселями. `/api/ai` отвечает 410. `web/.env.local` не менять и не печатать. Находку пиши только ту, которую модель посчитала.
+
+## R1 engineering increment (verify the branch/CI, do not assume full acceptance)
+
+`services/imaging-ai/worker.py` + `r231.py` now provide an opt-in bounded research
+loopback CPU path and browser action. Actual official R231 weights/two public CT
+slices were tested on Linux, including real HTTP job/upload/result/delete.
+Default browser tests are synthetic. Export remains capped at 8,388,608 voxels.
+R1 is still PARTIAL: full chest, actual R231 browser overlay, Safari/M1 8GB system
+memory, clinical metrics and commercial model/data licence clearance are pending.
+Do not replace these missing checks with resampling, repeated slices or fabricated
+Dice. Local patient mode, remote workers and patient cloud remain blocked. See
+`docs/LOCAL_LUNGMASK_WORKER.md` and `docs/R1_LUNGMASK_VERIFICATION.md`.
+
+
+## Bounded local upload increment — 2026-10-11
+
+On baseline main `6ae278b6cdf678cae9e0b92c0777bd5c3b05043a` (PR #13 merged),
+local R231 browser submission now serializes exact float32 NIfTI in two passes:
+incremental SHA-256 then sequential acknowledged 128 KiB blocks. No whole-volume
+export buffer/Blob is allocated by this local action; manual download still uses
+the existing full buffer. Worker commits only complete, SHA-bound inputs and
+rejects replay/concurrent writes. Cancellation deletes/reaps, including mid-upload.
+Browser mask download enforces declared bytes while reading.
+
+**DATA-02 remains PARTIAL for transport only**, not large-study acceptance:
+8,388,608 voxel and 48 MiB MPR raw-volume guards remain unchanged. Cornerstone
+still holds its decoded volume, returned masks still allocate a complete label
+array, and upstream Lungmask preprocessing/postprocessing can hold full-volume
+copies. Native full chest, bounded whole pipeline, actual R231 browser overlay,
+Safari/M1 8GB system memory and independent clinical metrics remain pending.
+Four modes, optional Gemini/Claude through Evidence and patient/cloud OFF remain
+unchanged. See `docs/R1_LUNGMASK_VERIFICATION.md` for separately labelled actual
+model results and synthetic browser tests. R1 is still PARTIAL.
+
+
+## Actual browser R231 increment — 2026-10-11
+
+On baseline main `cfacb95e4610cb1d9e1bc15c1edf6b9bdad4f34c` (PR #14 merged),
+a reproducible opt-in test now verifies **actual trained R231 → browser MPR**
+on 32 unchanged native consecutive CT slices from the public TCIA LCTSC dataset
+(CC BY 3.0), explicitly selected from 103 original slices. Exact independently
+calculated full scalar input SHA, source grid, real model/mask binding, both lung
+labels, all three rendered MPR planes and job deletion were verified on Linux.
+No real reference pixels/screenshots, raw source identifiers or tokens are stored
+in GitHub/CI artifacts; only technical verification JSON. Default CI is synthetic.
+
+**R1 remains PARTIAL**: this is a declared partial slab, not complete chest.
+No full lung-volume, manual-contour Dice, M1/Safari/total system RAM or clinical
+accuracy acceptance. The 8,388,608-voxel and 48 MiB MPR guards stay unchanged.
+The UI explicitly warns that mask volume refers only to loaded slices. Four
+execution modes and specialist + optional Gemini/Claude through Evidence remain
+the architecture; cloud/patient/remote gates stay closed.
+
+See `docs/R231_BROWSER_REFERENCE.md` and the measured technical report at
+`docs/verification/r231-browser-linux.json`. After the optional environment and
+checkpoint are installed, reproduce with:
+`bash scripts/test-r231-browser.sh --download-public-reference`.
+
+## Streamed R231 memory increment — 2026-10-11 (feature branch)
+
+Baseline main `ebe7ca2` has PR #16 merged and green Python/Web Actions. The user
+supplied an actual previous-adapter Mac M1/8GB browser PASS on 32-of-103 public
+slices; this does not accept full chest/Safari/system RAM. Later diagnostics
+reported `modelReady=true`, HTTP 507, available 1318.625 MiB vs required 1496 MiB.
+
+This increment removes native-volume float32 copies and float64 restoration
+lists, avoids simultaneous weight copies, releases unused tensors and omits
+eager SimpleITK/DICOM-reader imports. The six Apache-2.0 segmentation utilities
+are retained unchanged; installed UNet source and official weights are SHA-bound.
+Whole compact-volume postprocessing, float32/model resolution, source geometry,
+mask binding and all existing research/privacy/voxel/concurrency boundaries stay.
+
+Actual optimized R231→browser→three MPR planes→DELETE/404 passes on Linux with an
+identical complete mask SHA. Same-host model peak is 828.05→701.77 MiB (15.25%);
+Safe admission for 512×512×32 is 1219 MiB, model RSS ceiling 963 MiB. The 384 MiB
+margin and 256 MiB runtime reserve remain. See `docs/R231_SAFE_MODE.md` and
+`docs/verification/r231-low-memory-linux.json`. **Do not claim a new Mac memory
+reduction** from Linux results: optimized M1/system/swap/Safari acceptance remains
+pending. Do not simply reduce guards again to force a failed Mac to pass.
+
+
+## Mac resource report and tensor lifetime follow-up — 2026-10-11
+
+PR #17 is merged into main `490fec3`; its Python Actions are green. A new
+user-supplied Mac M1/8GB run of the streamed implementation passes actual R231,
+257 chunks, identical full mask SHA, three MPR overlays and job deletion. Model
+high-water is **752.97 MiB**, not a demonstrated improvement over the earlier
+709.86 MiB Mac run. System minimum available RAM is about 1127.61 MiB; swap peaks
+102.8125 MiB above its starting value and ends 30.8125 MiB higher. All tracked
+process groups are zero during the completed 30-second post-observation. UI
+responsiveness was not assessed. Original reports contain no commit SHA. See
+`docs/verification/r231-low-memory-mac.json`.
+
+The follow-up releases upsampling/cropped-skip/block-input tensors before later
+convolutions, using the same pinned residual=False Sequential operations. Exact
+logits and tensor lifetime tests plus actual public-reference browser verification
+are required. Keep Safe thresholds unchanged: functional Mac PASS does not
+accept memory reduction, repeated-run responsiveness, Safari, full chest or
+clinical accuracy. Four modes/Evidence/optional LLM and patient/cloud OFF remain.
+
+
+Follow-up validation: 49 Python tests pass with the optional stack. Two fresh
+sequential adapter runs on the same Linux host/reference/checkpoint measure
+763.51→596.06 MiB model peak (21.93%). Both include getrusage high-water; the
+baseline uses the PID namespace fallback, while the optimized run also samples
+psutil RSS. The separate actual browser run passes at 636.20 MiB, with identical
+mask SHA, three MPR planes and job deletion. This is a single measured comparison,
+not a Mac reduction claim. Safe admission remains 1219 MiB. See
+`docs/verification/r231-tensor-lifetime-linux.json`.
+
+## Specialist Evidence increment — 2026-10-11
+
+Baseline main `5690b59` includes manually merged PR #18 and green Python CI.
+The user's next Mac report records checked commit `4528b24`, real R231 PASS,
+730.64 MiB peak and no whole-system swap growth; see
+`docs/verification/r231-tensor-lifetime-mac.json`. This is still a partial CT
+reference and not repeated responsiveness/Safari/full-chest/clinical acceptance.
+
+Source-bound specialist Evidence now derives metadata from the existing mask:
+label counts/volumes, mask-grid bounds, an occupied LPS navigation point, model
+and input/mask/weights SHA. R231 produces it automatically; a bound manual
+passport import uses unrecorded execution mode. Local review/export/MPR navigation
+do not sign a result or call LLMs. No volume copy, extra model execution, guard
+change or patient/cloud activation. See `docs/SPECIALIST_EVIDENCE.md` for the
+separate LLM contract and pending reconciliation/audit/sign-off boundaries.
+
+## Local measurement reconciliation increment — 2026-10-12
+
+Baseline main `0b84bc4` has PR #19 manually merged and green Web Actions.
+Specialist Evidence now accepts explicit bound `opus-llm-measurements/v1` claims
+and exports numeric differences/abstention as `opus-evidence-comparison/v1`.
+Templates contain no prediction and unknown coverage. Imported source/provider/
+coverage claims are unverified; equal numbers never imply clinical agreement.
+Legacy orchestra findings cannot be converted by guessing anatomy or coverage.
+No model rerun, extra volume copy, guard change, paid call or patient/cloud route.
+See `docs/EVIDENCE_RECONCILIATION.md`. Spatial ROI reconciliation, independent
+inference, durable physician audit/sign-off and R1 acceptance remain pending.
+
+## Bound LLM spatial points — 2026-10-12
+
+Baseline main `9c96502` has PR #20 manually merged and green Web Actions.
+Optional LPS-mm points in the local LLM measurement contract now bind to the
+input/target/current-mask SHA, map through source geometry, sample the existing
+active mask and navigate all three MPR planes. Wrong source/mask, outside-volume
+points and rejected/missing labels cannot navigate. No point is invented in the
+template; label hit/background is not clinical agreement or absence of disease.
+Spatial exports retain needs_review/imported-unverified. No model rerun, volume
+copy, guard change or patient/cloud activation. Full ROI/pathology reconciliation,
+independent inference, persistent audit and R1 acceptance remain pending. See
+`docs/EVIDENCE_RECONCILIATION.md`.
+
+## Local review journal — 2026-10-12
+
+Baseline main `601d78d` has PR #21 manually merged and green Web Actions.
+Specialist changes/resets now append a bounded `opus-evidence-review/v1` journal
+with source/input/mask/model binding, revision, previous/new status and declared
+time/unverified actor. Explicit local export/restore only; old/forked/foreign
+imports cannot erase current history or replace measurements. No authenticated
+identity, clinical verification, signature, protected database or automatic
+browser persistence is implied. See `docs/EVIDENCE_REVIEW_HISTORY.md`.
+No model rerun, volume allocation, guard relaxation, .env.local change or
+patient/cloud/remote activation. Four modes and R1 boundaries remain unchanged.
+
+## Local printable Evidence report — 2026-10-12
+
+Baseline main `2c5d090` has PR #22 manually merged and green Web Actions.
+Source/model-bound specialist metadata, optional imported LLM claims/QC and local
+review history now export to self-contained HTML with print CSS. It remains an
+unsigned research draft; empty mask/missing claims/zero values/rejections and
+abstention are kept distinct. Known metadata is allowlisted/escaped, with no
+images, scripts, links, external resources or unknown-buffer serialization.
+Local browser printing/PDF is optional; authenticated clinical reports, Safari
+print acceptance and R1 acceptance remain pending. See `docs/EVIDENCE_REPORT.md`.
+No model rerun, volume copy, resource guard change, .env.local change or
+patient/cloud/remote activation. Four modes and optional-LLM separation remain.
+
+## Separate reviewer draft — 2026-10-12
+
+Baseline main `0c84fab` has PR #23 manually merged and green Web Actions.
+A local plain-text reviewer note now saves bounded versions separately from
+model output. It binds to the verified source/mask/model and exact status-review
+prefix SHA; changed marks require recheck. Unsaved edits block full JSON/HTML
+export. Local note restore cannot erase/fork existing versions or replace model
+measurements. Text is sensitive/unverified, escaped in reports, with no signed
+identity or protected storage. See `docs/REVIEWER_NOTE.md`.
+No model rerun, volume copy, resource guard change, .env.local change or
+patient/cloud/remote activation. Four modes and R1 boundaries remain unchanged.
+
+
+## Label-linked reviewer drafts — 2026-10-12 (feature branch)
+
+Baseline main `dcaf69b` has PR #24 manually merged and green Web Actions.
+The existing local note journal now keeps independent latest general/label text.
+Optional observation IDs must match current specialist Evidence exactly. Targeted
+journals use v2 so older clients refuse instead of misattributing label comments;
+older v1 general files keep their shape and prefix. MPR navigation reuses the existing
+occupied-label point, not an invented lesion/ROI. Unsaved edits block target
+switching and full exports. HTML retains latest text and stale/cleared state per
+target. Review changes conservatively stale all targets; reconfirmation is per
+target. The shared cap remains 32 versions total, not 32 per label.
+
+See `docs/REVIEWER_NOTE.md`. This is metadata-only unsigned research text, not
+clinical approval, protected storage or an authenticated audit. No model rerun,
+volume copy, resource-guard change, .env.local change or patient/cloud/remote
+activation. Four modes and R1/Mac/Safari/full-chest/clinical boundaries remain.
+
+
+## Local cloud privacy preparation — 2026-10-12 (feature branch)
+
+Baseline main `335d6d3` includes manually merged PR #25 and green Web Actions.
+The user's next goal is cloud analysis only after de-identification. The local
+Vision plan now prepares bounded windowed PNG copies without DICOM/private
+metadata, original UIDs/filenames or clinical/reviewer text. PNG ancillary blocks
+are stripped with CRC/size/encoding checks; actual opaque-black raster redaction
+leaves source/MPR/Evidence untouched. Each exact copy needs separate local text/
+visual checks bound to its SHA; redaction/restart resets review. Explicit local
+candidate export only, no network or provider/model run.
+
+This is PARTIAL privacy preparation, not a trusted de-ID release or DICOM file
+conformance claim. The candidate retains unverified/sampled-only and transmission
+false. OCR/defacing, independent privacy acceptance, server clinician/study
+controls, provider context and audit/retention remain pending; arbitrary `/api/ai`
+stays HTTP 410 and forged client flags cannot enable it. See
+`docs/CLOUD_DEIDENTIFICATION.md`. Four modes, optional-LLM Evidence separation,
+.env.local, all R231/MPR/resource guards and R1 acceptance stay unchanged.
+
+
+## Local privacy OCR assistance — 2026-10-12 (feature branch)
+
+Baseline main `d48f7ff` includes manually merged PR #26 and green Web Actions.
+Privacy copies now support opt-in actual Tesseract RU/EN text localization,
+SHA-bound native rectangles and batch raster redaction. Recognized strings remain
+in ephemeral workers; only coordinates/uncalibrated OCR confidence reach UI.
+Positive detections require hiding or an explicit local non-identifying-text
+acknowledgement; counts are retained. Re-scan/image changes revoke prior marks;
+zero detections never authorize cloud or complete human review.
+
+Pinned code/core/language assets are served as verified static same-origin GETs,
+not a pixel upload endpoint. No CDN, persisted OCR/image cache or provider call.
+One same-tab slot serializes OCR and R231; owned workers stop on cancel/source
+replacement/failure/30-second timeout. This is not cross-tab/OS memory admission
+or an M1/Safari benchmark. All existing worker/resource/MPR/SHA guards remain.
+See `docs/LOCAL_PRIVACY_OCR.md` for pins, licensing, tests and pending independent
+privacy/server release. Four modes, optional LLMs through Evidence, .env.local,
+patient/cloud/remote OFF and R1 boundaries remain unchanged.
+
+
+## Local privacy review journal — 2026-10-12 (feature branch)
+
+Baseline main `28be9d8` includes manually merged PR #27 and green Web Actions.
+Bounded local history now records copy SHA changes/rectangles, OCR start/result/
+cancel/failure and explicit human decisions. Replay checks current exact PNGs,
+redactions and review state before exports. Separate metadata-only journal and
+reviewed copy+journal bundle downloads complement the unchanged candidate format.
+No recognized text, original UIDs, patient/context text, token or error text is
+recorded. Capacity is 128 events; OCR reserves a terminal slot. Restart creates a
+new session; no silent truncation, automatic persistence or import is added.
+
+This is unsigned sampled-copy history with an unverified clock/actor, not clinical
+source verification, protected audit or a trusted de-ID release. Server/privacy/
+provider acceptance remains pending; patient cloud remains OFF and `/api/ai` 410.
+See `docs/PRIVACY_REVIEW_JOURNAL.md`. Four modes, optional-LLM Evidence separation,
+.env.local, R231/Safe/MPR guards and R1/Mac/Safari/full CT boundaries remain.
+
+
+## Local privacy bundle restoration — 2026-10-12 (feature branch)
+
+Baseline main `42ea468` includes manually merged PR #28 and green Web Actions.
+Local reviewed copy+journal files now restore onto matching current initial
+previews after bounded PNG/SHA/replay/digest checks and sequential cancellable
+decoding. Nonempty current history requires an exact same-session prefix;
+older/forked/foreign files and failures leave current work intact. Restore
+preserves raster redactions/history and appends v2 reset events, clearing both
+human checks and transient OCR/acknowledgement. Re-review is required for export.
+Native v1 files remain unchanged; new clients accept full v1/v2 bundles.
+
+This is explicit local restoration, not protected storage/authenticated provenance
+or trusted de-ID. No patient cloud release, server upload, model rerun, volume
+allocation, .env.local change or guard relaxation. Four modes, specialist/optional
+LLMs through Evidence and R1/Mac/Safari/full CT/clinical boundaries remain. See
+`docs/PRIVACY_REVIEW_JOURNAL.md` for versioning, limits and verification.
+
+
+## Preferred Vision/evaluator routing — 2026-10-12 (feature branch)
+
+Baseline main `5f65cfe` includes manually merged PR #29 and green main Web Actions.
+The user's exact Gemini 3.8 Flash + chosen Sonnet 5.5/Opus 5.5/GPT-6.1 Sol profile
+now replaces alphabetic catalogue examples in the synthetic browser trial.
+One main selection drives the selected Polza/OpenRouter gateway; missing exact
+models/modalities refuse without downgrading. Polza's documented metadata API is
+connected. The chosen evaluator, rather than Vision itself, runs the image critic
+and text synthesis. Five calls and existing cost guards remain; cancel/selection
+changes abort client/server requests and stale results are discarded.
+
+Public catalogue presence is not account access or radiological accuracy. Paid
+completions are mocked in verification; no patient data/new paid test/medical
+model rerun, .env.local change, cloud release or guard relaxation. Four modes and
+specialist/optional-LLM Evidence separation remain. See `docs/PREFERRED_AI_MODELS.md`.
+
+
+## Local privacy preparation readiness — 2026-10-12 (feature branch)
+
+Baseline main `4473328` includes manually merged PR #30 and green Web Actions.
+Each sampled copy now shows SHA-bound optional OCR, both human marks and redaction
+count; busy/stale/unreviewed states remain distinct. Seven server policy checks
+are shown separately as unconnected. On-demand metadata-only readiness export
+validates exact PNGs/current journal; it never serializes pixels, words, PHI,
+tokens or raw history, and cloud/de-ID flags always remain false.
+
+Rendering does not decode/hash/copy images or run models/network. This is an
+unsigned local snapshot, not trusted privacy acceptance or server authorization.
+No new paid call/patient transfer/.env.local change or guard relaxation. Four
+modes, specialist/optional-LLM Evidence separation and R1/Mac/Safari/full CT
+boundaries remain. See `docs/LOCAL_PRIVACY_READINESS.md`.
+
+
+## Bounded native CT slab — 2026-10-12
+
+Baseline main `22dc41b` has PR #31 merged and green Web Actions. An explicit
+consecutive native CT range now feeds MPR and the existing local R231 action,
+while full 2D remains available. The entire source geometry is rechecked; bounds
+are min(32 frames, existing voxel/raw/file limits). No resampling or pixel copy.
+Selected SOP identity, shifted LPS/scalars/SHA and strict worker contract remain
+bound. Selection/source changes tear down masks/packages/jobs; owned 2D decoded
+cache is released. See `docs/BOUNDED_CT_SLAB.md`.
+This is partial slab support, not full-CT stitching, a trained-model rerun or a
+Mac/Safari benchmark. Four modes/Evidence/optional LLMs, .env.local, patient/cloud
+OFF and R231/Safe/resource limits stay unchanged; R1 remains PARTIAL.
+
+
+## Full supplied CT disk-streaming stage — 2026-10-12
+
+Baseline main `b60badd` includes manually merged PR #33 and green Web/Python CI.
+A separate opus-analysis-request/v2 path decodes one owned native CT plane at a
+time, hashes/transmits exact HU in bounded chunks, preserves whole compact R231
+postprocessing and writes native masks per plane. Completed jobs serve only
+SHA/source/range-bound MPR derivatives and export full quantitative research
+Evidence without secrets. Native support is capped at 512x512x300; v1/manual
+export/generic mask/MPR guards remain unchanged. Safe admission/runtime pressure,
+one-job/origin/token and TTL controls remain. See docs/FULL_CT_STREAMING.md.
+266 Web tests; 58 Python tests with 3 optional medical-stack skips; production
+build/typecheck/Chromium use actual synthetic DICOM/rescale but mocked inference.
+No new trained full-CT/M1/Safari/system-memory/clinical acceptance is claimed.
+Four modes and specialist/optional-LLM separation remain; patient/cloud/remote
+release and .env.local are unchanged. R1 remains PARTIAL pending hardware/model
+acceptance. The public reference preparer has explicit --full-series opt-in;
+default 32-slice verification stays unchanged.
+
+
+## Full-reference R231 acceptance harness — 2026-10-12
+
+Baseline `bf967e5` includes manually merged PR #34 and successful main Web/Python
+Actions. `scripts/test-r231-browser.sh --download-public-reference --full-series`
+now runs one actual v2 model job on all 103 pinned public LCTSC frames, verifies
+native derivatives across the entire mask, complete mask SHA/label counts, MPR,
+Evidence and DELETE/404. Default partial-reference behavior stays available.
+A 1 Hz technical-only observer supplements model RSS with process-tree/system
+RAM and swap; Linux PID namespace resolution follows only own/direct-child
+processes so watchdogs cannot silently sample an unrelated PID. Safe budgets,
+weights/arithmetic, v1/MPR caps and patient/cloud gates are unchanged.
+
+See `docs/FULL_CT_STREAMING.md` for the reproducible command and separate hardware
+acceptance. Chromium/public all-frame coverage is not anatomical completeness,
+Safari/M1 responsiveness or clinical accuracy. R1 stays PARTIAL until those
+independent checks; TotalSegmentator remains the next specialist-model stage.
+.env.local is untouched; merge is manual.
+
+Actual full-reference Linux acceptance: all 103 original frames, 825 chunks,
+complete mask SHA/counts, four native MPR ranges and DELETE/404 PASS; model RSS
+588.92 MiB, inference 116.761 s. See docs/verification/r231-full-browser-linux.json.
+This does not accept Mac/Safari/clinical accuracy. 271 Web / 64 Python tests pass.

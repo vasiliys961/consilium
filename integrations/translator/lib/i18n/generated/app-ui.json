@@ -1,0 +1,519 @@
+{
+  "en": {
+    "live": {
+      "title": "Live auto dialogue",
+      "description": "Press Start. When Listening appears, take turns speaking. Translation starts automatically after a brief pause. Press Stop to finish. Changing a language or mode ends the current dialogue.",
+      "languageLabel": "Language {number}",
+      "start": "Start",
+      "stop": "Stop",
+      "enableSound": "Enable sound",
+      "soundBlocked": "Press Enable sound to hear the translation",
+      "sameLanguage": "Choose two different languages.",
+      "notice": "Audio is sent to OpenAI. Wait for the AI voice to finish before replying. Check important medical details with the speaker; automatic text checks cannot guarantee accuracy.",
+      "experimentalWarning": "The selected language ({languages}) is experimental: voice translation and captions need additional verification.",
+      "sourceTranslation": "Original → translation",
+      "transcribing": "Transcribing…",
+      "latency": "Audio starts after turn end detection",
+      "seconds": "s",
+      "phase": {
+        "ready": "Ready for dialogue",
+        "connecting": "Connecting live translation — allow microphone access…",
+        "listening": "Listening — you can speak either selected language",
+        "speaking": "Speech detected…",
+        "translating": "Translating…",
+        "playing": "Playing translation — please wait",
+        "error": "Dialogue stopped"
+      },
+      "errors": {
+        "browser": "WebRTC and microphone permission are required. Open localhost:3001 in Chrome or Safari.",
+        "microphone_timeout": "Microphone request timed out. Allow access or open localhost:3001 in Chrome or Safari.",
+        "microphone_denied": "Allow microphone access for this page and browser in macOS settings.",
+        "microphone_lost": "Microphone disconnected. Reconnect it and start again.",
+        "missing_api_key": "The API key is not configured on the local server.",
+        "realtime_failed": "Could not connect to OpenAI Realtime. Check your network and try again.",
+        "connection_lost": "Connection lost. Press Start to reconnect.",
+        "connection_timeout": "Audio connection timed out. Check your network and try again.",
+        "response_timeout": "Model response timed out. Start again.",
+        "response_failed": "Translation failed. Start again.",
+        "generic": "Could not continue the dialogue. Check your connection and try again."
+      },
+      "medicalGlossaryLegend": "◆ — medical glossary: 331 concepts, 11 languages."
+    },
+    "common": {
+      "experimental": "experimental",
+      "translationMode": "Translation mode",
+      "manualMode": "Manual mode",
+      "autoMode": "Auto dialogue"
+    }
+  },
+  "ru": {
+    "live": {
+      "title": "Живой автодиалог",
+      "description": "Нажмите «Старт». Когда появится «Слушаю», говорите по очереди. Перевод звучит автоматически после короткой паузы. Для остановки нажмите «Остановить». Смена языка или режима завершает текущий диалог.",
+      "languageLabel": "Язык {number}",
+      "start": "Старт",
+      "stop": "Остановить",
+      "enableSound": "Включить звук",
+      "soundBlocked": "Нажмите Включить звук, чтобы услышать перевод",
+      "sameLanguage": "Выберите два разных языка.",
+      "notice": "Аудио передаётся в OpenAI. Дождитесь конца озвучки перед ответом. Уточняйте важные медицинские сведения у собеседника: автоматическая проверка текста не гарантирует точность перевода.",
+      "experimentalWarning": "Выбранный язык ({languages}) является экспериментальным: голосовой перевод и субтитры требуют дополнительной проверки.",
+      "sourceTranslation": "Оригинал → перевод",
+      "transcribing": "Транскрибирование…",
+      "latency": "Аудио начинается после определения конца очереди",
+      "seconds": "с",
+      "phase": {
+        "ready": "Готов к диалогу",
+        "connecting": "Подключение к живому переводу — разрешите доступ к микрофону…",
+        "listening": "Слушаю — можно говорить на любом из двух языков",
+        "speaking": "Слышу речь…",
+        "translating": "Перевожу…",
+        "playing": "Звучит перевод — дождитесь окончания",
+        "error": "Диалог остановлен"
+      },
+      "errors": {
+        "browser": "WebRTC и разрешение на использование микрофона необходимы. Откройте localhost:3001 в Chrome или Safari.",
+        "microphone_timeout": "Запрос на использование микрофона истек. Разрешите доступ или откройте localhost:3001 в Chrome или Safari.",
+        "microphone_denied": "Разрешите доступ к микрофону для этой страницы и браузера в настройках macOS.",
+        "microphone_lost": "Микрофон отключен. Переподключите его и начните снова.",
+        "missing_api_key": "Ключ API не настроен на локальном сервере.",
+        "realtime_failed": "Не удалось подключиться к OpenAI Realtime. Проверьте вашу сеть и попробуйте снова.",
+        "connection_lost": "Соединение потеряно. Нажмите Начать, чтобы переподключиться.",
+        "connection_timeout": "Аудиосоединение истекло. Проверьте вашу сеть и попробуйте снова.",
+        "response_timeout": "Ответ модели истек. Начните снова.",
+        "response_failed": "Перевод не удался. Начните снова.",
+        "generic": "Не удалось продолжить диалог. Проверьте ваше соединение и попробуйте снова."
+      },
+      "medicalGlossaryLegend": "◆ — медицинский глоссарий: 331 понятие, 11 языков."
+    },
+    "common": {
+      "experimental": "экспериментальный",
+      "translationMode": "Режим перевода",
+      "manualMode": "Ручной режим",
+      "autoMode": "Автодиалог"
+    }
+  },
+  "es": {
+    "live": {
+      "title": "Diálogo automático en vivo",
+      "description": "Presiona Iniciar. Cuando aparezca Escuchando, tomen turnos para hablar. La traducción comienza automáticamente después de una breve pausa. Presiona Detener para finalizar. Cambiar un idioma o modo termina el diálogo actual.",
+      "languageLabel": "Idioma {number}",
+      "start": "Iniciar",
+      "stop": "Detener",
+      "enableSound": "Habilitar sonido",
+      "soundBlocked": "Presiona Habilitar sonido para escuchar la traducción",
+      "sameLanguage": "Elige dos idiomas diferentes.",
+      "notice": "El audio se envía a OpenAI. Espere al final de la voz antes de responder. Confirme los detalles médicos importantes; la revisión automática no garantiza la exactitud.",
+      "experimentalWarning": "El idioma seleccionado ({languages}) es experimental: la traducción de voz y los subtítulos necesitan verificación adicional.",
+      "sourceTranslation": "Original → traducción",
+      "transcribing": "Transcribiendo…",
+      "latency": "El audio comienza después de la detección del final del turno",
+      "seconds": "s",
+      "phase": {
+        "ready": "Listo para el diálogo",
+        "connecting": "Conectando traducción en vivo — permite el acceso al micrófono…",
+        "listening": "Escuchando — puedes hablar en cualquiera de los idiomas seleccionados",
+        "speaking": "Discurso detectado…",
+        "translating": "Traduciendo…",
+        "playing": "Reproduciendo traducción — por favor espera",
+        "error": "Diálogo detenido"
+      },
+      "errors": {
+        "browser": "Se requieren WebRTC y permiso de micrófono. Abre localhost:3001 en Chrome o Safari.",
+        "microphone_timeout": "La solicitud de micrófono ha expirado. Permite el acceso o abre localhost:3001 en Chrome o Safari.",
+        "microphone_denied": "Permite el acceso al micrófono para esta página y navegador en la configuración de macOS.",
+        "microphone_lost": "Micrófono desconectado. Reconéctalo y comienza de nuevo.",
+        "missing_api_key": "La clave API no está configurada en el servidor local.",
+        "realtime_failed": "No se pudo conectar a OpenAI Realtime. Verifica tu red e inténtalo de nuevo.",
+        "connection_lost": "Conexión perdida. Presiona Iniciar para reconectar.",
+        "connection_timeout": "La conexión de audio ha expirado. Verifica tu red e inténtalo de nuevo.",
+        "response_timeout": "La respuesta del modelo ha expirado. Comienza de nuevo.",
+        "response_failed": "La traducción falló. Comienza de nuevo.",
+        "generic": "No se pudo continuar el diálogo. Verifica tu conexión e inténtalo de nuevo."
+      },
+      "medicalGlossaryLegend": "◆ — glosario médico: 331 conceptos, 11 idiomas."
+    },
+    "common": {
+      "experimental": "experimental",
+      "translationMode": "Modo de traducción",
+      "manualMode": "Modo manual",
+      "autoMode": "Diálogo automático"
+    }
+  },
+  "fr": {
+    "live": {
+      "title": "Dialogue automatique en direct",
+      "description": "Appuyez sur Démarrer. Lorsque Écoute apparaît, prenez des tours pour parler. La traduction commence automatiquement après une brève pause. Appuyez sur Arrêter pour terminer. Changer de langue ou de mode met fin au dialogue actuel.",
+      "languageLabel": "Langue {number}",
+      "start": "Démarrer",
+      "stop": "Arrêter",
+      "enableSound": "Activer le son",
+      "soundBlocked": "Appuyez sur Activer le son pour entendre la traduction",
+      "sameLanguage": "Choisissez deux langues différentes.",
+      "notice": "Le son est envoyé à OpenAI. Attendez la fin de la voix avant de répondre. Confirmez les détails médicaux importants ; la vérification automatique ne garantit pas l’exactitude.",
+      "experimentalWarning": "La langue sélectionnée ({languages}) est expérimentale : la traduction vocale et les sous-titres nécessitent une vérification supplémentaire.",
+      "sourceTranslation": "Original → traduction",
+      "transcribing": "Transcription en cours…",
+      "latency": "L'audio commence après la détection de la fin du tour",
+      "seconds": "s",
+      "phase": {
+        "ready": "Prêt pour le dialogue",
+        "connecting": "Connexion à la traduction en direct — autorisez l'accès au microphone…",
+        "listening": "Écoute — vous pouvez parler dans l'une ou l'autre langue sélectionnée",
+        "speaking": "Parole détectée…",
+        "translating": "Traduction en cours…",
+        "playing": "Lecture de la traduction — veuillez patienter",
+        "error": "Dialogue arrêté"
+      },
+      "errors": {
+        "browser": "WebRTC et autorisation du microphone sont requis. Ouvrez localhost:3001 dans Chrome ou Safari.",
+        "microphone_timeout": "Le délai de demande du microphone a expiré. Autorisez l'accès ou ouvrez localhost:3001 dans Chrome ou Safari.",
+        "microphone_denied": "Autorisez l'accès au microphone pour cette page et ce navigateur dans les paramètres macOS.",
+        "microphone_lost": "Microphone déconnecté. Reconnectez-le et recommencez.",
+        "missing_api_key": "La clé API n'est pas configurée sur le serveur local.",
+        "realtime_failed": "Impossible de se connecter à OpenAI Realtime. Vérifiez votre réseau et réessayez.",
+        "connection_lost": "Connexion perdue. Appuyez sur Démarrer pour vous reconnecter.",
+        "connection_timeout": "Le délai de connexion audio a expiré. Vérifiez votre réseau et réessayez.",
+        "response_timeout": "Le délai de réponse du modèle a expiré. Recommencez.",
+        "response_failed": "La traduction a échoué. Recommencez.",
+        "generic": "Impossible de continuer le dialogue. Vérifiez votre connexion et réessayez."
+      },
+      "medicalGlossaryLegend": "◆ — glossaire médical : 331 notions, 11 langues."
+    },
+    "common": {
+      "experimental": "expérimental",
+      "translationMode": "Mode de traduction",
+      "manualMode": "Mode manuel",
+      "autoMode": "Dialogue automatique"
+    }
+  },
+  "ar": {
+    "live": {
+      "title": "حوار تلقائي مباشر",
+      "description": "اضغط على بدء. عندما يظهر الاستماع، خذ أدوار التحدث. تبدأ الترجمة تلقائيًا بعد فترة توقف قصيرة. اضغط على إيقاف لإنهاء الحوار. تغيير لغة أو وضع ينهي الحوار الحالي.",
+      "languageLabel": "اللغة {number}",
+      "start": "ابدأ",
+      "stop": "أوقف",
+      "enableSound": "تفعيل الصوت",
+      "soundBlocked": "اضغط على تفعيل الصوت لسماع الترجمة",
+      "sameLanguage": "اختر لغتين مختلفتين.",
+      "notice": "يُرسل الصوت إلى OpenAI. انتظر انتهاء الصوت قبل الرد. تحقق من التفاصيل الطبية المهمة مع المتحدث؛ الفحص الآلي لا يضمن الدقة.",
+      "experimentalWarning": "اللغة المحددة ({languages}) تجريبية: تحتاج ترجمة الصوت والتسميات إلى تحقق إضافي.",
+      "sourceTranslation": "الأصل → الترجمة",
+      "transcribing": "جارٍ النسخ…",
+      "latency": "يبدأ الصوت بعد اكتشاف نهاية الدور",
+      "seconds": "ث",
+      "phase": {
+        "ready": "جاهز للحوار",
+        "connecting": "جارٍ الاتصال بالترجمة المباشرة — يرجى السماح بالوصول إلى الميكروفون…",
+        "listening": "يستمع — يمكنك التحدث بأي من اللغتين المحددتين",
+        "speaking": "تم اكتشاف الكلام…",
+        "translating": "جارٍ الترجمة…",
+        "playing": "جارٍ تشغيل الترجمة — يرجى الانتظار",
+        "error": "تم إيقاف الحوار"
+      },
+      "errors": {
+        "browser": "يتطلب WebRTC وإذن الميكروفون. افتح localhost:3001 في Chrome أو Safari.",
+        "microphone_timeout": "انتهت مهلة طلب الميكروفون. يرجى السماح بالوصول أو فتح localhost:3001 في Chrome أو Safari.",
+        "microphone_denied": "يرجى السماح بالوصول إلى الميكروفون لهذه الصفحة والمتصفح في إعدادات macOS.",
+        "microphone_lost": "تم فصل الميكروفون. أعد توصيله وابدأ مرة أخرى.",
+        "missing_api_key": "مفتاح API غير مُعد على الخادم المحلي.",
+        "realtime_failed": "تعذر الاتصال بـ OpenAI Realtime. تحقق من شبكتك وحاول مرة أخرى.",
+        "connection_lost": "تم فقد الاتصال. اضغط على بدء لإعادة الاتصال.",
+        "connection_timeout": "انتهت مهلة اتصال الصوت. تحقق من شبكتك وحاول مرة أخرى.",
+        "response_timeout": "انتهت مهلة استجابة النموذج. ابدأ مرة أخرى.",
+        "response_failed": "فشلت الترجمة. ابدأ مرة أخرى.",
+        "generic": "تعذر متابعة الحوار. تحقق من اتصالك وحاول مرة أخرى."
+      },
+      "medicalGlossaryLegend": "◆ — مسرد طبي: 331 مفهومًا، 11 لغة."
+    },
+    "common": {
+      "experimental": "تجريبي",
+      "translationMode": "وضع الترجمة",
+      "manualMode": "الوضع اليدوي",
+      "autoMode": "الحوار التلقائي"
+    }
+  },
+  "hi": {
+    "live": {
+      "title": "सीधा स्वचालित संवाद",
+      "description": "शुरू करने के लिए प्रारंभ दबाएं। जब सुनने का संकेत दिखाई दे, तो बोलने के लिए बारी लें। थोड़ी देर रुकने के बाद अनुवाद स्वचालित रूप से शुरू होता है। समाप्त करने के लिए रोकें दबाएं। भाषा या मोड बदलने से वर्तमान संवाद समाप्त हो जाता है।",
+      "languageLabel": "भाषा {number}",
+      "start": "शुरू करें",
+      "stop": "रोकें",
+      "enableSound": "ध्वनि सक्षम करें",
+      "soundBlocked": "अनुवाद सुनने के लिए ध्वनि सक्षम करें दबाएं",
+      "sameLanguage": "दो अलग-अलग भाषाएँ चुनें।",
+      "notice": "ऑडियो OpenAI को भेजा जाता है। उत्तर देने से पहले आवाज़ समाप्त होने दें। महत्वपूर्ण चिकित्सा विवरण वक्ता से जाँचें; स्वचालित जाँच सटीकता की गारंटी नहीं देती।",
+      "experimentalWarning": "चुनी गई भाषा ({languages}) प्रायोगिक है: आवाज अनुवाद और कैप्शन को अतिरिक्त सत्यापन की आवश्यकता है।",
+      "sourceTranslation": "मूल → अनुवाद",
+      "transcribing": "अनुवादित किया जा रहा है…",
+      "latency": "ऑडियो बारी समाप्त होने के बाद शुरू होता है",
+      "seconds": "सेकंड",
+      "phase": {
+        "ready": "संवाद के लिए तैयार",
+        "connecting": "सीधा अनुवाद कनेक्ट कर रहा है — माइक्रोफोन एक्सेस की अनुमति दें…",
+        "listening": "सुन रहा है — आप चयनित भाषा में बोल सकते हैं",
+        "speaking": "भाषण का पता चला…",
+        "translating": "अनुवाद कर रहा है…",
+        "playing": "अनुवाद चला रहा है — कृपया प्रतीक्षा करें",
+        "error": "संवाद बंद हो गया"
+      },
+      "errors": {
+        "browser": "WebRTC और माइक्रोफोन अनुमति आवश्यक हैं। Chrome या Safari में localhost:3001 खोलें।",
+        "microphone_timeout": "माइक्रोफोन अनुरोध समय समाप्त हो गया। अनुमति दें या Chrome या Safari में localhost:3001 खोलें।",
+        "microphone_denied": "macOS सेटिंग्स में इस पृष्ठ और ब्राउज़र के लिए माइक्रोफोन एक्सेस की अनुमति दें।",
+        "microphone_lost": "माइक्रोफोन डिस्कनेक्ट हो गया। इसे फिर से कनेक्ट करें और फिर से शुरू करें।",
+        "missing_api_key": "API कुंजी स्थानीय सर्वर पर कॉन्फ़िगर नहीं की गई है।",
+        "realtime_failed": "OpenAI Realtime से कनेक्ट नहीं हो सका। अपने नेटवर्क की जांच करें और फिर से प्रयास करें।",
+        "connection_lost": "कनेक्शन खो गया। फिर से कनेक्ट करने के लिए प्रारंभ दबाएं।",
+        "connection_timeout": "ऑडियो कनेक्शन समय समाप्त हो गया। अपने नेटवर्क की जांच करें और फिर से प्रयास करें।",
+        "response_timeout": "मॉडल प्रतिक्रिया समय समाप्त हो गया। फिर से शुरू करें।",
+        "response_failed": "अनुवाद विफल। फिर से शुरू करें।",
+        "generic": "संवाद जारी नहीं रखा जा सका। अपने कनेक्शन की जांच करें और फिर से प्रयास करें।"
+      },
+      "medicalGlossaryLegend": "◆ — चिकित्सा शब्दावली: 331 अवधारणाएँ, 11 भाषाएँ।"
+    },
+    "common": {
+      "experimental": "प्रायोगिक",
+      "translationMode": "अनुवाद मोड",
+      "manualMode": "मैनुअल मोड",
+      "autoMode": "स्वचालित संवाद"
+    }
+  },
+  "pt-BR": {
+    "live": {
+      "title": "Diálogo automático ao vivo",
+      "description": "Pressione Iniciar. Quando Escutando aparecer, alternem para falar. A tradução começa automaticamente após uma breve pausa. Pressione Parar para finalizar. Mudar um idioma ou modo encerra o diálogo atual.",
+      "languageLabel": "Idioma {number}",
+      "start": "Iniciar",
+      "stop": "Parar",
+      "enableSound": "Ativar som",
+      "soundBlocked": "Pressione Ativar som para ouvir a tradução",
+      "sameLanguage": "Escolha dois idiomas diferentes.",
+      "notice": "O áudio é enviado à OpenAI. Aguarde o fim da voz antes de responder. Confirme os detalhes médicos importantes; a verificação automática não garante a precisão.",
+      "experimentalWarning": "O idioma selecionado ({languages}) é experimental: a tradução de voz e as legendas precisam de verificação adicional.",
+      "sourceTranslation": "Original → tradução",
+      "transcribing": "Transcrevendo…",
+      "latency": "O áudio começa após a detecção do fim da vez",
+      "seconds": "s",
+      "phase": {
+        "ready": "Pronto para o diálogo",
+        "connecting": "Conectando tradução ao vivo — permita acesso ao microfone…",
+        "listening": "Escutando — você pode falar em qualquer um dos idiomas selecionados",
+        "speaking": "Fala detectada…",
+        "translating": "Traduzindo…",
+        "playing": "Reproduzindo tradução — por favor, aguarde",
+        "error": "Diálogo interrompido"
+      },
+      "errors": {
+        "browser": "WebRTC e permissão do microfone são necessários. Abra localhost:3001 no Chrome ou Safari.",
+        "microphone_timeout": "O pedido de microfone expirou. Permita o acesso ou abra localhost:3001 no Chrome ou Safari.",
+        "microphone_denied": "Permita o acesso ao microfone para esta página e navegador nas configurações do macOS.",
+        "microphone_lost": "Microfone desconectado. Reconecte-o e comece novamente.",
+        "missing_api_key": "A chave da API não está configurada no servidor local.",
+        "realtime_failed": "Não foi possível conectar ao OpenAI Realtime. Verifique sua rede e tente novamente.",
+        "connection_lost": "Conexão perdida. Pressione Iniciar para reconectar.",
+        "connection_timeout": "Conexão de áudio expirou. Verifique sua rede e tente novamente.",
+        "response_timeout": "O tempo de resposta do modelo expirou. Comece novamente.",
+        "response_failed": "A tradução falhou. Comece novamente.",
+        "generic": "Não foi possível continuar o diálogo. Verifique sua conexão e tente novamente."
+      },
+      "medicalGlossaryLegend": "◆ — glossário médico: 331 conceitos, 11 idiomas."
+    },
+    "common": {
+      "experimental": "experimental",
+      "translationMode": "Modo de tradução",
+      "manualMode": "Modo manual",
+      "autoMode": "Diálogo automático"
+    }
+  },
+  "id": {
+    "live": {
+      "title": "Dialog otomatis langsung",
+      "description": "Tekan Mulai. Ketika Mendengarkan muncul, bergantian berbicara. Penerjemahan dimulai secara otomatis setelah jeda singkat. Tekan Berhenti untuk menyelesaikan. Mengubah bahasa atau mode akan mengakhiri dialog saat ini.",
+      "languageLabel": "Bahasa {number}",
+      "start": "Mulai",
+      "stop": "Berhenti",
+      "enableSound": "Aktifkan suara",
+      "soundBlocked": "Tekan Aktifkan suara untuk mendengar terjemahan",
+      "sameLanguage": "Pilih dua bahasa yang berbeda.",
+      "notice": "Audio dikirim ke OpenAI. Tunggu suara selesai sebelum menjawab. Konfirmasikan rincian medis penting; pemeriksaan otomatis tidak menjamin akurasi.",
+      "experimentalWarning": "Bahasa yang dipilih ({languages}) bersifat eksperimental: penerjemahan suara dan teks perlu verifikasi tambahan.",
+      "sourceTranslation": "Asli → terjemahan",
+      "transcribing": "Mentranskripsikan…",
+      "latency": "Audio dimulai setelah deteksi akhir giliran",
+      "seconds": "d",
+      "phase": {
+        "ready": "Siap untuk dialog",
+        "connecting": "Menghubungkan penerjemahan langsung — izinkan akses mikrofon…",
+        "listening": "Mendengarkan — Anda dapat berbicara dalam salah satu bahasa yang dipilih",
+        "speaking": "Pidato terdeteksi…",
+        "translating": "Menerjemahkan…",
+        "playing": "Memutar terjemahan — harap tunggu",
+        "error": "Dialog dihentikan"
+      },
+      "errors": {
+        "browser": "WebRTC dan izin mikrofon diperlukan. Buka localhost:3001 di Chrome atau Safari.",
+        "microphone_timeout": "Permintaan mikrofon habis waktu. Izinkan akses atau buka localhost:3001 di Chrome atau Safari.",
+        "microphone_denied": "Izinkan akses mikrofon untuk halaman dan browser ini di pengaturan macOS.",
+        "microphone_lost": "Mikrofon terputus. Sambungkan kembali dan mulai lagi.",
+        "missing_api_key": "Kunci API tidak dikonfigurasi di server lokal.",
+        "realtime_failed": "Tidak dapat terhubung ke OpenAI Realtime. Periksa jaringan Anda dan coba lagi.",
+        "connection_lost": "Koneksi hilang. Tekan Mulai untuk menyambung kembali.",
+        "connection_timeout": "Koneksi audio habis waktu. Periksa jaringan Anda dan coba lagi.",
+        "response_timeout": "Respon model habis waktu. Mulai lagi.",
+        "response_failed": "Penerjemahan gagal. Mulai lagi.",
+        "generic": "Tidak dapat melanjutkan dialog. Periksa koneksi Anda dan coba lagi."
+      },
+      "medicalGlossaryLegend": "◆ — glosarium medis: 331 konsep, 11 bahasa."
+    },
+    "common": {
+      "experimental": "eksperimental",
+      "translationMode": "Mode penerjemahan",
+      "manualMode": "Mode manual",
+      "autoMode": "Dialog otomatis"
+    }
+  },
+  "ms": {
+    "live": {
+      "title": "Dialog auto langsung",
+      "description": "Tekan Mula. Apabila Mendengar muncul, bergilir-gilir bercakap. Penterjemahan bermula secara automatik selepas jeda singkat. Tekan Henti untuk mengakhiri. Mengubah bahasa atau mod akan menamatkan dialog semasa.",
+      "languageLabel": "Bahasa {number}",
+      "start": "Mula",
+      "stop": "Henti",
+      "enableSound": "Aktifkan bunyi",
+      "soundBlocked": "Tekan Aktifkan bunyi untuk mendengar penterjemahan",
+      "sameLanguage": "Pilih dua bahasa yang berbeza.",
+      "notice": "Audio dihantar ke OpenAI. Tunggu suara selesai sebelum menjawab. Sahkan butiran perubatan penting; semakan automatik tidak menjamin ketepatan.",
+      "experimentalWarning": "Bahasa yang dipilih ({languages}) adalah eksperimen: penterjemahan suara dan sari kata memerlukan pengesahan tambahan.",
+      "sourceTranslation": "Asal → penterjemahan",
+      "transcribing": "Sedang mentranskripsi…",
+      "latency": "Audio bermula selepas pengesanan akhir giliran",
+      "seconds": "s",
+      "phase": {
+        "ready": "Sedia untuk dialog",
+        "connecting": "Menghubungkan penterjemahan langsung — benarkan akses mikrofon…",
+        "listening": "Mendengar — anda boleh bercakap dalam mana-mana bahasa yang dipilih",
+        "speaking": "Ucapan dikesan…",
+        "translating": "Sedang menterjemah…",
+        "playing": "Sedang memainkan penterjemahan — sila tunggu",
+        "error": "Dialog dihentikan"
+      },
+      "errors": {
+        "browser": "WebRTC dan kebenaran mikrofon diperlukan. Buka localhost:3001 di Chrome atau Safari.",
+        "microphone_timeout": "Permintaan mikrofon tamat. Benarkan akses atau buka localhost:3001 di Chrome atau Safari.",
+        "microphone_denied": "Benarkan akses mikrofon untuk halaman dan pelayar ini dalam tetapan macOS.",
+        "microphone_lost": "Mikrofon terputus. Sambungkan semula dan mulakan lagi.",
+        "missing_api_key": "Kunci API tidak dikonfigurasikan di pelayan tempatan.",
+        "realtime_failed": "Tidak dapat menyambung ke OpenAI Realtime. Semak rangkaian anda dan cuba lagi.",
+        "connection_lost": "Sambungan hilang. Tekan Mula untuk menyambung semula.",
+        "connection_timeout": "Sambungan audio tamat. Semak rangkaian anda dan cuba lagi.",
+        "response_timeout": "Tanggapan model tamat. Mulakan semula.",
+        "response_failed": "Penterjemahan gagal. Mulakan semula.",
+        "generic": "Tidak dapat meneruskan dialog. Semak sambungan anda dan cuba lagi."
+      },
+      "medicalGlossaryLegend": "◆ — glosari perubatan: 331 konsep, 11 bahasa."
+    },
+    "common": {
+      "experimental": "eksperimental",
+      "translationMode": "Mod penterjemahan",
+      "manualMode": "Mod manual",
+      "autoMode": "Dialog auto"
+    }
+  },
+  "tr": {
+    "live": {
+      "title": "Canlı otomatik diyalog",
+      "description": "Başlat'a basın. Dinleme göründüğünde, sırayla konuşun. Kısa bir duraklamadan sonra çeviri otomatik olarak başlar. Bitirmek için Durdur'a basın. Bir dili veya modu değiştirmek mevcut diyaloğu sonlandırır.",
+      "languageLabel": "Dil {number}",
+      "start": "Başlat",
+      "stop": "Durdur",
+      "enableSound": "Sesi etkinleştir",
+      "soundBlocked": "Çeviriyi duymak için Sesi etkinleştir'e basın",
+      "sameLanguage": "İki farklı dil seçin.",
+      "notice": "Ses OpenAI’a gönderilir. Yanıtlamadan önce sesin bitmesini bekleyin. Önemli tıbbi ayrıntıları konuşmacıyla doğrulayın; otomatik kontrol doğruluğu garanti etmez.",
+      "experimentalWarning": "Seçilen dil ({languages}) deneysel: sesli çeviri ve altyazılar ek doğrulama gerektirir.",
+      "sourceTranslation": "Orijinal → çeviri",
+      "transcribing": "Transkribe ediliyor…",
+      "latency": "Ses, dönüş sonu tespiti sonrası başlar",
+      "seconds": "s",
+      "phase": {
+        "ready": "Diyalog için hazır",
+        "connecting": "Canlı çeviri bağlanıyor — mikrofon erişimine izin verin…",
+        "listening": "Dinliyor — seçilen dilden birini konuşabilirsiniz",
+        "speaking": "Konuşma algılandı…",
+        "translating": "Çeviriliyor…",
+        "playing": "Çeviri oynatılıyor — lütfen bekleyin",
+        "error": "Diyalog durduruldu"
+      },
+      "errors": {
+        "browser": "WebRTC ve mikrofon izni gereklidir. Chrome veya Safari'de localhost:3001'yi açın.",
+        "microphone_timeout": "Mikrofon isteği zaman aşımına uğradı. Erişime izin verin veya Chrome veya Safari'de localhost:3001'yi açın.",
+        "microphone_denied": "Bu sayfa ve tarayıcı için mikrofon erişimine izin verin (macOS ayarlarında).",
+        "microphone_lost": "Mikrofon bağlantısı kesildi. Yeniden bağlayın ve tekrar başlayın.",
+        "missing_api_key": "API anahtarı yerel sunucuda yapılandırılmamış.",
+        "realtime_failed": "OpenAI Gerçek Zamanlı'ya bağlanılamadı. Ağınızı kontrol edin ve tekrar deneyin.",
+        "connection_lost": "Bağlantı kesildi. Yeniden bağlanmak için Başlat'a basın.",
+        "connection_timeout": "Ses bağlantısı zaman aşımına uğradı. Ağınızı kontrol edin ve tekrar deneyin.",
+        "response_timeout": "Model yanıtı zaman aşımına uğradı. Yeniden başlayın.",
+        "response_failed": "Çeviri başarısız oldu. Yeniden başlayın.",
+        "generic": "Diyaloğa devam edilemedi. Bağlantınızı kontrol edin ve tekrar deneyin."
+      },
+      "medicalGlossaryLegend": "◆ — tıp sözlüğü: 331 kavram, 11 dil."
+    },
+    "common": {
+      "experimental": "deneysel",
+      "translationMode": "Çeviri modu",
+      "manualMode": "Manuel mod",
+      "autoMode": "Otomatik diyalog"
+    }
+  },
+  "zh-CN": {
+    "live": {
+      "title": "实时自动对话",
+      "description": "按下开始。当出现“听取”时，轮流发言。经过短暂的停顿后，翻译会自动开始。按下停止以结束。更改语言或模式将结束当前对话。",
+      "languageLabel": "语言 {number}",
+      "start": "开始",
+      "stop": "停止",
+      "enableSound": "启用声音",
+      "soundBlocked": "按下启用声音以听取翻译",
+      "sameLanguage": "选择两种不同的语言。",
+      "notice": "音频会发送至 OpenAI。请等待译音结束后再回答。重要医疗信息应向说话者核实；自动文本检查不能保证翻译准确。",
+      "experimentalWarning": "所选语言（{languages}）为实验性：语音翻译和字幕需要额外验证。",
+      "sourceTranslation": "原文 → 翻译",
+      "transcribing": "转录中…",
+      "latency": "音频在检测到轮次结束后开始",
+      "seconds": "秒",
+      "phase": {
+        "ready": "准备好对话",
+        "connecting": "连接实时翻译 — 允许麦克风访问…",
+        "listening": "正在听取 — 您可以说任一选择的语言",
+        "speaking": "检测到语音…",
+        "translating": "翻译中…",
+        "playing": "正在播放翻译 — 请稍候",
+        "error": "对话已停止"
+      },
+      "errors": {
+        "browser": "需要WebRTC和麦克风权限。在Chrome或Safari中打开localhost:3001。",
+        "microphone_timeout": "麦克风请求超时。请允许访问或在Chrome或Safari中打开localhost:3001。",
+        "microphone_denied": "请在macOS设置中允许此页面和浏览器的麦克风访问。",
+        "microphone_lost": "麦克风已断开连接。请重新连接并重新开始。",
+        "missing_api_key": "本地服务器未配置API密钥。",
+        "realtime_failed": "无法连接到OpenAI实时服务。请检查您的网络并重试。",
+        "connection_lost": "连接丢失。按下开始以重新连接。",
+        "connection_timeout": "音频连接超时。请检查您的网络并重试。",
+        "response_timeout": "模型响应超时。请重新开始。",
+        "response_failed": "翻译失败。请重新开始。",
+        "generic": "无法继续对话。请检查您的连接并重试。"
+      },
+      "medicalGlossaryLegend": "◆ — 医学术语表：331个概念，11种语言。"
+    },
+    "common": {
+      "experimental": "实验性",
+      "translationMode": "翻译模式",
+      "manualMode": "手动模式",
+      "autoMode": "自动对话"
+    }
+  }
+}

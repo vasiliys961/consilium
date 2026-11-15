@@ -1,0 +1,74 @@
+export type AiProvider = "openrouter" | "polza";
+export type AiRole = "vision" | "reasoning";
+/** Internal-only OpenRouter structured output; never constructed from browser input. */
+export type AiJsonSchemaFormat={
+  type:"json_schema";
+  json_schema:{name:string;strict:true;schema:Record<string,unknown>};
+};
+export interface AiGatewayRequest {
+  provider: AiProvider;
+  role: AiRole;
+  model: string;
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> }>;
+  temperature?: number;
+  maxTokens?: number;
+  responseFormat?:AiJsonSchemaFormat;
+  /** Refuse OpenRouter endpoints that silently ignore the JSON schema. */
+  requireParameters?:true;
+}
+const PROVIDERS: Record<AiProvider, { url: string; env: string }> = {
+  openrouter: { url: "https://openrouter.ai/api/v1/chat/completions", env: "OPENROUTER_API_KEY" },
+  polza: { url: "https://polza.ai/api/v1/chat/completions", env: "POLZA_API_KEY" },
+};
+export function isAiProvider(value: unknown): value is AiProvider {
+  return value === "openrouter" || value === "polza";
+}
+export function validateAiGatewayRequest(value: unknown): value is AiGatewayRequest {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return isAiProvider(v.provider) && (v.role === "vision" || v.role === "reasoning") &&
+    typeof v.model === "string" && v.model.length > 0 && v.model.length <= 160 &&
+    Array.isArray(v.messages) && v.messages.length > 0 && v.messages.length <= 30 &&
+    v.messages.every((m: unknown) => !!m && typeof m === "object" &&
+      ["system", "user", "assistant"].includes((m as {role?: string}).role ?? "") &&
+      (typeof (m as {content?: unknown}).content === "string" || Array.isArray((m as {content?: unknown}).content)));
+}
+export async function callAiGateway(request: AiGatewayRequest, signal?: AbortSignal) {
+  if(process.env.CONCILIUM_OPENROUTER_ONLY==='1'&&request.provider!=='openrouter')throw Error('Polza is disabled in Concilium. Use OpenRouter.');
+  if(request.responseFormat&&(request.provider!=="openrouter"||request.requireParameters!==true))
+    throw Error("Structured output requires a compatible OpenRouter endpoint");
+  const config = PROVIDERS[request.provider];
+  const apiKey = process.env[config.env];
+  if (!apiKey) throw new Error(`Provider ${request.provider} is not configured`);
+  // A structured specialist report is longer than a per-frame JSON observation.
+  // Allow up to 3500 tokens for known Opus reports and rich Gemini observations
+  // with provider-enforced JSON. Other models retain their previous ceilings.
+  const tokenCeiling=request.responseFormat&&
+    request.provider==="openrouter"&&["anthropic/claude-opus-5.5","google/gemini-3.8-flash","google/gemini-4-argon"].includes(request.model)
+    ?4500:request.responseFormat?2000:1500;
+  const runId=crypto.randomUUID(),started=Date.now();
+  const receipt=(event:string,fields:Record<string,unknown>={})=>{if(process.env.CONCILIUM_INTEGRATION==='1')console.log('CONCILIUM_MODEL '+JSON.stringify({event,runId,model:request.model,provider:request.provider,...fields}));};
+  receipt('model.started');
+  try {
+  const response = await fetch(config.url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    // All research completions have an explicit output token ceiling to avoid
+    // accidental unbounded spending. This is not an account spending limit.
+    body: JSON.stringify({ model: request.model, messages: request.messages,
+      // These evaluator versions do not advertise temperature in either catalogue.
+      ...(["openai/gpt-6.1-sol","anthropic/claude-sonnet-5.5","anthropic/claude-opus-5.5"].includes(request.model)?{}:
+        {temperature:request.temperature??0.1}),
+      ...(request.responseFormat?{response_format:request.responseFormat}:{}),
+      ...(request.requireParameters?{provider:{require_parameters:true}}:{}),
+      max_tokens: Number.isInteger(request.maxTokens) &&
+        request.maxTokens! >= 1 && request.maxTokens! <= tokenCeiling ? request.maxTokens : 1200 }),
+    signal,
+    cache: "no-store",
+  });
+  if (!response.ok){receipt('model.responded',{httpStatus:response.status,durationMs:Date.now()-started,usageAvailable:false});throw new Error(`AI provider returned HTTP ${response.status}`);}
+  const payload = await response.json();
+  receipt('model.responded',{httpStatus:response.status,durationMs:Date.now()-started,finishReason:payload.choices?.[0]?.finish_reason??null,inputTokens:payload.usage?.prompt_tokens??0,outputTokens:payload.usage?.completion_tokens??0,usageAvailable:typeof payload.usage?.prompt_tokens==='number'&&typeof payload.usage?.completion_tokens==='number'});
+  return { provider: request.provider, model: payload.model ?? request.model, choices: payload.choices ?? [], usage: payload.usage ?? null };
+  }catch(error){receipt('model.failed',{durationMs:Date.now()-started});throw error;}
+}

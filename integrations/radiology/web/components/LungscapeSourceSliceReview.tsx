@@ -1,0 +1,206 @@
+"use client";
+import {LocalizedUi,useUiTranslator} from './ConciliumBridge';
+import { useEffect, useRef, useState } from "react";
+export type LungscapeBox = {
+    modelClassId: number;
+    sourceModelLabel: string;
+    sourceVoxelBoundsInclusive: number[][];
+    candidateVoxelCount: number;
+};
+type Header = {
+    dim: [
+        number,
+        number,
+        number
+    ];
+    offset: number;
+    type: 2 | 4 | 16;
+    scale: number;
+    intercept: number;
+    affine: number[] | null;
+};
+const MAX_DECODED = 450 * 1024 * 1024;
+function headerOf(data: Uint8Array, mask = false): Header {
+    if (data.byteLength < 352)
+        throw Error("NIfTI заголовок неполный");
+    const v = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    if (v.getInt32(0, true) !== 348 || String.fromCharCode(...data.slice(344, 348)) !== "n+1\0")
+        throw Error("Нужен NIfTI-1 single-file");
+    if (v.getInt16(40, true) !== 3)
+        throw Error("Нужна 3D-КТ");
+    const dim: [
+        number,
+        number,
+        number
+    ] = [42, 44, 46].map(i => v.getInt16(i, true)) as [
+        number,
+        number,
+        number
+    ];
+    if (dim.some((n, i) => n < 2 || n > (i === 2 ? 500 : 512)))
+        throw Error("Серия превышает допустимые размеры");
+    const type = v.getInt16(70, true);
+    if (type !== 4 && type !== 16 && !(mask && type === 2))
+        throw Error("Неподдерживаемый NIfTI тип исходных данных");
+    const offset = v.getFloat32(108, true);
+    if (!Number.isSafeInteger(offset) || offset < 352 || offset > 4096)
+        throw Error("Недопустимое смещение NIfTI");
+    const bytes = type === 2 ? 1 : type === 4 ? 2 : 4;
+    if (offset + dim[0] * dim[1] * dim[2] * bytes > MAX_DECODED)
+        throw Error("Исследование превышает бюджет потокового просмотра");
+    const rawScale = v.getFloat32(112, true), rawIntercept = v.getFloat32(116, true);
+    const scale = rawScale === 0 || Number.isNaN(rawScale) ? 1 : rawScale;
+    const intercept = rawScale === 0 || Number.isNaN(rawScale) ? 0 : rawIntercept;
+    if (!Number.isFinite(scale) || !Number.isFinite(intercept))
+        throw Error("Некорректная шкала CT");
+    const form = v.getInt16(254, true);
+    const affine = form > 0 ? Array.from({ length: 12 }, (_, i) => v.getFloat32(280 + i * 4, true)) : null;
+    if (affine && !affine.every(Number.isFinite))
+        throw Error("Повреждена матрица sform NIfTI");
+    return { dim, offset, type: type as 2 | 4 | 16, scale, intercept, affine };
+}
+async function readPlane(file: File, k: number, signal: AbortSignal, mask = false) {
+    // For gz NIfTI, decode as a stream and retain only the exact original k-plane.
+    const gz = file.name.toLowerCase().endsWith(".gz");
+    const stream = gz ? file.stream().pipeThrough(new DecompressionStream("gzip")) : file.stream();
+    const reader = stream.getReader();
+    let position = 0;
+    let hdr: Header | null = null;
+    let start = 0;
+    let end = 0;
+    let slice: Uint8Array | null = null, used = 0;
+    const first = new Uint8Array(4096);
+    let headerCount = 0;
+    try {
+        while (true) {
+            if (signal.aborted)
+                throw Error("Просмотр отменён");
+            const item = await reader.read();
+            if (item.done)
+                break;
+            const value = item.value;
+            if (!hdr) {
+                const take = Math.min(4096 - headerCount, value.byteLength);
+                first.set(value.subarray(0, take), headerCount);
+                headerCount += take;
+                if (headerCount >= 352) {
+                    hdr = headerOf(first, mask);
+                    if (k < 0 || k >= hdr.dim[2])
+                        throw Error("Срез за пределами КТ");
+                    const n = hdr.dim[0] * hdr.dim[1] * (hdr.type === 2 ? 1 : hdr.type === 4 ? 2 : 4);
+                    start = hdr.offset + k * n;
+                    end = start + n;
+                    slice = new Uint8Array(n);
+                }
+            }
+            if (hdr && slice) {
+                const from = Math.max(start, position), to = Math.min(end, position + value.length);
+                if (from < to) {
+                    slice.set(value.subarray(from - position, to - position), from - start);
+                    used += to - from;
+                }
+            }
+            position += value.byteLength;
+            if (position > MAX_DECODED)
+                throw Error("Превышен лимит распаковки CT");
+            if (hdr && position >= end)
+                break;
+        }
+    }
+    finally {
+        await reader.cancel().catch(() => { });
+        reader.releaseLock();
+    }
+    if (!hdr || !slice || used !== slice.length)
+        throw Error("Данные среза NIfTI усечены");
+    return { hdr, slice };
+}
+export default function LungscapeSourceSliceReview({ source, mask, candidates, individual = false }: {
+    source: File;
+    mask?: File | null;
+    candidates: LungscapeBox[];
+    individual?: boolean;
+}) {
+    const __ui = useUiTranslator();
+    const [k, setK] = useState(0), [max, setMax] = useState(0), [error, setError] = useState("");
+    const canvas = useRef<HTMLCanvasElement>(null);
+    useEffect(() => {
+        let active = true;
+        const abort = new AbortController();
+        setError("");
+        void (async () => {
+            try {
+                const { hdr, slice } = await readPlane(source, k, abort.signal);
+                if (!active)
+                    return;
+                if (candidates.some(box => box.sourceVoxelBoundsInclusive.some((bound, i) => bound.some((v, axis) => !Number.isSafeInteger(v) || v < 0 || v >= hdr.dim[axis]))))
+                    throw Error("Кандидат выходит за оригинальную сетку исходной КТ");
+                setMax(hdr.dim[2] - 1);
+                const predicted = mask ? await readPlane(mask, k, abort.signal, true) : null;
+                if (predicted) {
+                    if (predicted.hdr.dim.some((n, i) => n !== hdr.dim[i]))
+                        throw Error("Исходная КТ и маска имеют разные размеры");
+                    if (!hdr.affine || !predicted.hdr.affine || hdr.affine.some((n, i) => Math.abs(n - predicted.hdr.affine![i]) > 0.0001))
+                        throw Error("Невозможно независимо подтвердить совпадение sform КТ и маски. Заливка отключена");
+                }
+                const [nx, ny] = hdr.dim;
+                const image = new ImageData(nx, ny), v = new DataView(slice.buffer);
+                for (let y = 0; y < ny; y++)
+                    for (let x = 0; x < nx; x++) {
+                        const i = x + y * nx;
+                        const raw = hdr.type === 4 ? v.getInt16(i * 2, true) : v.getFloat32(i * 4, true);
+                        const hu = raw * hdr.scale + hdr.intercept;
+                        const gray = Number.isFinite(hu) ? Math.max(0, Math.min(255, Math.round((hu + 1350) / 1500 * 255))) : 0;
+                        const q = ((ny - 1 - y) * nx + x) * 4;
+                        image.data[q] = gray;
+                        image.data[q + 1] = gray;
+                        image.data[q + 2] = gray;
+                        image.data[q + 3] = 255;
+                        if (predicted) {
+                            const mv = new DataView(predicted.slice.buffer);
+                            const typ = predicted.hdr.type;
+                            const label = typ === 2 ? mv.getUint8(i) : typ === 4 ? mv.getInt16(i * 2, true) : mv.getFloat32(i * 4, true);
+                            if (!Number.isInteger(label) || label < 0 || label > 255)
+                                throw Error("Некорректный класс маски");
+                            if (label > 0) {
+                                image.data[q] = Math.round(gray * 0.55);
+                                image.data[q + 1] = Math.round(gray * 0.55 + 110);
+                                image.data[q + 2] = Math.round(gray * 0.55 + 78);
+                            }
+                        }
+                    }
+                const el = canvas.current;
+                if (!el)
+                    return;
+                el.width = nx;
+                el.height = ny;
+                const ctx = el.getContext("2d");
+                if (!ctx)
+                    return;
+                ctx.putImageData(image, 0, 0);
+                ctx.lineWidth = Math.max(2, nx / 200);
+                ctx.strokeStyle = "#00f0ad";
+                ctx.font = `${Math.max(12, nx / 30)}px sans-serif`;
+                for (const box of candidates) {
+                    const [lo, hi] = box.sourceVoxelBoundsInclusive;
+                    if (k < lo[2] || k > hi[2])
+                        continue;
+                    ctx.strokeRect(lo[0], ny - 1 - hi[1], hi[0] - lo[0] + 1, hi[1] - lo[1] + 1);
+                    ctx.fillStyle = "#00f0ad";
+                    ctx.fillText(String(box.modelClassId), lo[0], Math.max(12, ny - 1 - hi[1] - 4));
+                }
+            }
+            catch (e) {
+                if (active)
+                    setError(e instanceof Error ? e.message : "Ошибка NIfTI среза");
+            }
+        })();
+        return () => { active = false; abort.abort(); };
+    }, [source, mask, k, candidates]);
+    return <div><p><LocalizedUi value={"\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440 \u0438\u0441\u0445\u043E\u0434\u043D\u043E\u0433\u043E \u0441\u0440\u0435\u0437\u0430 k \u2014 \u0437\u0435\u043B\u0451\u043D\u044B\u0435 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u043F\u043E\u043A\u0430\u0437\u044B\u0432\u0430\u044E\u0442"}/><LocalizedUi value={individual ? "границы отдельных 26-связных компонентов оригинальной маски" : "общие границы всех вокселей соответствующего класса модели"}/>. <LocalizedUi value={mask ? "Зелёная полупрозрачная заливка — оригинальная маска, проверенная по SHA-256 и sform." : "Это не точные контуры и не клинические диагнозы."}/></p>
+ <div aria-label={__ui("\u041A\u043B\u0430\u0441\u0441\u044B \u043C\u043E\u0434\u0435\u043B\u0438")}><LocalizedUi value={candidates.map((box, i) => <button key={i} type="button" onClick={() => setK(Math.max(0, Math.min(max, Math.round((box.sourceVoxelBoundsInclusive[0][2] + box.sourceVoxelBoundsInclusive[1][2]) / 2))))}><LocalizedUi value={"\u041A\u043B\u0430\u0441\u0441"}/><LocalizedUi value={box.modelClassId}/><LocalizedUi value={": \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0446\u0435\u043D\u0442\u0440 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D\u0430 k ("}/><LocalizedUi value={box.sourceVoxelBoundsInclusive[0][2]}/>–<LocalizedUi value={box.sourceVoxelBoundsInclusive[1][2]}/>)</button>)}/></div>
+ <label><LocalizedUi value={"\u0421\u0440\u0435\u0437 k:"}/><LocalizedUi value={k}/> / <LocalizedUi value={max}/><input type="range" min={0} max={max} value={Math.min(k, max)} onChange={e => setK(Number(e.target.value))}/></label>
+ <LocalizedUi value={error && <p role="alert"><LocalizedUi value={error}/></p>}/>
+ <canvas ref={canvas} style={{ maxWidth: "100%", height: "auto", imageRendering: "pixelated" }} aria-label={__ui("\u0418\u0441\u0445\u043E\u0434\u043D\u0430\u044F \u041A\u0422 \u0441 \u043F\u0440\u044F\u043C\u043E\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0430\u043C\u0438 \u043A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u043E\u0432 LungSCAPE191")}/>
+ <p><LocalizedUi value={"\u041E\u043A\u043D\u043E \u043B\u0451\u0433\u043A\u0438\u0445: WL \u2212600 HU / WW 1500 HU. \u0422\u043E\u043B\u044C\u043A\u043E \u043F\u043E\u0441\u043B\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F SHA-256 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A\u0430; \u0431\u0435\u0437 \u043F\u0440\u0438\u0432\u044F\u0437\u043A\u0438 \u043A \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u043B\u044C\u043D\u043E\u0439 DICOM-\u0441\u0435\u0440\u0438\u0438. \u041D\u0435 \u0434\u043B\u044F \u043A\u043B\u0438\u043D\u0438\u0447\u0435\u0441\u043A\u043E\u0433\u043E \u0437\u0430\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F."}/></p></div>;
+}

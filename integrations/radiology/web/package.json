@@ -1,0 +1,38 @@
+{
+  "name": "opus-radiology-web",
+  "version": "1.6.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/*.test.ts ../scripts/r231-full-browser.test.mjs",
+    "test:browser": "node ../scripts/check-segmentation-browser.mjs",
+    "setup:analysis": "node ../scripts/setup-local-public-analysis.mjs"
+  },
+  "dependencies": {
+    "@cornerstonejs/core": "4.18.3",
+    "@cornerstonejs/dicom-image-loader": "4.18.3",
+    "@noble/hashes": "2.0.1",
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/rus": "1.0.0",
+    "dicom-parser": "1.8.21",
+    "next": "16.4.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tesseract.js": "6.0.1",
+    "tesseract.js-core": "6.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "playwright": "1.51.1",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

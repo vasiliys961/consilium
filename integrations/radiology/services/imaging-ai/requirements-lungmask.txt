@@ -1,0 +1,10 @@
+# OPTIONAL CT lung segmentation model family. Install separately on Mac.
+# No cloud credentials. Model weights/checkpoint licences require review.
+# Batch size 1 and memory benchmarking mandatory on M1 8GB.
+-r requirements.txt
+torch==2.6.0
+SimpleITK==2.4.1
+lungmask==0.2.20
+# Keep the full optional install compatible with the base numpy<2 contract.
+scipy==1.14.1
+scikit-image==0.24.0

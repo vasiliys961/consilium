@@ -1,0 +1,520 @@
+"use client";
+import {LocalizedUi,useUiTranslator} from './ConciliumBridge';
+import { useEffect, useRef, useState } from "react";
+import { buildVisionPrivacyPacket, createPrivacyFrame, markPrivacyReview, pngFromBase64, validatePrivacyRectangle, type PrivacyFrame, type PrivacyRectangle } from "../lib/vision-privacy";
+import { redactPrivacyRegions, validatePrivacyRaster } from "../lib/vision-privacy-browser";
+import { scanPrivacyText, type PrivacyOcrResult } from "../lib/privacy-ocr";
+import { autoPrepareVisionPrivacy } from "../lib/auto-privacy-preparation";
+import { appendPrivacyEvent, buildPrivacyReviewBundle, createPrivacyJournal, exportPrivacyJournal, MAX_PRIVACY_EVENTS, MAX_PRIVACY_BUNDLE_BYTES, restorePrivacyReviewBundle, type PrivacyAction, type PrivacyJournal } from "../lib/privacy-review-journal";
+import { acquireBrowserCompute } from "../lib/browser-compute-slot";
+import VisionPrivacyReadiness from "./VisionPrivacyReadiness";
+import DeidentifiedOpenRouterPanel from "./DeidentifiedOpenRouterPanel";
+import type { LocalLungFacts } from "../lib/local-lung-review";
+import type { LocalSameSeriesLaa950 } from "../lib/same-series-laa950-review";
+import type { SanitizedDetectorBundle } from "../lib/detector-consilium-evidence";
+import type { ClnFrameRelativeEvidence } from "../lib/cln-frame-relative-evidence";
+import type { OriginalXrvCxrResult } from "../lib/xrv-original-cxr";
+import { buildPrivacyReadinessReport } from "../lib/privacy-readiness";
+const actionLabels: Record<PrivacyAction["kind"], string> = { redacted: "Скрытие областей", "ocr-started": "OCR начат",
+    "ocr-completed": "OCR завершён", "ocr-cancelled": "OCR отменён", "ocr-failed": "OCR не завершён",
+    "text-retained": "Надписи оставлены по ручной отметке", "review-set": "Ручная проверка", "copy-restored": "Копия восстановлена · проверки сняты" };
+/** OCR reads same-origin fixed assets only. No image upload or recognized-text export. */
+export default function VisionPrivacyPreparation({ previews, modality, originalLocalFileIds, onOpenOriginalSlice, specialistFacts, specialistLocalBinding, localLaa950, originalDetectorEvidence = null, originalCxrEvidence = null, frameRelativeClnEvidence = null, autoStartAfterDetectors = false, primaryAnalysisStage = "idle", onReviewedBatch, batchSubmitting = false, initialPreparation, reviewedBatchLabel = "Кадры проверены — продолжить анализ серии" }: {
+    previews: readonly (string | undefined)[];
+    modality: string;
+    originalLocalFileIds: readonly string[];
+    onOpenOriginalSlice: (localFileId: string) => void;
+    specialistFacts?: LocalLungFacts | null;
+    localLaa950?: LocalSameSeriesLaa950 | null;
+    specialistLocalBinding?: string;
+    originalDetectorEvidence?: SanitizedDetectorBundle | null;
+    originalCxrEvidence?: OriginalXrvCxrResult | null;
+    frameRelativeClnEvidence?: ClnFrameRelativeEvidence | null;
+    autoStartAfterDetectors?: boolean;
+    primaryAnalysisStage?: "idle" | "running" | "completed" | "vision-only" | "cancelled";
+    onReviewedBatch?: (packet: ReturnType<typeof buildVisionPrivacyPacket>, preparation?: import("../lib/auto-privacy-preparation").AutomaticPrivacyPreparation) => Promise<void>;
+    batchSubmitting?: boolean;
+    reviewedBatchLabel?: string;
+    initialPreparation?: import("../lib/auto-privacy-preparation").AutomaticPrivacyPreparation;
+}) {
+    const __ui = useUiTranslator();
+    const [frames, setFrames] = useState<PrivacyFrame[]>([]), [selected, setSelected] = useState(0);
+    const [redactionMode, setRedactionMode] = useState(false);
+    const dragStart = useRef<{
+        x: number;
+        y: number;
+    } | null>(null);
+    const [error, setError] = useState(""), [busy, setBusy] = useState(false);
+    const [rectangle, setRectangle] = useState<PrivacyRectangle>({ x: 0, y: 0, width: 1, height: 1 });
+    const [ocr, setOcr] = useState<Record<string, PrivacyOcrResult>>({}), [ocrBusy, setOcrBusy] = useState(false), [ocrNotice, setOcrNotice] = useState("");
+    const [keptText, setKeptText] = useState<Record<string, string>>({});
+    const [journal, setJournal] = useState<PrivacyJournal | null>(null);
+    const [importBusy, setImportBusy] = useState(false), [importNotice, setImportNotice] = useState("");
+    const journalRef = useRef<PrivacyJournal | null>(null);
+    const scan = useRef<AbortController | null>(null);
+    const generation = useRef(0);
+    useEffect(() => () => { ++generation.current; scan.current?.abort(); }, []);
+    // Prepare the SAME already selected four PNGs automatically, entirely offline.
+    // OCR + actual black-pixel masking + second OCR never grants clinical/cloud clearance.
+    // Lease the exact preview snapshot, not a permanent one-shot flag: React Strict
+    // Mode replays effect cleanup, and that abort must allow the second setup.
+    const restoredPreparation = useRef<typeof initialPreparation>(undefined);
+    const autoAttempt = useRef<readonly (string | undefined)[] | null>(null);
+    useEffect(() => {
+        if (initialPreparation) {
+            if (restoredPreparation.current === initialPreparation)
+                return;
+            restoredPreparation.current = initialPreparation;
+            journalRef.current = initialPreparation.journal;
+            setJournal(initialPreparation.journal);
+            setFrames(initialPreparation.frames);
+            setOcr(initialPreparation.ocr);
+            setSelected(0);
+            setKeptText({});
+            return;
+        }
+        if (!autoStartAfterDetectors || autoAttempt.current === previews || !previews.length || previews.some(p => !p?.startsWith("data:image/png;base64,")))
+            return;
+        if (!["CT", "MR", "CR", "DX"].includes(modality))
+            return;
+        autoAttempt.current = previews;
+        const controller = new AbortController();
+        const version = ++generation.current;
+        scan.current = controller;
+        setBusy(true);
+        setOcrBusy(true);
+        setError("");
+        setOcrNotice("Подготавливаем PNG и проверяем OCR всех выбранных кадров локально, без закрашивания анатомии…");
+        void autoPrepareVisionPrivacy(previews, modality as "CT" | "MR" | "CR" | "DX", controller.signal, notice => {
+            if (version === generation.current && !controller.signal.aborted)
+                setOcrNotice(notice);
+        }, { autoRedact: false }).then(result => {
+            if (version !== generation.current || controller.signal.aborted)
+                return;
+            journalRef.current = result.journal;
+            setJournal(result.journal);
+            setFrames(result.frames);
+            setOcr(result.ocr);
+            setSelected(0);
+            setKeptText({});
+            setRectangle({ x: 0, y: 0, width: 1, height: 1 });
+            setOcrNotice("Локальная проверка завершена. Пиксели автоматически не закрашивались. " + (result.unresolved > 0 ?
+                "OCR отметил возможные надписи: проверьте их, скройте идентификаторы или подтвердите ложное срабатывание." :
+                "Все кадры ожидают проверки врача перед передачей."));
+        }).catch(e => {
+            if (version === generation.current && !controller.signal.aborted)
+                setError("Автоматическая подготовка не завершена: " +
+                    (e instanceof Error ? e.message : "ошибка OCR") +
+                    ". Кадры не разрешены к облачной передаче; используйте ручную подготовку.");
+        }).finally(() => {
+            if (version === generation.current) {
+                scan.current = null;
+                setBusy(false);
+                setOcrBusy(false);
+            }
+        });
+        return () => {
+            controller.abort();
+            // An aborted Strict Mode replay has NOT completed privacy preparation.
+            // Release only this snapshot's lease; never invalidate a newer attempt.
+            if (autoAttempt.current === previews)
+                autoAttempt.current = null;
+        };
+    }, [previews, modality, autoStartAfterDetectors, initialPreparation]);
+    const frame = frames[selected];
+    const currentOcr = frame && ocr[frame.frameId]?.sha256 === frame.sha256 ? ocr[frame.frameId] : undefined;
+    const unresolvedText = !!currentOcr?.regions.length && keptText[frame.frameId] !== frame.sha256;
+    let validRectangle = false;
+    try {
+        if (frame) {
+            validatePrivacyRectangle(rectangle, frame.width, frame.height);
+            validRectangle = true;
+        }
+    }
+    catch { }
+    const reviewed = frames.length > 0 && frames.every(f => f.pixelReviewSha256 === f.sha256 && f.visualReviewSha256 === f.sha256);
+    const allOcrChecked = frames.length > 0 && frames.every(f => {
+        const output = ocr[f.frameId];
+        return !!output && output.sha256 === f.sha256 &&
+            (output.regions.length === 0 || keptText[f.frameId] === f.sha256);
+    });
+    const ocrComplete = frames.length > 0 && frames.every(f => ocr[f.frameId]?.sha256 === f.sha256);
+    const pilotReady = reviewed && allOcrChecked && !busy && !ocrBusy && !importBusy;
+    const makePilotPacket = () => {
+        if (!pilotReady || !journalRef.current)
+            throw new Error("Повторите проверку всех точных копий.");
+        const packet = buildVisionPrivacyPacket(frames, crypto.randomUUID());
+        // Source frame IDs and action SHA remain local; never send this journal.
+        exportPrivacyJournal(journalRef.current, packet.frames);
+        return packet;
+    };
+    const record = (target: PrivacyFrame, action: PrivacyAction) => {
+        if (!journalRef.current)
+            throw new Error("Сначала создайте копии и локальный журнал.");
+        const next = appendPrivacyEvent(journalRef.current, target.frameId, target.sha256, action, new Date().toISOString());
+        journalRef.current = next;
+        setJournal(next);
+    };
+    const initialCopies = () => {
+        if (!["CT", "MR", "CR", "DX"].includes(modality) || !previews.length || previews.length > 4 || previews.some(p => !p?.startsWith("data:image/png;base64,")))
+            throw new Error("Сначала дождитесь локальных PNG-миниатюр всех выбранных срезов.");
+        return previews.map((url, i) => createPrivacyFrame(pngFromBase64(url!.split(",")[1]), `frame-${i + 1}`, modality as "CT" | "MR" | "CR" | "DX"));
+    };
+    const prepare = () => {
+        ++generation.current;
+        setError("");
+        setImportNotice("");
+        try {
+            const next = initialCopies();
+            const nextJournal = createPrivacyJournal(next, crypto.randomUUID(), new Date().toISOString());
+            journalRef.current = nextJournal;
+            setJournal(nextJournal);
+            setFrames(next);
+            setSelected(0);
+            setRectangle({ x: 0, y: 0, width: 1, height: 1 });
+            setOcr({});
+            setKeptText({});
+            setOcrNotice("");
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось подготовить копии.");
+        }
+    };
+    const restore = async (file: File) => {
+        const controller = new AbortController(), version = ++generation.current;
+        scan.current = controller;
+        setBusy(true);
+        setImportBusy(true);
+        setError("");
+        setImportNotice("");
+        let release: (() => void) | undefined;
+        try {
+            if (!file.size || file.size > MAX_PRIVACY_BUNDLE_BYTES)
+                throw new Error("Выберите пакет копий с журналом не более 12 МиБ.");
+            release = acquireBrowserCompute("privacy-restore");
+            const text = await file.text();
+            if (controller.signal.aborted)
+                throw new DOMException("Восстановление отменено.", "AbortError");
+            const next = restorePrivacyReviewBundle(text, initialCopies(), journalRef.current ? { journal: journalRef.current, frames } : null, new Date().toISOString());
+            for (const f of next.frames)
+                await validatePrivacyRaster(f, controller.signal);
+            if (version !== generation.current || controller.signal.aborted)
+                return;
+            journalRef.current = next.journal;
+            setJournal(next.journal);
+            setFrames(next.frames);
+            setSelected(0);
+            setOcr({});
+            setKeptText({});
+            setOcrNotice("");
+            setRectangle({ x: 0, y: 0, width: 1, height: 1 });
+            setImportNotice("Копии и история восстановлены. Осмотрите каждый кадр заново: ручные проверки и результат OCR не перенесены.");
+        }
+        catch (e) {
+            if (version === generation.current)
+                setError(controller.signal.aborted ? "Восстановление отменено. Текущая работа сохранена." :
+                    e instanceof Error ? e.message : "Не удалось восстановить пакет. Текущая работа сохранена.");
+        }
+        finally {
+            release?.();
+            if (version === generation.current) {
+                scan.current = null;
+                setBusy(false);
+                setImportBusy(false);
+            }
+        }
+    };
+    const redact = async (regions: PrivacyRectangle[] = [rectangle]) => {
+        if (!frame)
+            return;
+        const version = ++generation.current;
+        const controller = new AbortController();
+        scan.current = controller;
+        setBusy(true);
+        setError("");
+        try {
+            const next = await redactPrivacyRegions(frame, regions);
+            if (version !== generation.current)
+                return;
+            record(frame, { kind: "redacted", nextSha256: next.sha256, rectangles: regions });
+            setFrames(previous => previous.map(f => f.frameId === next.frameId ? next : f));
+            setOcrBusy(true);
+            setOcrNotice("Проверяем кадр после скрытия данных…");
+            record(next, { kind: "ocr-started" });
+            const result = await scanPrivacyText(next, controller.signal);
+            if (version !== generation.current || controller.signal.aborted)
+                return;
+            record(next, { kind: "ocr-completed", regionCount: result.regions.length });
+            setOcr(previous => ({ ...previous, [next.frameId]: result }));
+            setOcrNotice("Данные скрыты. Проверьте получившийся кадр и подтвердите проверку всех кадров.");
+        }
+        catch (e) {
+            if (version === generation.current)
+                setError(e instanceof Error ? e.message : "Не удалось скрыть область.");
+        }
+        finally {
+            if (version === generation.current) {
+                scan.current = null;
+                setBusy(false);
+                setOcrBusy(false);
+            }
+        }
+    };
+    const findText = async () => {
+        if (!frame)
+            return;
+        try {
+            record(frame, { kind: "ocr-started" });
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось записать действие.");
+            return;
+        }
+        const controller = new AbortController(), version = ++generation.current;
+        scan.current = controller;
+        setBusy(true);
+        setOcrBusy(true);
+        setError("");
+        setOcrNotice("Локальный поиск надписей · до 30 секунд…");
+        setFrames(previous => previous.map(f => f.frameId === frame.frameId ? { ...f, pixelReviewSha256: null, visualReviewSha256: null } : f));
+        setOcr(previous => { const next = { ...previous }; delete next[frame.frameId]; return next; });
+        setKeptText(previous => { const next = { ...previous }; delete next[frame.frameId]; return next; });
+        try {
+            const result = await scanPrivacyText(frame, controller.signal);
+            if (version !== generation.current)
+                return;
+            if (controller.signal.aborted)
+                throw new DOMException("OCR отменён.", "AbortError");
+            record(frame, { kind: "ocr-completed", regionCount: result.regions.length });
+            setOcr(previous => ({ ...previous, [frame.frameId]: result }));
+            setOcrNotice("");
+        }
+        catch (e) {
+            if (version === generation.current) {
+                record(frame, { kind: controller.signal.aborted ? "ocr-cancelled" : "ocr-failed" });
+                if (controller.signal.aborted)
+                    setOcrNotice("OCR отменён. Автоматическая проверка не выполнена.");
+                else {
+                    setOcrNotice("");
+                    setError(e instanceof Error ? e.message : "OCR не завершён.");
+                }
+            }
+        }
+        finally {
+            if (version === generation.current) {
+                scan.current = null;
+                setBusy(false);
+                setOcrBusy(false);
+            }
+        }
+    };
+    const reviewAllExactCopies = (checked: boolean) => {
+        if (busy || ocrBusy || !journalRef.current || !frames.length)
+            return;
+        if (checked && !ocrComplete) {
+            setError("Дождитесь завершения проверки надписей на всех кадрах.");
+            return;
+        }
+        try {
+            let next = journalRef.current;
+            const retained = { ...keptText };
+            const updated = frames.map(f => {
+                if (checked && ocr[f.frameId]?.regions.length && retained[f.frameId] !== f.sha256) {
+                    next = appendPrivacyEvent(next, f.frameId, f.sha256, { kind: "text-retained" }, new Date().toISOString());
+                    retained[f.frameId] = f.sha256;
+                }
+                for (const kind of ["pixel", "visual"] as const) {
+                    next = appendPrivacyEvent(next, f.frameId, f.sha256, { kind: "review-set", review: kind, checked }, new Date().toISOString());
+                }
+                return markPrivacyReview(markPrivacyReview(f, "pixel", checked), "visual", checked);
+            });
+            journalRef.current = next;
+            setJournal(next);
+            setKeptText(retained);
+            setFrames(updated);
+            setError("");
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось подтвердить проверки копий.");
+        }
+    };
+    const review = (kind: "pixel" | "visual", checked: boolean) => {
+        if (!frame)
+            return;
+        if (checked && unresolvedText) {
+            setError("Сначала скройте найденные надписи или отметьте их как неидентифицирующие после просмотра.");
+            return;
+        }
+        try {
+            record(frame, { kind: "review-set", review: kind, checked });
+            setFrames(previous => previous.map(f => f.frameId === frame.frameId ? markPrivacyReview(f, kind, checked) : f));
+            setError("");
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось записать проверку.");
+        }
+    };
+    const retainText = () => {
+        if (!frame)
+            return;
+        try {
+            record(frame, { kind: "text-retained" });
+            setKeptText(previous => ({ ...previous, [frame.frameId]: frame.sha256 }));
+            setError("");
+            setOcrNotice("");
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось записать отметку.");
+        }
+    };
+    const download = (kind: "candidate" | "journal" | "bundle" | "readiness" = "candidate") => {
+        try {
+            if (!journalRef.current)
+                throw new Error("Сначала создайте копии.");
+            let packet: unknown;
+            if (kind === "readiness")
+                packet = buildPrivacyReadinessReport({ frames, ocr, keptText, busy }, journalRef.current);
+            else if (kind === "journal")
+                packet = exportPrivacyJournal(journalRef.current, frames);
+            else if (kind === "bundle")
+                packet = buildPrivacyReviewBundle(frames, journalRef.current, crypto.randomUUID());
+            else {
+                const candidate = buildVisionPrivacyPacket(frames, crypto.randomUUID());
+                // Even the legacy candidate export must match the recorded actions.
+                exportPrivacyJournal(journalRef.current, candidate.frames);
+                packet = candidate;
+            }
+            const url = URL.createObjectURL(new Blob([JSON.stringify(packet)], { type: "application/json" }));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `opus-local-privacy-${kind}.json`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setError("");
+        }
+        catch (e) {
+            setError(e instanceof Error ? e.message : "Не удалось сохранить пакет.");
+        }
+    };
+    return <section className="ora-privacy-preparation" aria-label={__ui("\u041F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u043E\u0431\u0435\u0437\u043B\u0438\u0447\u0435\u043D\u043D\u044B\u0445 \u043A\u0430\u0434\u0440\u043E\u0432")}>
+    <h3><LocalizedUi value={"\u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u043A\u0430\u0434\u0440\u044B \u043F\u0435\u0440\u0435\u0434 \u0430\u043D\u0430\u043B\u0438\u0437\u043E\u043C"}/></h3>
+    <p><LocalizedUi value={"\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u043A\u0430\u0434\u0440\u044B \u043D\u0438\u0436\u0435. \u0415\u0441\u043B\u0438 \u0432\u0438\u0434\u043D\u044B \u0424\u0418\u041E, \u0434\u0430\u0442\u044B, \u043D\u043E\u043C\u0435\u0440\u0430 \u0438\u043B\u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u2014 \u0441\u043A\u0440\u043E\u0439\u0442\u0435 \u0438\u0445. \u0417\u0430\u0442\u0435\u043C \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443 \u0438 \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u0435 \u0430\u043D\u0430\u043B\u0438\u0437. \u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0435 \u0441\u043D\u0438\u043C\u043A\u0438 \u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u044F\u044E\u0442\u0441\u044F."}/></p>
+    <LocalizedUi value={busy && <p role="status"><LocalizedUi value={"\u041F\u043E\u0434\u0433\u043E\u0442\u0430\u0432\u043B\u0438\u0432\u0430\u0435\u043C \u0438\u0437\u043E\u0431\u0440\u0430\u0436\u0435\u043D\u0438\u044F \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u043C \u043D\u0430\u0434\u043F\u0438\u0441\u0438\u2026"}/></p>}/>
+    <details><summary><LocalizedUi value={"\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u00B7 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0438\u043B\u0438 \u043F\u0435\u0440\u0435\u0441\u043E\u0437\u0434\u0430\u0442\u044C \u043A\u043E\u043F\u0438\u0438"}/></summary>
+    <button type="button" disabled={busy || previews.some(p => !p)} onClick={prepare}><LocalizedUi value={frames.length ? "Создать копии заново" : "Подготовить копии без метаданных"}/></button>
+    <label><LocalizedUi value={"\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u043A\u043E\u043F\u0438\u0438 \u0441 \u0436\u0443\u0440\u043D\u0430\u043B\u043E\u043C JSON"}/><input type="file" accept=".json,application/json" disabled={busy || previews.some(p => !p)} onChange={e => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file)
+                void restore(file);
+        }}/></label>
+    </details>
+    <LocalizedUi value={importBusy && <button type="button" onClick={() => scan.current?.abort()}><LocalizedUi value={"\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435"}/></button>}/>
+    <LocalizedUi value={importNotice && <p role="status"><LocalizedUi value={importNotice}/></p>}/>
+    <LocalizedUi value={error && <p role="alert"><LocalizedUi value={error}/></p>}/>
+    <LocalizedUi value={frames.length > 0 && <section aria-label={__ui("\u0412\u0441\u0435 \u0438\u0441\u0445\u043E\u0434\u044F\u0449\u0438\u0435 \u043E\u0431\u0435\u0437\u043B\u0438\u0447\u0435\u043D\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438")}>
+      <h4><LocalizedUi value={"\u041F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u0432\u0441\u0435 \u043A\u0430\u0434\u0440\u044B \u0434\u043B\u044F AI ("}/><LocalizedUi value={frames.length}/>)</h4>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+      <LocalizedUi value={frames.map((f, i) => <button type="button" key={f.frameId} disabled={busy} onClick={() => setSelected(i)} style={{ maxWidth: 220 }}>
+        <img src={"data:image/png;base64," + f.pngBase64} alt={"Копия " + (i + 1)} width={190} style={{ width: "100%", height: "auto" }}/>
+        <span><LocalizedUi value={"\u041A\u0430\u0434\u0440"}/><LocalizedUi value={i + 1}/><LocalizedUi value={ocr[f.frameId]?.sha256 === f.sha256 ?
+                    (ocr[f.frameId].regions.length ? " · проверьте отмеченные области" : " · готов к просмотру") : " · проверка надписей…"}/></span>
+      </button>)}/>
+      </div>
+      <label><input type="checkbox" disabled={busy || !ocrComplete} checked={reviewed} onChange={e => reviewAllExactCopies(e.target.checked)}/><LocalizedUi value={"\u042F \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u043B \u0432\u0441\u0435 \u043A\u0430\u0434\u0440\u044B, \u0432\u043A\u043B\u044E\u0447\u0430\u044F \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438: \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u044B\u0445 \u0434\u0430\u043D\u043D\u044B\u0445 \u0438 \u0443\u0437\u043D\u0430\u0432\u0430\u0435\u043C\u044B\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u043D\u0435\u0442. \u041E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0432\u0430\u043D\u0438\u044F \u0442\u0435\u043A\u0441\u0442\u0430 \u2014 \u043B\u043E\u0436\u043D\u044B\u0435 \u0441\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u043D\u0438\u044F \u0438\u043B\u0438 \u043D\u0435\u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0435 \u043D\u0430\u0434\u043F\u0438\u0441\u0438."}/></label>
+      <LocalizedUi value={!ocrComplete && <p role="status"><LocalizedUi value={"\u0414\u043E\u0436\u0434\u0438\u0442\u0435\u0441\u044C \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u043D\u0430 \u0432\u0441\u0435\u0445 \u043A\u0430\u0434\u0440\u0430\u0445."}/><button type="button" disabled={busy} onClick={() => {
+                    const index = frames.findIndex(f => ocr[f.frameId]?.sha256 === f.sha256 &&
+                        !!ocr[f.frameId].regions.length && keptText[f.frameId] !== f.sha256);
+                    if (index >= 0)
+                        setSelected(index);
+                }}><LocalizedUi value={"\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u043A\u0430\u0434\u0440\u0443 \u0441 \u043E\u0442\u043C\u0435\u0442\u043A\u0430\u043C\u0438 OCR"}/></button>
+      </p>}/>
+    </section>}/>
+    <LocalizedUi value={frame && <>
+      <label><LocalizedUi value={"\u041A\u043E\u043F\u0438\u044F \u043A\u0430\u0434\u0440\u0430"}/><select value={selected} disabled={busy} onChange={e => { setSelected(Number(e.target.value)); setError(""); setOcrNotice(""); }}>
+        <LocalizedUi value={frames.map((f, i) => <option key={f.frameId} value={i}><LocalizedUi value={"\u041A\u0430\u0434\u0440"}/><LocalizedUi value={i + 1}/> · <LocalizedUi value={f.width}/>×<LocalizedUi value={f.height}/></option>)}/>
+      </select></label>
+      <button type="button" disabled={busy} aria-pressed={redactionMode} onClick={() => setRedactionMode(v => !v)}><LocalizedUi value={redactionMode ? "Закончить скрытие данных" : "Скрыть персональные данные на этом кадре"}/></button>
+      <LocalizedUi value={redactionMode && <p><LocalizedUi value={"\u041E\u0431\u0432\u0435\u0434\u0438\u0442\u0435 \u043D\u0430\u0434\u043F\u0438\u0441\u044C \u043C\u044B\u0448\u044C\u044E \u0438\u043B\u0438 \u043F\u0430\u043B\u044C\u0446\u0435\u043C \u2014 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u043D\u0430\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043A\u0440\u0430\u0448\u0435\u043D\u0430. \u041D\u0435 \u0432\u044B\u0434\u0435\u043B\u044F\u0439\u0442\u0435 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0432\u0430\u0436\u043D\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438."}/></p>}/>
+      <div className="ora-privacy-preview-scroll"><div className="ora-privacy-image-region" style={{ width: frame.width, height: frame.height, touchAction: redactionMode ? "none" : undefined, cursor: redactionMode ? "crosshair" : undefined }} onPointerDown={e => {
+                if (!redactionMode || busy)
+                    return;
+                const r = e.currentTarget.getBoundingClientRect();
+                dragStart.current = { x: Math.max(0, Math.min(frame.width - 1, Math.floor(e.clientX - r.left))), y: Math.max(0, Math.min(frame.height - 1, Math.floor(e.clientY - r.top))) };
+                e.currentTarget.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            }} onPointerMove={e => {
+                const start = dragStart.current;
+                if (!start || !redactionMode || busy)
+                    return;
+                const r = e.currentTarget.getBoundingClientRect();
+                const x = Math.max(0, Math.min(frame.width, Math.floor(e.clientX - r.left))), y = Math.max(0, Math.min(frame.height, Math.floor(e.clientY - r.top)));
+                setRectangle({ x: Math.min(start.x, x), y: Math.min(start.y, y), width: Math.abs(x - start.x), height: Math.abs(y - start.y) });
+            }} onPointerUp={e => {
+                const start = dragStart.current;
+                dragStart.current = null;
+                if (!start || !redactionMode || busy)
+                    return;
+                const r = e.currentTarget.getBoundingClientRect();
+                const x = Math.max(0, Math.min(frame.width, Math.floor(e.clientX - r.left))), y = Math.max(0, Math.min(frame.height, Math.floor(e.clientY - r.top)));
+                const region = { x: Math.min(start.x, x), y: Math.min(start.y, y), width: Math.abs(x - start.x), height: Math.abs(y - start.y) };
+                if (region.width > 1 && region.height > 1) {
+                    setRectangle(region);
+                    void redact([region]);
+                }
+            }} onPointerCancel={() => { dragStart.current = null; }}><img className="ora-privacy-preview" width={frame.width} height={frame.height} src={"data:image/png;base64," + frame.pngBase64} alt={__ui("\u0422\u043E\u0447\u043D\u0430\u044F \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u043A\u043E\u043F\u0438\u044F \u043A\u0430\u0434\u0440\u0430")}/>
+        <LocalizedUi value={!!currentOcr?.regions.length && <svg className="ora-privacy-selection" width={frame.width} height={frame.height} style={{ pointerEvents: "none" }} aria-label={__ui("\u041E\u0431\u043B\u0430\u0441\u0442\u0438, \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u043D\u044B\u0435 OCR")}>
+          <LocalizedUi value={currentOcr.regions.map((r, i) => <rect key={i} x={r.rectangle.x} y={r.rectangle.y} width={r.rectangle.width} height={r.rectangle.height} fill="none" stroke="#f4aa36" strokeWidth={2}/>)}/>
+        </svg>}/>
+        <LocalizedUi value={validRectangle && <svg className="ora-privacy-selection" width={frame.width} height={frame.height} aria-label={__ui("\u0412\u044B\u0434\u0435\u043B\u0435\u043D\u043D\u0430\u044F \u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0441\u043A\u0440\u044B\u0442\u0438\u044F")} style={{ pointerEvents: "none" }}>
+          <rect x={rectangle.x} y={rectangle.y} width={rectangle.width} height={rectangle.height} fill="none" stroke="#f4aa36" strokeWidth={2}/></svg>}/>
+      </div></div>
+      <details><summary><LocalizedUi value={"\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u00B7 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u0432\u0430\u043D\u0438\u0435 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u0438 \u0442\u043E\u0447\u043D\u043E\u0435 \u0432\u044B\u0434\u0435\u043B\u0435\u043D\u0438\u0435"}/></summary>
+      <section className="ora-privacy-ocr" aria-label={__ui("\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u043E\u0438\u0441\u043A \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439")}>
+        <button type="button" disabled={busy} onClick={() => void findText()}><LocalizedUi value={"\u041D\u0430\u0439\u0442\u0438 \u043D\u0430\u0434\u043F\u0438\u0441\u0438 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E"}/></button>
+        <LocalizedUi value={ocrBusy && <button type="button" onClick={() => scan.current?.abort()}><LocalizedUi value={"\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C OCR"}/></button>}/>
+        <LocalizedUi value={ocrNotice && <p role="status"><LocalizedUi value={ocrNotice}/></p>}/>
+        <LocalizedUi value={currentOcr && <>
+          <p role="status"><LocalizedUi value={"\u041E\u0431\u043B\u0430\u0441\u0442\u0435\u0439 \u0441 \u043D\u0430\u0434\u043F\u0438\u0441\u044F\u043C\u0438:"}/><LocalizedUi value={currentOcr.regions.length}/><LocalizedUi value={". OCR \u043C\u043E\u0436\u0435\u0442 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442; \u0440\u0443\u0447\u043D\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u043E\u0431\u044F\u0437\u0430\u0442\u0435\u043B\u044C\u043D\u0430."}/></p>
+          <LocalizedUi value={currentOcr.regions.length > 0 && !unresolvedText && <p><LocalizedUi value={"\u041D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0435 \u043D\u0430\u0434\u043F\u0438\u0441\u0438 \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u044B \u043A\u0430\u043A \u043D\u0435\u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0435 \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0439 \u043E\u0442\u043C\u0435\u0442\u043A\u0435."}/></p>}/>
+          <ul><LocalizedUi value={currentOcr.regions.map((r, i) => <li key={i}><LocalizedUi value={"\u041E\u0431\u043B\u0430\u0441\u0442\u044C"}/><LocalizedUi value={i + 1}/>: <LocalizedUi value={r.rectangle.x}/>, <LocalizedUi value={r.rectangle.y}/> · <LocalizedUi value={r.rectangle.width}/>×<LocalizedUi value={r.rectangle.height}/>
+            <button type="button" disabled={busy} onClick={() => setRectangle(r.rectangle)}><LocalizedUi value={"\u0412\u044B\u0431\u0440\u0430\u0442\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u044C"}/><LocalizedUi value={i + 1}/></button></li>)}/></ul>
+          <LocalizedUi value={currentOcr.regions.length > 0 && <>
+            <button type="button" disabled={busy || frame.redactions.length + currentOcr.regions.length > 32} onClick={() => void redact(currentOcr.regions.map(r => r.rectangle))}><LocalizedUi value={"\u0421\u043A\u0440\u044B\u0442\u044C \u043D\u0430\u0439\u0434\u0435\u043D\u043D\u044B\u0435 \u043D\u0430\u0434\u043F\u0438\u0441\u0438"}/></button>
+            <button type="button" disabled={busy || !unresolvedText} onClick={retainText}><LocalizedUi value={"\u041E\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043D\u0430\u0434\u043F\u0438\u0441\u0438: \u043D\u0435 \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0442 \u043F\u0430\u0446\u0438\u0435\u043D\u0442\u0430"}/></button>
+          </>}/>
+        </>}/>
+        <p><LocalizedUi value={"\u041F\u043E\u0438\u0441\u043A \u043D\u0430 \u0440\u0443\u0441\u0441\u043A\u043E\u043C \u0438 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C \u0432\u044B\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F \u0432 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435 \u043D\u0430 \u043E\u0434\u043D\u043E\u043C \u043A\u0430\u0434\u0440\u0435. \u0420\u0435\u0441\u0443\u0440\u0441\u044B OCR \u0437\u0430\u0433\u0440\u0443\u0436\u0430\u044E\u0442\u0441\u044F \u0441 \u044D\u0442\u043E\u0433\u043E \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u044F, \u043F\u0438\u043A\u0441\u0435\u043B\u0438 \u043D\u0430 \u0441\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u044E\u0442\u0441\u044F. OCR \u043D\u0435 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u0442 \u043B\u0438\u0446\u043E \u0438 \u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0430\u0435\u0442 \u043E\u0431\u0435\u0437\u043B\u0438\u0447\u0438\u0432\u0430\u043D\u0438\u0435."}/></p>
+      </section>
+      <p><LocalizedUi value={"\u041E\u0431\u043B\u0430\u0441\u0442\u044C \u0441\u043A\u0440\u044B\u0442\u0438\u044F \u0432 \u043F\u0438\u043A\u0441\u0435\u043B\u044F\u0445: \u043E\u0442\u0441\u0447\u0451\u0442 \u043E\u0442 \u043B\u0435\u0432\u043E\u0433\u043E \u0432\u0435\u0440\u0445\u043D\u0435\u0433\u043E \u0443\u0433\u043B\u0430. \u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B \u043D\u0435 \u043C\u0435\u043D\u044F\u0435\u0442\u0441\u044F; \u0441\u043A\u0440\u044B\u0442\u044B\u0435 \u043E\u0431\u043B\u0430\u0441\u0442\u0438 \u0442\u0435\u0440\u044F\u044E\u0442 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u0447\u0435\u0441\u043A\u043E\u0435 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435."}/></p>
+      <div className="ora-privacy-rectangle"><LocalizedUi value={(["x", "y", "width", "height"] as const).map((field, i) => <label key={field}><LocalizedUi value={["X", "Y", "Ширина", "Высота"][i]}/>
+        <input type="number" min={field === "x" || field === "y" ? 0 : 1} step={1} value={Number.isFinite(rectangle[field]) ? rectangle[field] : ""} disabled={busy} onChange={e => setRectangle(previous => ({ ...previous, [field]: e.target.value === "" ? NaN : Number(e.target.value) }))}/></label>)}/></div>
+      <button type="button" disabled={busy || !validRectangle || frame.redactions.length >= 32} onClick={() => void redact()}><LocalizedUi value={"\u0421\u043A\u0440\u044B\u0442\u044C \u043E\u0431\u043B\u0430\u0441\u0442\u044C \u0432 \u043A\u043E\u043F\u0438\u0438"}/></button>
+      <p role="status"><LocalizedUi value={"\u0421\u043A\u0440\u044B\u0442\u044B\u0445 \u043E\u0431\u043B\u0430\u0441\u0442\u0435\u0439:"}/><LocalizedUi value={frame.redactions.length}/><LocalizedUi value={". \u0418\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u043A\u043E\u043F\u0438\u0438 \u0441\u0431\u0440\u0430\u0441\u044B\u0432\u0430\u0435\u0442 \u0435\u0451 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443."}/></p>
+      <label><input type="checkbox" disabled={busy} checked={frame.pixelReviewSha256 === frame.sha256} onChange={e => review("pixel", e.target.checked)}/><LocalizedUi value={"\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u043B \u043A\u043E\u043F\u0438\u044E: \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0445 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u043D\u0435\u0442"}/></label>
+      <label><input type="checkbox" disabled={busy} checked={frame.visualReviewSha256 === frame.sha256} onChange={e => review("visual", e.target.checked)}/><LocalizedUi value={"\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u043B \u043A\u043E\u043F\u0438\u044E: \u043B\u0438\u0446\u0430 \u0438 \u0443\u0437\u043D\u0430\u0432\u0430\u0435\u043C\u044B\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u043D\u0435\u0442"}/></label>
+      </details>
+      <details><summary><LocalizedUi value={"\u0414\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u00B7 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0441\u0442\u0430\u0442\u0443\u0441 \u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0444\u0430\u0439\u043B\u043E\u0432"}/></summary>
+      <VisionPrivacyReadiness frames={frames} ocr={ocr} keptText={keptText} busy={busy}/>
+      <button type="button" disabled={busy} onClick={() => download("readiness")}><LocalizedUi value={"\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0441\u0442\u0430\u0442\u0443\u0441 \u0431\u0435\u0437 \u043F\u0438\u043A\u0441\u0435\u043B\u0435\u0439 JSON"}/></button>
+      <button type="button" disabled={busy || !reviewed} onClick={() => download()}><LocalizedUi value={"\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u043F\u0430\u043A\u0435\u0442 \u043A\u043E\u043F\u0438\u0439 JSON"}/></button>
+      <LocalizedUi value={journal && <section aria-label={__ui("\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0439 \u0436\u0443\u0440\u043D\u0430\u043B \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u043E\u0441\u0442\u0438")}>
+        <p role="status"><LocalizedUi value={"\u0414\u0435\u0439\u0441\u0442\u0432\u0438\u0439 \u0432 \u0436\u0443\u0440\u043D\u0430\u043B\u0435:"}/><LocalizedUi value={journal.events.length}/><LocalizedUi value={"\u0438\u0437"}/><LocalizedUi value={MAX_PRIVACY_EVENTS}/><LocalizedUi value={". \u0412\u0440\u0435\u043C\u044F \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u044E\u0449\u0438\u0439 \u043D\u0435 \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u044B."}/></p>
+        <details><summary><LocalizedUi value={"\u0418\u0441\u0442\u043E\u0440\u0438\u044F \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439"}/></summary><ol><LocalizedUi value={journal.events.map(e => <li key={e.revision}>
+          <LocalizedUi value={e.revision}/><LocalizedUi value={". \u041A\u0430\u0434\u0440"}/><LocalizedUi value={e.frameId.slice(-1)}/> · <LocalizedUi value={actionLabels[e.action.kind]}/> · <LocalizedUi value={e.declaredAt}/>
+          <LocalizedUi value={e.action.kind === "ocr-completed" && ` · областей: ${e.action.regionCount}`}/>
+          <LocalizedUi value={e.action.kind === "redacted" && ` · областей: ${e.action.rectangles.length}`}/>
+          <LocalizedUi value={e.action.kind === "review-set" && ` · ${e.action.review === "pixel" ? "надписи" : "узнаваемые признаки"}: ${e.action.checked ? "отметка поставлена" : "отметка снята"}`}/>
+        </li>)}/></ol></details>
+        <button type="button" disabled={busy} onClick={() => download("journal")}><LocalizedUi value={"\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u0436\u0443\u0440\u043D\u0430\u043B \u0431\u0435\u0437 \u043F\u0438\u043A\u0441\u0435\u043B\u0435\u0439 JSON"}/></button>
+        <button type="button" disabled={busy || !reviewed} onClick={() => download("bundle")}><LocalizedUi value={"\u0421\u043A\u0430\u0447\u0430\u0442\u044C \u043A\u043E\u043F\u0438\u0438 \u0441 \u0436\u0443\u0440\u043D\u0430\u043B\u043E\u043C JSON"}/></button>
+        <p><LocalizedUi value={"\u0421\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u043E \u0432\u0430\u0448\u0435\u0439 \u043A\u043E\u043C\u0430\u043D\u0434\u0435. \u041D\u043E\u0432\u044B\u0439 \u043D\u0430\u0431\u043E\u0440 \u043A\u043E\u043F\u0438\u0439 \u0437\u0430\u043C\u0435\u043D\u0438\u0442 \u0442\u0435\u043A\u0443\u0449\u0438\u0439 \u0436\u0443\u0440\u043D\u0430\u043B \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438; \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0435 \u043D\u0443\u0436\u043D\u044B\u0439 \u0444\u0430\u0439\u043B \u0437\u0430\u0440\u0430\u043D\u0435\u0435. \u0416\u0443\u0440\u043D\u0430\u043B \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u043F\u0440\u0438\u0432\u044F\u0437\u043A\u0438 SHA, \u043D\u043E \u043D\u0435 \u0441\u043B\u043E\u0432\u0430 OCR \u0438 \u043D\u0435 \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u044C\u043D\u044B\u0435 UID. \u041F\u0430\u043A\u0435\u0442 \u0441 \u043A\u043E\u043F\u0438\u044F\u043C\u0438 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u0442 \u0447\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0435 \u043F\u0438\u043A\u0441\u0435\u043B\u0438. \u042D\u0442\u043E \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u044B\u0435 \u043D\u0435\u043F\u043E\u0434\u043F\u0438\u0441\u0430\u043D\u043D\u044B\u0435 \u0437\u0430\u043F\u0438\u0441\u0438, \u043D\u0435 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0430 \u043E\u0431\u043B\u0430\u0447\u043D\u0443\u044E \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0443."}/></p>
+      </section>}/>
+    </details>
+    </>}/>
+    <LocalizedUi value={frames.length > 0 && onReviewedBatch && <button type="button" disabled={!pilotReady || batchSubmitting} onClick={() => void onReviewedBatch(makePilotPacket(), { frames, ocr, journal: journalRef.current!, unresolved: 0, redacted: frames.reduce((sum, f) => sum + f.redactions.length, 0) }).catch(e => setError(e instanceof Error ? e.message : "Пакет не обработан."))}>
+      <LocalizedUi value={batchSubmitting ? "Gemini анализирует проверенные кадры…" : reviewedBatchLabel}/>
+    </button>}/>
+    <LocalizedUi value={frames.length > 0 && !onReviewedBatch && <DeidentifiedOpenRouterPanel key={frames.map(f => f.sha256).join(":")} enabledByLocalChecks={pilotReady} autoConnect={autoStartAfterDetectors} primaryAnalysisStage={primaryAnalysisStage} exactReviewedHashes={frames.map(f => ({ imageId: f.frameId, sha256: f.sha256 }))} prepareReviewedPacket={makePilotPacket} originalLocalFileIds={originalLocalFileIds} specialistFacts={specialistFacts} originalDetectorEvidence={originalDetectorEvidence} frameRelativeClnEvidence={frameRelativeClnEvidence} originalCxrEvidence={originalCxrEvidence} localLaa950={localLaa950} specialistLocalBinding={specialistLocalBinding} onOpenOriginalSlice={onOpenOriginalSlice}/>}/>
+  </section>;
+}

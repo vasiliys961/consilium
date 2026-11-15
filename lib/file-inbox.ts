@@ -1,0 +1,12 @@
+/** Standalone local file inbox. Originals are never analyzed or uploaded here. */
+export interface InboxFile {id:string;name:string;type:string;size:number;created:string;blob:Blob;deletedAt?:string}
+function database():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open('concilium-file-inbox-v1',1);request.onupgradeneeded=()=>request.result.createObjectStore('files',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
+export async function receiveInboxFile(file:File):Promise<InboxFile>{
+ if(file.size>8_000_000)throw Error('До 8 МБ на файл. Для большого видео передайте короткий фрагмент.');
+ const bytes=await file.arrayBuffer();const id=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),value=>value.toString(16).padStart(2,'0')).join('');
+ const record:InboxFile={id,name:file.name,type:file.type||'application/octet-stream',size:file.size,created:new Date().toISOString(),blob:file};const db=await database();
+ try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(record);tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error??Error('Не удалось сохранить файл. Проверьте свободное место в браузере.'));});return record;}finally{db.close();}
+}
+export async function readInboxFiles():Promise<InboxFile[]>{const db=await database();try{return await new Promise<InboxFile[]>((resolve,reject)=>{const request=db.transaction('files').objectStore('files').getAll();request.onsuccess=()=>resolve((request.result as InboxFile[]).sort((a,b)=>b.created.localeCompare(a.created)));request.onerror=()=>reject(request.error);});}finally{db.close();}}
+export async function trashInboxFile(id:string,restore=false):Promise<void>{const db=await database();try{await new Promise<void>((resolve,reject)=>{const tx=db.transaction('files','readwrite'),store=tx.objectStore('files'),request=store.get(id);request.onsuccess=()=>{const file=request.result as InboxFile|undefined;if(file)store.put({...file,deletedAt:restore?undefined:new Date().toISOString()});};tx.oncomplete=()=>resolve();tx.onabort=()=>reject(tx.error);});}finally{db.close();}}
+export function downloadInboxFile(file:InboxFile){const url=URL.createObjectURL(file.blob),anchor=document.createElement('a');anchor.href=url;anchor.download=file.name;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}

@@ -1,0 +1,23 @@
+export const GENETIC_TOPICS=[
+ {id:'meaning',title:'Значение вариантов',question:'Какие варианты в этом тесте наиболее важны, с какими заболеваниями связаны и что меняют в ведении пациента?'},
+ {id:'hereditary',title:'Наследственные болезни',question:'Могут ли находки объяснить симптомы или семейные случаи заболеваний? Обсудите наследование, пенетрантность, носительство и что подтвердит клиническую связь.'},
+ {id:'pregnancy',title:'Беременность и планирование семьи',question:'Что результаты означают для планирования беременности, риска для ребёнка и обследования партнёра? Разделите носительство, скрининг и диагностические тесты; укажите, какие сведения о партнёре и семье нужны.'},
+ {id:'family',title:'Дети и родственники',question:'Кому из родственников имеет смысл предложить обследование, какой вариант проверять и что изменит положительный или отрицательный результат? Учтите возраст и семейную историю.'},
+ {id:'sport',title:'Спорт и физические нагрузки',question:'Что результаты означают для безопасности физических нагрузок, сердца, мышц и риска травм? Какие проверки нужны до изменения тренировок? Отдельно обсудите значение распространённых спортивных маркеров.'},
+ {id:'cancer',title:'Онкологические риски',question:'Есть ли в тесте находки, связанные с наследственными опухолевыми синдромами? Что следует уточнить по семье и фенотипу и какие варианты наблюдения могут быть обоснованы?'},
+ {id:'heart',title:'Сердце и сосуды',question:'Есть ли значимые находки для кардиомиопатий, аритмий, аортопатий или липидного обмена? Как сопоставить их с клиникой, обследованием сердца и семейной историей?'},
+ {id:'drugs',title:'Лекарства и фармакогенетика',question:'Что генетические находки меняют в эффективности, переносимости и выборе текущих лекарств? Разберите взаимодействия, альтернативы и необходимый контроль с учётом клинического контекста.'},
+ {id:'nutrition',title:'Питание и обмен веществ',question:'Есть ли практическое значение для питания, метаболических нарушений, дефицитов или переносимости продуктов? Какие рекомендации следуют из данных, а что требует клинических и лабораторных уточнений?'},
+ {id:'prevention',title:'Профилактика и долголетие',question:'Какие находки действительно меняют профилактику и наблюдение в течение жизни? Разделите моногенные риски, распространённые ассоциации и полигенную оценку; свяжите рекомендации с возрастом и факторами риска.'},
+] as const;
+export const GENETIC_FAQ=[
+ 'Есть ли у пациента наследственное заболевание или только предрасположенность?',
+ 'Что означает VUS и какие данные помогут уточнить его значение?',
+ 'Может ли результат объяснить симптомы, если класс ACMG не указан?',
+ 'Почему лаборатории дают разные оценки одного варианта?',
+ 'Что нужно подтвердить другим методом и каким именно?',
+ 'Нужно ли обследовать партнёра, детей или родителей?',
+ 'Что отрицательный результат исключает, а чего не исключает?',
+ 'Когда имеет смысл пересмотреть интерпретацию или повторить тест?',
+] as const;
+export const GENETIC_TOPIC_INSTRUCTION=`Discuss the requested clinical domain, not only medications. Pregnancy/reproduction: distinguish carrier screening, fetal screening and diagnosis; use actual parental genotypes and inheritance, discuss residual risk and partner/family testing, and give a Mendelian probability only when its conditions are stated. A routine SNP VCF may not assess SMN1 copy number, FMR1 expansions, structural variants or all mitochondrial heteroplasmy. A common MTHFR polymorphism alone is not a basis for high-dose folate, thrombophilia diagnosis or pregnancy anticoagulation. Sports: prioritize clinically relevant cardiomyopathy, arrhythmia, aortopathy, malignant-hyperthermia or muscle-disease findings and actual exertional symptoms/family history. Explain ACTN3/ACE or injury associations as limited population associations; do not predict an individual's athletic destiny or impose training restrictions from one common SNP. Hereditary disease/family counseling: discuss mode of inheritance, genotype/phase, phenotype fit, variable expression, age-dependent penetrance, cascade testing and implications of a negative test. Cancer/cardiovascular risks: relate a specific allele and assessment to the clinical phenotype and family, rather than assigning a syndrome from gene name alone. Nutrition/prevention/longevity: give practical conditional clinical advice based on actual findings and phenotype, without invented nutrient doses, supplements, life expectancy, PRS, percentages or a blanket claim of normal health. Explain discrepant laboratory assessments and how confirmation, updated databases or reanalysis may resolve them. Ask only the few missing questions that would change this domain's next step.`;

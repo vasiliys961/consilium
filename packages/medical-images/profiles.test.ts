@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {IMAGE_PROFILES,imageProfilePrompt,profileModality,validImageProfile} from './profiles.ts';import {conduct} from '../../lib/conductor.ts';import {samplePlane} from '../skin/plane.ts';
+test('existing maternal specialty criteria are connected to explicit medical image profiles',()=>{assert.equal(IMAGE_PROFILES.length,13);assert.match(imageProfilePrompt('mammography'),/BI-RADS/);assert.match(imageProfilePrompt('histology'),/architecture/);assert.match(imageProfilePrompt('wound'),/wound bed/);assert.equal(validImageProfile('invented'),false);assert.equal(profileModality('dermatoscopy'),'dermatology');});
+test('a named specialty does not depend on the uploaded filename and derives technical samples from actual pixels',()=>{const plane=samplePlane({width:1024,height:1024,data:new Uint8Array(1024*1024*4).fill(120)});assert.equal(plane.gray.length,4096);const result=conduct({files:[{name:'photo.png',imageProfile:'histology',plane,image:'invalid'}]});assert.equal(result.ledger[0].modality,'histology');assert.notEqual(result.ledger[0].reading?.quality,null);});
+
+test('an explicit image profile overrides a misleading filename but does not relabel a digital ECG file',()=>{
+ const image=conduct({files:[{name:'ecg2.png',imageProfile:'histology',image:'placeholder'}]});assert.equal(image.ledger[0].modality,'histology');
+ const waveform=conduct({files:[{name:'tracing.csv',imageProfile:'histology',text:'sampling_rate,500\nI,II,III,aVR,aVL,aVF,V1,V2,V3,V4,V5,V6\n0,0,0,0,0,0,0,0,0,0,0,0'}]});assert.equal(waveform.ledger[0].modality,'ecg');
+});

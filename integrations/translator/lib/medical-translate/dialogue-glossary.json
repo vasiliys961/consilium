@@ -1,0 +1,5637 @@
+{
+  "description": "Expanded AI-assisted medical terminology reference. Not independently reviewed or certified; source meaning and exact drug identity always take priority.",
+  "provenance": {
+    "method": "AI-assisted translation of a curated generic term list; existing entries retained",
+    "model": "gpt-4.1-mini",
+    "clinicallyReviewed": false
+  },
+  "entries": [
+    {
+      "id": "metoprolol",
+      "terms": {
+        "ru": "метопролол",
+        "en": "metoprolol",
+        "es": "metoprolol",
+        "fr": "métoprolol",
+        "ar": "ميتوبرولول",
+        "hi": "मेटोप्रोलोल",
+        "pt": "metoprolol",
+        "id": "metoprolol",
+        "ms": "metoprolol",
+        "tr": "metoprolol",
+        "zh": "美托洛尔"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "penicillin",
+      "terms": {
+        "ru": "пенициллин",
+        "en": "penicillin",
+        "es": "penicilina",
+        "fr": "pénicilline",
+        "ar": "بنسلين",
+        "hi": "पेनिसिलिन",
+        "pt": "penicilina",
+        "id": "penisilin",
+        "ms": "penisilin",
+        "tr": "penisilin",
+        "zh": "青霉素"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "aspirin",
+      "terms": {
+        "ru": "аспирин",
+        "en": "aspirin",
+        "es": "aspirina",
+        "fr": "aspirine",
+        "ar": "أسبرين",
+        "hi": "एस्पिरिन",
+        "pt": "aspirina",
+        "id": "aspirin",
+        "ms": "aspirin",
+        "tr": "aspirin",
+        "zh": "阿司匹林"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "ibuprofen",
+      "terms": {
+        "ru": "ибупрофен",
+        "en": "ibuprofen",
+        "es": "ibuprofeno",
+        "fr": "ibuprofène",
+        "ar": "إيبوبروفين",
+        "hi": "इबुप्रोफेन",
+        "pt": "ibuprofeno",
+        "id": "ibuprofen",
+        "ms": "ibuprofen",
+        "tr": "ibuprofen",
+        "zh": "布洛芬"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "paracetamol",
+      "terms": {
+        "ru": "парацетамол",
+        "en": "paracetamol",
+        "es": "paracetamol",
+        "fr": "paracétamol",
+        "ar": "باراسيتامول",
+        "hi": "पैरासिटामोल",
+        "pt": "paracetamol",
+        "id": "paracetamol",
+        "ms": "paracetamol",
+        "tr": "parasetamol",
+        "zh": "对乙酰氨基酚"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "amoxicillin",
+      "terms": {
+        "ru": "амоксициллин",
+        "en": "amoxicillin",
+        "es": "amoxicilina",
+        "fr": "amoxicilline",
+        "ar": "أموكسيسيلين",
+        "hi": "एमोक्सिसिलिन",
+        "pt": "amoxicilina",
+        "id": "amoksisilin",
+        "ms": "amoksisilin",
+        "tr": "amoksisilin",
+        "zh": "阿莫西林"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "warfarin",
+      "terms": {
+        "ru": "варфарин",
+        "en": "warfarin",
+        "es": "warfarina",
+        "fr": "warfarine",
+        "ar": "وارفارين",
+        "hi": "वारफारिन",
+        "pt": "varfarina",
+        "id": "warfarin",
+        "ms": "warfarin",
+        "tr": "warfarin",
+        "zh": "华法林"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "insulin",
+      "terms": {
+        "ru": "инсулин",
+        "en": "insulin",
+        "es": "insulina",
+        "fr": "insuline",
+        "ar": "إنسولين",
+        "hi": "इंसुलिन",
+        "pt": "insulina",
+        "id": "insulin",
+        "ms": "insulin",
+        "tr": "insülin",
+        "zh": "胰岛素"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "lisinopril",
+      "terms": {
+        "ru": "лизиноприл",
+        "en": "lisinopril",
+        "es": "lisinopril",
+        "fr": "lisinopril",
+        "ar": "ليزينوبريل",
+        "hi": "लिसिनोप्रिल",
+        "pt": "lisinopril",
+        "id": "lisinopril",
+        "ms": "lisinopril",
+        "tr": "lisinopril",
+        "zh": "赖诺普利"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "enalapril",
+      "terms": {
+        "ru": "эналаприл",
+        "en": "enalapril",
+        "es": "enalapril",
+        "fr": "énalapril",
+        "ar": "إنالابريل",
+        "hi": "एनेलाप्रिल",
+        "pt": "enalapril",
+        "id": "enalapril",
+        "ms": "enalapril",
+        "tr": "enalapril",
+        "zh": "依那普利"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "amlodipine",
+      "terms": {
+        "ru": "амлодипин",
+        "en": "amlodipine",
+        "es": "amlodipino",
+        "fr": "amlodipine",
+        "ar": "أملوديبين",
+        "hi": "एम्लोडिपिन",
+        "pt": "amlodipino",
+        "id": "amlodipin",
+        "ms": "amlodipin",
+        "tr": "amlodipin",
+        "zh": "氨氯地平"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "bisoprolol",
+      "terms": {
+        "ru": "бисопролол",
+        "en": "bisoprolol",
+        "es": "bisoprolol",
+        "fr": "bisoprolol",
+        "ar": "بيسوبرولول",
+        "hi": "बिसोप्रोलोल",
+        "pt": "bisoprolol",
+        "id": "bisoprolol",
+        "ms": "bisoprolol",
+        "tr": "bisoprolol",
+        "zh": "比索洛尔"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "atorvastatin",
+      "terms": {
+        "ru": "аторвастатин",
+        "en": "atorvastatin",
+        "es": "atorvastatina",
+        "fr": "atorvastatine",
+        "ar": "أتورفاستاتين",
+        "hi": "एटोरवास्टेटिन",
+        "pt": "atorvastatina",
+        "id": "atorvastatin",
+        "ms": "atorvastatin",
+        "tr": "atorvastatin",
+        "zh": "阿托伐他汀"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "clopidogrel",
+      "terms": {
+        "ru": "клопидогрел",
+        "en": "clopidogrel",
+        "es": "clopidogrel",
+        "fr": "clopidogrel",
+        "ar": "كلوبيدوجريل",
+        "hi": "क्लोपिडोग्रेल",
+        "pt": "clopidogrel",
+        "id": "clopidogrel",
+        "ms": "clopidogrel",
+        "tr": "klopidogrel",
+        "zh": "氯吡格雷"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "omeprazole",
+      "terms": {
+        "ru": "омепразол",
+        "en": "omeprazole",
+        "es": "omeprazol",
+        "fr": "oméprazole",
+        "ar": "أوميبرازول",
+        "hi": "ओमेप्राजोल",
+        "pt": "omeprazol",
+        "id": "omeprazol",
+        "ms": "omeprazol",
+        "tr": "omeprazol",
+        "zh": "奥美拉唑"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "losartan",
+      "terms": {
+        "ru": "лозартан",
+        "en": "losartan",
+        "es": "losartán",
+        "fr": "losartan",
+        "ar": "لوزارتان",
+        "hi": "लोसार्टन",
+        "pt": "losartana",
+        "id": "losartan",
+        "ms": "losartan",
+        "tr": "losartan",
+        "zh": "氯沙坦"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "metformin",
+      "terms": {
+        "ru": "метформин",
+        "en": "metformin",
+        "es": "metformina",
+        "fr": "metformine",
+        "ar": "ميتفورمين",
+        "hi": "मेटफॉर्मिन",
+        "pt": "metformina",
+        "id": "metformin",
+        "ms": "metformin",
+        "tr": "metformin",
+        "zh": "二甲双胍"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "salbutamol",
+      "terms": {
+        "ru": "сальбутамол",
+        "en": "salbutamol",
+        "es": "salbutamol",
+        "fr": "salbutamol",
+        "ar": "سالبوتامول",
+        "hi": "साल्बुटामोल",
+        "pt": "salbutamol",
+        "id": "salbutamol",
+        "ms": "salbutamol",
+        "tr": "salbutamol",
+        "zh": "沙丁胺醇"
+      },
+      "category": "drugs"
+    },
+    {
+      "id": "dyspnea",
+      "terms": {
+        "ru": "одышка",
+        "en": "shortness of breath",
+        "es": "dificultad para respirar",
+        "fr": "essoufflement",
+        "ar": "ضيق التنفس",
+        "hi": "सांस लेने में तकलीफ",
+        "pt": "falta de ar",
+        "id": "sesak napas",
+        "ms": "sesak nafas",
+        "tr": "nefes darlığı",
+        "zh": "呼吸困难"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "edema",
+      "terms": {
+        "ru": "отёк",
+        "en": "edema",
+        "es": "edema",
+        "fr": "œdème",
+        "ar": "وذمة",
+        "hi": "सूजन",
+        "pt": "edema",
+        "id": "edema",
+        "ms": "edema",
+        "tr": "ödem",
+        "zh": "水肿"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "myocardial-infarction",
+      "terms": {
+        "ru": "инфаркт миокарда",
+        "en": "myocardial infarction",
+        "es": "infarto de miocardio",
+        "fr": "infarctus du myocarde",
+        "ar": "احتشاء عضلة القلب",
+        "hi": "हृदयाघात",
+        "pt": "infarto do miocárdio",
+        "id": "infark miokard",
+        "ms": "infark miokardium",
+        "tr": "miyokard enfarktüsü",
+        "zh": "心肌梗死"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "arrhythmia",
+      "terms": {
+        "ru": "аритмия",
+        "en": "arrhythmia",
+        "es": "arritmia",
+        "fr": "arythmie",
+        "ar": "عدم انتظام ضربات القلب",
+        "hi": "अतालता",
+        "pt": "arritmia",
+        "id": "aritmia",
+        "ms": "aritmia",
+        "tr": "aritmi",
+        "zh": "心律失常"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "anticoagulant",
+      "terms": {
+        "ru": "антикоагулянт",
+        "en": "anticoagulant",
+        "es": "anticoagulante",
+        "fr": "anticoagulant",
+        "ar": "مضاد تخثر",
+        "hi": "रक्त पतला करने वाली दवा",
+        "pt": "anticoagulante",
+        "id": "antikoagulan",
+        "ms": "antikoagulan",
+        "tr": "antikoagülan",
+        "zh": "抗凝剂"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "hypertension",
+      "terms": {
+        "ru": "артериальная гипертензия",
+        "en": "hypertension",
+        "es": "hipertensión arterial",
+        "fr": "hypertension artérielle",
+        "ar": "ارتفاع ضغط الدم",
+        "hi": "उच्च रक्तचाप",
+        "pt": "hipertensão arterial",
+        "id": "hipertensi",
+        "ms": "hipertensi",
+        "tr": "hipertansiyon",
+        "zh": "高血压"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "hypotension",
+      "terms": {
+        "ru": "артериальная гипотензия",
+        "en": "hypotension",
+        "es": "hipotensión arterial",
+        "fr": "hypotension artérielle",
+        "ar": "انخفاض ضغط الدم",
+        "hi": "निम्न रक्तचाप",
+        "pt": "hipotensão arterial",
+        "id": "hipotensi",
+        "ms": "hipotensi",
+        "tr": "hipotansiyon",
+        "zh": "低血压"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "glucose",
+      "terms": {
+        "ru": "глюкоза",
+        "en": "glucose",
+        "es": "glucosa",
+        "fr": "glucose",
+        "ar": "غلوكوز",
+        "hi": "ग्लूकोज़",
+        "pt": "glicose",
+        "id": "glukosa",
+        "ms": "glukosa",
+        "tr": "glikoz",
+        "zh": "葡萄糖"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "allergy",
+      "terms": {
+        "ru": "аллергия",
+        "en": "allergy",
+        "es": "alergia",
+        "fr": "allergie",
+        "ar": "حساسية",
+        "hi": "एलर्जी",
+        "pt": "alergia",
+        "id": "alergi",
+        "ms": "alahan",
+        "tr": "alerji",
+        "zh": "过敏"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "angina",
+      "terms": {
+        "ru": "стенокардия",
+        "en": "angina",
+        "es": "angina",
+        "fr": "angine",
+        "ar": "ذبحة صدرية",
+        "hi": "एंजाइना",
+        "pt": "angina",
+        "id": "angina",
+        "ms": "angina",
+        "tr": "anjina",
+        "zh": "心绞痛"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "paresthesia",
+      "terms": {
+        "ru": "парестезия",
+        "en": "paresthesia",
+        "es": "parestesia",
+        "fr": "paresthésie",
+        "ar": "تنميل",
+        "hi": "पैरस्थीसिया",
+        "pt": "parestesia",
+        "id": "parestesia",
+        "ms": "parestesia",
+        "tr": "parestezi",
+        "zh": "感觉异常"
+      },
+      "category": "terms"
+    },
+    {
+      "id": "bp",
+      "terms": {
+        "ru": "АД",
+        "en": "BP",
+        "es": "TA",
+        "fr": "TA",
+        "ar": "ضغط الدم",
+        "hi": "रक्तचाप",
+        "pt": "PA",
+        "id": "tekanan darah",
+        "ms": "tekanan darah",
+        "tr": "KB",
+        "zh": "血压"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "hr",
+      "terms": {
+        "ru": "ЧСС",
+        "en": "HR",
+        "es": "FC",
+        "fr": "FC",
+        "ar": "معدل ضربات القلب",
+        "hi": "हृदय गति",
+        "pt": "FC",
+        "id": "denyut jantung",
+        "ms": "denyut jantung",
+        "tr": "KY",
+        "zh": "心率"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "ecg",
+      "terms": {
+        "ru": "ЭКГ",
+        "en": "ECG",
+        "es": "ECG",
+        "fr": "ECG",
+        "ar": "تخطيط القلب الكهربائي",
+        "hi": "ईसीजी",
+        "pt": "ECG",
+        "id": "EKG",
+        "ms": "EKG",
+        "tr": "EKG",
+        "zh": "心电图"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "ct",
+      "terms": {
+        "ru": "КТ",
+        "en": "CT",
+        "es": "TC",
+        "fr": "CT",
+        "ar": "التصوير المقطعي",
+        "hi": "सीटी स्कैन",
+        "pt": "TC",
+        "id": "CT",
+        "ms": "CT",
+        "tr": "BT",
+        "zh": "CT扫描"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "mri",
+      "terms": {
+        "ru": "МРТ",
+        "en": "MRI",
+        "es": "RM",
+        "fr": "IRM",
+        "ar": "التصوير بالرنين المغناطيسي",
+        "hi": "एमआरआई",
+        "pt": "RM",
+        "id": "MRI",
+        "ms": "MRI",
+        "tr": "MR",
+        "zh": "核磁共振"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "cbc",
+      "terms": {
+        "ru": "ОАК",
+        "en": "CBC",
+        "es": "CBC",
+        "fr": "NFS",
+        "ar": "فحص تعداد الدم الكامل",
+        "hi": "पूर्ण रक्त गणना",
+        "pt": "Hemograma",
+        "id": "CBC",
+        "ms": "CBC",
+        "tr": "CBC",
+        "zh": "全血细胞计数"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "hb",
+      "terms": {
+        "ru": "гемоглобин",
+        "en": "hemoglobin",
+        "es": "hemoglobina",
+        "fr": "hémoglobine",
+        "ar": "الهيموغلوبين",
+        "hi": "हीमोग्लोबिन",
+        "pt": "hemoglobina",
+        "id": "hemoglobin",
+        "ms": "hemoglobin",
+        "tr": "hemoglobin",
+        "zh": "血红蛋白"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "inr",
+      "terms": {
+        "ru": "МНО",
+        "en": "INR",
+        "es": "INR",
+        "fr": "INR",
+        "ar": "INR",
+        "hi": "INR",
+        "pt": "INR",
+        "id": "INR",
+        "ms": "INR",
+        "tr": "INR",
+        "zh": "国际标准化比率"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "spo2",
+      "terms": {
+        "ru": "сатурация",
+        "en": "SpO2",
+        "es": "SpO2",
+        "fr": "SpO2",
+        "ar": "تشبع الأكسجين",
+        "hi": "SpO2",
+        "pt": "SpO2",
+        "id": "SpO2",
+        "ms": "SpO2",
+        "tr": "SpO2",
+        "zh": "血氧饱和度"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "icu",
+      "terms": {
+        "ru": "ОРИТ",
+        "en": "ICU",
+        "es": "UCI",
+        "fr": "USI",
+        "ar": "العناية المركزة",
+        "hi": "आईसीयू",
+        "pt": "UTI",
+        "id": "ICU",
+        "ms": "ICU",
+        "tr": "YOİ",
+        "zh": "重症监护室"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "er",
+      "terms": {
+        "ru": "приемное отделение",
+        "en": "ER",
+        "es": "Urgencias",
+        "fr": "SAU",
+        "ar": "قسم الطوارئ",
+        "hi": "आपातकालीन कक्ष",
+        "pt": "Urgência",
+        "id": "IGD",
+        "ms": "ER",
+        "tr": "Acil Servis",
+        "zh": "急诊室"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "bid",
+      "terms": {
+        "ru": "два раза в день",
+        "en": "BID",
+        "es": "BID",
+        "fr": "BID",
+        "ar": "مرتين يومياً",
+        "hi": "दिन में दो बार",
+        "pt": "BID",
+        "id": "BID",
+        "ms": "BID",
+        "tr": "BID",
+        "zh": "每日两次"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "tid",
+      "terms": {
+        "ru": "три раза в день",
+        "en": "TID",
+        "es": "TID",
+        "fr": "TID",
+        "ar": "ثلاث مرات يومياً",
+        "hi": "दिन में तीन बार",
+        "pt": "TID",
+        "id": "TID",
+        "ms": "TID",
+        "tr": "TID",
+        "zh": "每日三次"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "qid",
+      "terms": {
+        "ru": "четыре раза в день",
+        "en": "QID",
+        "es": "QID",
+        "fr": "QID",
+        "ar": "أربع مرات يومياً",
+        "hi": "दिन में चार बार",
+        "pt": "QID",
+        "id": "QID",
+        "ms": "QID",
+        "tr": "QID",
+        "zh": "每日四次"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "prn",
+      "terms": {
+        "ru": "по необходимости",
+        "en": "PRN",
+        "es": "PRN",
+        "fr": "PRN",
+        "ar": "عند الحاجة",
+        "hi": "आवश्यकतानुसार",
+        "pt": "PRN",
+        "id": "PRN",
+        "ms": "PRN",
+        "tr": "PRN",
+        "zh": "必要时"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "ms",
+      "terms": {
+        "ru": "MS",
+        "en": "MS",
+        "es": "MS",
+        "fr": "MS",
+        "ar": "MS",
+        "hi": "MS",
+        "pt": "MS",
+        "id": "MS",
+        "ms": "MS",
+        "tr": "MS",
+        "zh": "MS"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "cp",
+      "terms": {
+        "ru": "CP",
+        "en": "CP",
+        "es": "CP",
+        "fr": "CP",
+        "ar": "CP",
+        "hi": "CP",
+        "pt": "CP",
+        "id": "CP",
+        "ms": "CP",
+        "tr": "CP",
+        "zh": "CP"
+      },
+      "category": "abbreviations"
+    },
+    {
+      "id": "heart",
+      "terms": {
+        "ru": "сердце",
+        "en": "heart",
+        "es": "corazón",
+        "fr": "cœur",
+        "ar": "قلب",
+        "hi": "हृदय",
+        "pt": "coração",
+        "id": "jantung",
+        "ms": "jantung",
+        "tr": "kalp",
+        "zh": "心脏"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "lung",
+      "terms": {
+        "ru": "легкое",
+        "en": "lung",
+        "es": "pulmones",
+        "fr": "poumon",
+        "ar": "رئة",
+        "hi": "फेफड़ा",
+        "pt": "pulmão",
+        "id": "paru",
+        "ms": "paru",
+        "tr": "akciğer",
+        "zh": "肺"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "arm",
+      "terms": {
+        "ru": "рука",
+        "en": "arm",
+        "es": "brazo",
+        "fr": "bras",
+        "ar": "ذراع",
+        "hi": "बांह",
+        "pt": "braço",
+        "id": "lengan",
+        "ms": "lengan",
+        "tr": "kol",
+        "zh": "手臂"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "pulmonary-artery",
+      "terms": {
+        "ru": "легочная артерия",
+        "en": "pulmonary artery",
+        "es": "arteria pulmonar",
+        "fr": "artère pulmonaire",
+        "ar": "الشريان الرئوي",
+        "hi": "फुफ्फुसीय धमनी",
+        "pt": "artéria pulmonar",
+        "id": "arteri pulmonalis",
+        "ms": "arteri pulmonalis",
+        "tr": "pulmoner arter",
+        "zh": "肺动脉"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "knee",
+      "terms": {
+        "ru": "колено",
+        "en": "knee",
+        "es": "rodilla",
+        "fr": "genou",
+        "ar": "ركبة",
+        "hi": "घुटना",
+        "pt": "joelho",
+        "id": "lutut",
+        "ms": "lutut",
+        "tr": "diz",
+        "zh": "膝盖"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "shoulder",
+      "terms": {
+        "ru": "плечо",
+        "en": "shoulder",
+        "es": "hombro",
+        "fr": "épaule",
+        "ar": "كتف",
+        "hi": "कंधा",
+        "pt": "ombro",
+        "id": "bahu",
+        "ms": "bahu",
+        "tr": "omuz",
+        "zh": "肩膀"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "liver",
+      "terms": {
+        "ru": "печень",
+        "en": "liver",
+        "es": "hígado",
+        "fr": "foie",
+        "ar": "كبد",
+        "hi": "यकृत",
+        "pt": "fígado",
+        "id": "hati",
+        "ms": "hati",
+        "tr": "karaciğer",
+        "zh": "肝脏"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "kidney",
+      "terms": {
+        "ru": "почка",
+        "en": "kidney",
+        "es": "riñón",
+        "fr": "rein",
+        "ar": "كلية",
+        "hi": "गुर्दा",
+        "pt": "rim",
+        "id": "ginjal",
+        "ms": "buah pinggang",
+        "tr": "böbrek",
+        "zh": "肾脏"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "left",
+      "terms": {
+        "ru": "левый",
+        "en": "left",
+        "es": "izquierdo",
+        "fr": "gauche",
+        "ar": "أيسر",
+        "hi": "बायाँ",
+        "pt": "esquerdo",
+        "id": "kiri",
+        "ms": "kiri",
+        "tr": "sol",
+        "zh": "左侧"
+      },
+      "category": "laterality"
+    },
+    {
+      "id": "right",
+      "terms": {
+        "ru": "правый",
+        "en": "right",
+        "es": "derecho",
+        "fr": "droit",
+        "ar": "أيمن",
+        "hi": "दायाँ",
+        "pt": "direito",
+        "id": "kanan",
+        "ms": "kanan",
+        "tr": "sağ",
+        "zh": "右侧"
+      },
+      "category": "laterality"
+    },
+    {
+      "id": "bilateral",
+      "terms": {
+        "ru": "двусторонний",
+        "en": "bilateral",
+        "es": "bilateral",
+        "fr": "bilatéral",
+        "ar": "ثنائي الجانب",
+        "hi": "दोनों तरफ़",
+        "pt": "bilateral",
+        "id": "bilateral",
+        "ms": "bilateral",
+        "tr": "bilateral",
+        "zh": "双侧"
+      },
+      "category": "laterality"
+    },
+    {
+      "id": "oral",
+      "terms": {
+        "ru": "внутрь, перорально",
+        "en": "by mouth, orally",
+        "es": "por vía oral",
+        "fr": "par voie orale",
+        "ar": "عن طريق الفم",
+        "hi": "मुंह से",
+        "pt": "por via oral",
+        "id": "melalui mulut",
+        "ms": "melalui mulut",
+        "tr": "ağızdan",
+        "zh": "口服"
+      },
+      "category": "routes"
+    },
+    {
+      "id": "intravenous",
+      "terms": {
+        "ru": "внутривенно",
+        "en": "intravenously",
+        "es": "por vía intravenosa",
+        "fr": "par voie intraveineuse",
+        "ar": "عن طريق الوريد",
+        "hi": "नस में",
+        "pt": "por via intravenosa",
+        "id": "melalui pembuluh darah vena",
+        "ms": "melalui vena",
+        "tr": "damar içine",
+        "zh": "静脉给药"
+      },
+      "category": "routes"
+    },
+    {
+      "id": "intramuscular",
+      "terms": {
+        "ru": "внутримышечный",
+        "en": "intramuscular",
+        "es": "intramuscular",
+        "fr": "intramusculaire",
+        "ar": "في العضل",
+        "hi": "मांसपेशी में",
+        "pt": "intramuscular",
+        "id": "intramuskular",
+        "ms": "intramuskular",
+        "tr": "intramüsküler",
+        "zh": "肌肉注射"
+      },
+      "category": "routes"
+    },
+    {
+      "id": "subcutaneous",
+      "terms": {
+        "ru": "подкожный",
+        "en": "subcutaneous",
+        "es": "subcutáneo",
+        "fr": "sous-cutané",
+        "ar": "تحت الجلد",
+        "hi": "त्वचा के नीचे",
+        "pt": "subcutâneo",
+        "id": "subkutan",
+        "ms": "subkutan",
+        "tr": "subkutan",
+        "zh": "皮下注射"
+      },
+      "category": "routes"
+    },
+    {
+      "id": "topical",
+      "terms": {
+        "ru": "местный",
+        "en": "topical",
+        "es": "tópico",
+        "fr": "topique",
+        "ar": "موضعي",
+        "hi": "स्थानीय",
+        "pt": "tópico",
+        "id": "topikal",
+        "ms": "topikal",
+        "tr": "topikal",
+        "zh": "局部用药"
+      },
+      "category": "routes"
+    },
+    {
+      "id": "mcg",
+      "terms": {
+        "ru": "микрограмм",
+        "en": "microgram",
+        "es": "microgramo",
+        "fr": "microgramme",
+        "ar": "ميكروغرام",
+        "hi": "माइक्रोग्राम",
+        "pt": "micrograma",
+        "id": "mikrogram",
+        "ms": "mikrogram",
+        "tr": "mikrogram",
+        "zh": "微克"
+      },
+      "category": "units"
+    },
+    {
+      "id": "mg",
+      "terms": {
+        "ru": "миллиграмм",
+        "en": "milligram",
+        "es": "miligramo",
+        "fr": "milligramme",
+        "ar": "مليغرام",
+        "hi": "मिलीग्राम",
+        "pt": "miligrama",
+        "id": "miligram",
+        "ms": "miligram",
+        "tr": "miligram",
+        "zh": "毫克"
+      },
+      "category": "units"
+    },
+    {
+      "id": "g",
+      "terms": {
+        "ru": "г",
+        "en": "g",
+        "es": "g",
+        "fr": "g",
+        "ar": "غ",
+        "hi": "ग्राम",
+        "pt": "g",
+        "id": "g",
+        "ms": "g",
+        "tr": "g",
+        "zh": "克"
+      },
+      "category": "units"
+    },
+    {
+      "id": "ml",
+      "terms": {
+        "ru": "миллилитр",
+        "en": "milliliter",
+        "es": "mililitro",
+        "fr": "millilitre",
+        "ar": "مليلتر",
+        "hi": "मिलीलीटर",
+        "pt": "mililitro",
+        "id": "mililiter",
+        "ms": "mililiter",
+        "tr": "mililitre",
+        "zh": "毫升"
+      },
+      "category": "units"
+    },
+    {
+      "id": "iu",
+      "terms": {
+        "ru": "МЕ",
+        "en": "IU",
+        "es": "UI",
+        "fr": "UI",
+        "ar": "وحدة دولية",
+        "hi": "अंतरराष्ट्रीय इकाई",
+        "pt": "UI",
+        "id": "IU",
+        "ms": "IU",
+        "tr": "IU",
+        "zh": "国际单位"
+      },
+      "category": "units"
+    },
+    {
+      "id": "mmol_l",
+      "terms": {
+        "ru": "ммоль/л",
+        "en": "mmol/L",
+        "es": "mmol/L",
+        "fr": "mmol/L",
+        "ar": "ممول/لتر",
+        "hi": "मिलीमोल प्रति लीटर",
+        "pt": "mmol/L",
+        "id": "mmol/L",
+        "ms": "mmol/L",
+        "tr": "mmol/L",
+        "zh": "毫摩尔/升"
+      },
+      "category": "units"
+    },
+    {
+      "id": "mg_dl",
+      "terms": {
+        "ru": "мг/дл",
+        "en": "mg/dL",
+        "es": "mg/dL",
+        "fr": "mg/dL",
+        "ar": "ملغ/دل",
+        "hi": "मिलीग्राम/डीएल",
+        "pt": "mg/dL",
+        "id": "mg/dL",
+        "ms": "mg/dL",
+        "tr": "mg/dL",
+        "zh": "毫克/分升"
+      },
+      "category": "units"
+    },
+    {
+      "id": "bpm",
+      "terms": {
+        "ru": "ударов в минуту",
+        "en": "bpm",
+        "es": "lpm",
+        "fr": "bpm",
+        "ar": "نبضة في الدقيقة",
+        "hi": "बीट प्रति मिनट",
+        "pt": "bpm",
+        "id": "bpm",
+        "ms": "bpm",
+        "tr": "bpm",
+        "zh": "次/分钟"
+      },
+      "category": "units"
+    },
+    {
+      "id": "mmhg",
+      "terms": {
+        "ru": "мм рт. ст.",
+        "en": "mmHg",
+        "es": "mmHg",
+        "fr": "mmHg",
+        "ar": "مم زئبق",
+        "hi": "मिमी एचजी",
+        "pt": "mmHg",
+        "id": "mmHg",
+        "ms": "mmHg",
+        "tr": "mmHg",
+        "zh": "毫米汞柱"
+      },
+      "category": "units"
+    },
+    {
+      "id": "celsius",
+      "terms": {
+        "ru": "градус Цельсия",
+        "en": "Celsius",
+        "es": "Celsius",
+        "fr": "Celsius",
+        "ar": "درجة مئوية",
+        "hi": "सेल्सियस",
+        "pt": "Celsius",
+        "id": "Celsius",
+        "ms": "Celsius",
+        "tr": "Santigrat",
+        "zh": "摄氏度"
+      },
+      "category": "units"
+    },
+    {
+      "id": "pulmonary-embolism",
+      "terms": {
+        "ru": "легочная эмболия",
+        "en": "pulmonary embolism",
+        "es": "embolia pulmonar",
+        "fr": "embolie pulmonaire",
+        "ar": "انصمام رئوي",
+        "hi": "फुफ्फुसीय एम्बोलिज्म",
+        "pt": "embolia pulmonar",
+        "id": "emboli paru",
+        "ms": "emboli pulmonari",
+        "tr": "pulmoner emboli",
+        "zh": "肺栓塞"
+      },
+      "category": "phrases"
+    },
+    {
+      "id": "pain",
+      "terms": {
+        "ru": "боль",
+        "en": "pain",
+        "es": "dolor",
+        "fr": "douleur",
+        "ar": "ألم",
+        "hi": "दर्द",
+        "pt": "dor",
+        "id": "nyeri",
+        "ms": "sakit",
+        "tr": "ağrı",
+        "zh": "疼痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "headache",
+      "terms": {
+        "ru": "головная боль",
+        "en": "headache",
+        "es": "dolor de cabeza",
+        "fr": "céphalée",
+        "ar": "صداع",
+        "hi": "सिरदर्द",
+        "pt": "dor de cabeça",
+        "id": "sakit kepala",
+        "ms": "sakit kepala",
+        "tr": "baş ağrısı",
+        "zh": "头痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "chest-pain",
+      "terms": {
+        "ru": "боль в груди",
+        "en": "chest pain",
+        "es": "dolor torácico",
+        "fr": "douleur thoracique",
+        "ar": "ألم في الصدر",
+        "hi": "छाती में दर्द",
+        "pt": "dor no peito",
+        "id": "nyeri dada",
+        "ms": "sakit dada",
+        "tr": "göğüs ağrısı",
+        "zh": "胸痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "abdominal-pain",
+      "terms": {
+        "ru": "боль в животе",
+        "en": "abdominal pain",
+        "es": "dolor abdominal",
+        "fr": "douleur abdominale",
+        "ar": "ألم في البطن",
+        "hi": "पेट दर्द",
+        "pt": "dor abdominal",
+        "id": "nyeri perut",
+        "ms": "sakit perut",
+        "tr": "karın ağrısı",
+        "zh": "腹痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "back-pain",
+      "terms": {
+        "ru": "боль в спине",
+        "en": "back pain",
+        "es": "dolor de espalda",
+        "fr": "douleur dorsale",
+        "ar": "ألم في الظهر",
+        "hi": "पीठ दर्द",
+        "pt": "dor nas costas",
+        "id": "nyeri punggung",
+        "ms": "sakit belakang",
+        "tr": "sırt ağrısı",
+        "zh": "背痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "sore-throat",
+      "terms": {
+        "ru": "боль в горле",
+        "en": "sore throat",
+        "es": "dolor de garganta",
+        "fr": "mal de gorge",
+        "ar": "التهاب الحلق",
+        "hi": "गले में खराश",
+        "pt": "dor de garganta",
+        "id": "sakit tenggorokan",
+        "ms": "sakit tekak",
+        "tr": "boğaz ağrısı",
+        "zh": "咽喉痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "fever",
+      "terms": {
+        "ru": "лихорадка",
+        "en": "fever",
+        "es": "fiebre",
+        "fr": "fièvre",
+        "ar": "حمى",
+        "hi": "बुखार",
+        "pt": "febre",
+        "id": "demam",
+        "ms": "demam",
+        "tr": "ateş",
+        "zh": "发热"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "chills",
+      "terms": {
+        "ru": "озноб",
+        "en": "chills",
+        "es": "escalofríos",
+        "fr": "frissons",
+        "ar": "قشعريرة",
+        "hi": "सिहरन",
+        "pt": "calafrios",
+        "id": "menggigil",
+        "ms": "sejuk menggigil",
+        "tr": "titreme",
+        "zh": "寒战"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "cough",
+      "terms": {
+        "ru": "кашель",
+        "en": "cough",
+        "es": "tos",
+        "fr": "toux",
+        "ar": "سعال",
+        "hi": "खांसी",
+        "pt": "tosse",
+        "id": "batuk",
+        "ms": "batuk",
+        "tr": "öksürük",
+        "zh": "咳嗽"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "dry-cough",
+      "terms": {
+        "ru": "сухой кашель",
+        "en": "dry cough",
+        "es": "tos seca",
+        "fr": "toux sèche",
+        "ar": "سعال جاف",
+        "hi": "सूखी खांसी",
+        "pt": "tosse seca",
+        "id": "batuk kering",
+        "ms": "batuk kering",
+        "tr": "kuru öksürük",
+        "zh": "干咳"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "productive-cough",
+      "terms": {
+        "ru": "продуктивный кашель",
+        "en": "productive cough",
+        "es": "tos productiva",
+        "fr": "toux productive",
+        "ar": "سعال مصحوب بالبلغم",
+        "hi": "बलगम वाली खांसी",
+        "pt": "tosse produtiva",
+        "id": "batuk berdahak",
+        "ms": "batuk berkahak",
+        "tr": "balgamlı öksürük",
+        "zh": "咳痰"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "wheezing",
+      "terms": {
+        "ru": "свистящее дыхание",
+        "en": "wheezing",
+        "es": "sibilancias",
+        "fr": "sifflements",
+        "ar": "صفير",
+        "hi": "घरघराहट",
+        "pt": "sibilância",
+        "id": "mengi",
+        "ms": "mengi",
+        "tr": "hırıltı",
+        "zh": "喘息"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "nausea",
+      "terms": {
+        "ru": "тошнота",
+        "en": "nausea",
+        "es": "náuseas",
+        "fr": "nausée",
+        "ar": "غثيان",
+        "hi": "मतली",
+        "pt": "náusea",
+        "id": "mual",
+        "ms": "loya",
+        "tr": "bulantı",
+        "zh": "恶心"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "vomiting",
+      "terms": {
+        "ru": "рвота",
+        "en": "vomiting",
+        "es": "vómitos",
+        "fr": "vomissements",
+        "ar": "تقيؤ",
+        "hi": "उल्टी",
+        "pt": "vômito",
+        "id": "muntah",
+        "ms": "muntah",
+        "tr": "kusma",
+        "zh": "呕吐"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "diarrhea",
+      "terms": {
+        "ru": "диарея",
+        "en": "diarrhea",
+        "es": "diarrea",
+        "fr": "diarrhée",
+        "ar": "إسهال",
+        "hi": "दस्त",
+        "pt": "diarreia",
+        "id": "diare",
+        "ms": "cirit-birit",
+        "tr": "ishal",
+        "zh": "腹泻"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "constipation",
+      "terms": {
+        "ru": "запор",
+        "en": "constipation",
+        "es": "estreñimiento",
+        "fr": "constipation",
+        "ar": "إمساك",
+        "hi": "कब्ज",
+        "pt": "constipação",
+        "id": "sembelit",
+        "ms": "sembelit",
+        "tr": "kabızlık",
+        "zh": "便秘"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "dizziness",
+      "terms": {
+        "ru": "головокружение",
+        "en": "dizziness",
+        "es": "mareo",
+        "fr": "étourdissement",
+        "ar": "دوار",
+        "hi": "चक्कर",
+        "pt": "tontura",
+        "id": "pusing",
+        "ms": "pening",
+        "tr": "baş dönmesi",
+        "zh": "头晕"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "fainting",
+      "terms": {
+        "ru": "обморок",
+        "en": "fainting",
+        "es": "desmayo",
+        "fr": "évanouissement",
+        "ar": "إغماء",
+        "hi": "बेहोशी",
+        "pt": "desmaio",
+        "id": "pingsan",
+        "ms": "pengsan",
+        "tr": "bayılma",
+        "zh": "晕厥"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "fatigue",
+      "terms": {
+        "ru": "усталость",
+        "en": "fatigue",
+        "es": "fatiga",
+        "fr": "fatigue",
+        "ar": "إرهاق",
+        "hi": "थकान",
+        "pt": "fadiga",
+        "id": "kelelahan",
+        "ms": "keletihan",
+        "tr": "yorgunluk",
+        "zh": "疲劳"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "weakness",
+      "terms": {
+        "ru": "слабость",
+        "en": "weakness",
+        "es": "debilidad",
+        "fr": "faiblesse",
+        "ar": "ضعف",
+        "hi": "कमज़ोरी",
+        "pt": "fraqueza",
+        "id": "kelemahan",
+        "ms": "kelemahan",
+        "tr": "zayıflık",
+        "zh": "虚弱"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "numbness",
+      "terms": {
+        "ru": "онемение",
+        "en": "numbness",
+        "es": "entumecimiento",
+        "fr": "engourdissement",
+        "ar": "خدر",
+        "hi": "सुन्नता",
+        "pt": "dormência",
+        "id": "mati rasa",
+        "ms": "kebas",
+        "tr": "uyuşma",
+        "zh": "麻木"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "tingling",
+      "terms": {
+        "ru": "покалывание",
+        "en": "tingling",
+        "es": "hormigueo",
+        "fr": "picotement",
+        "ar": "وخز",
+        "hi": "सुननु",
+        "pt": "formigamento",
+        "id": "kesemutan",
+        "ms": "kesemutan",
+        "tr": "karıncalanma",
+        "zh": "刺痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "seizure",
+      "terms": {
+        "ru": "припадок",
+        "en": "seizure",
+        "es": "convulsión",
+        "fr": "crise",
+        "ar": "نوبة",
+        "hi": "दौरा",
+        "pt": "convulsão",
+        "id": "kejang",
+        "ms": "sawan",
+        "tr": "nöbet",
+        "zh": "癫痫发作"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "rash",
+      "terms": {
+        "ru": "сыпь",
+        "en": "rash",
+        "es": "erupción",
+        "fr": "éruption",
+        "ar": "طفح جلدي",
+        "hi": "दाने",
+        "pt": "erupção cutânea",
+        "id": "ruam",
+        "ms": "ruam",
+        "tr": "döküntü",
+        "zh": "皮疹"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "itching",
+      "terms": {
+        "ru": "зуд",
+        "en": "itching",
+        "es": "picazón",
+        "fr": "démangeaison",
+        "ar": "حكة",
+        "hi": "खुजली",
+        "pt": "coceira",
+        "id": "gatal",
+        "ms": "gatal",
+        "tr": "kaşıntı",
+        "zh": "瘙痒"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "bleeding",
+      "terms": {
+        "ru": "кровотечение",
+        "en": "bleeding",
+        "es": "sangrado",
+        "fr": "saignement",
+        "ar": "نزيف",
+        "hi": "खून बहना",
+        "pt": "sangramento",
+        "id": "pendarahan",
+        "ms": "pendarahan",
+        "tr": "kanama",
+        "zh": "出血"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "bruising",
+      "terms": {
+        "ru": "кровоподтек",
+        "en": "bruising",
+        "es": "moretón",
+        "fr": "ecchymose",
+        "ar": "كدمة",
+        "hi": "नीला पड़ना",
+        "pt": "hematoma",
+        "id": "memar",
+        "ms": "lebam",
+        "tr": "morarma",
+        "zh": "瘀伤"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "loss-of-appetite",
+      "terms": {
+        "ru": "потеря аппетита",
+        "en": "loss of appetite",
+        "es": "pérdida de apetito",
+        "fr": "perte d'appétit",
+        "ar": "فقدان الشهية",
+        "hi": "भूख कम होना",
+        "pt": "perda de apetite",
+        "id": "hilang nafsu makan",
+        "ms": "hilang selera makan",
+        "tr": "iştahsızlık",
+        "zh": "食欲减退"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "weight-loss",
+      "terms": {
+        "ru": "потеря веса",
+        "en": "weight loss",
+        "es": "pérdida de peso",
+        "fr": "perte de poids",
+        "ar": "فقدان الوزن",
+        "hi": "वज़न कम होना",
+        "pt": "perda de peso",
+        "id": "penurunan berat badan",
+        "ms": "penurunan berat badan",
+        "tr": "kilo kaybı",
+        "zh": "体重减轻"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "weight-gain",
+      "terms": {
+        "ru": "набор веса",
+        "en": "weight gain",
+        "es": "aumento de peso",
+        "fr": "prise de poids",
+        "ar": "زيادة الوزن",
+        "hi": "वज़न बढ़ना",
+        "pt": "ganho de peso",
+        "id": "penambahan berat badan",
+        "ms": "penambahan berat badan",
+        "tr": "kilo alma",
+        "zh": "体重增加"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "difficulty-swallowing",
+      "terms": {
+        "ru": "затрудненное глотание",
+        "en": "difficulty swallowing",
+        "es": "dificultad para tragar",
+        "fr": "difficulté à avaler",
+        "ar": "صعوبة في البلع",
+        "hi": "निगलने में कठिनाई",
+        "pt": "dificuldade para engolir",
+        "id": "sulit menelan",
+        "ms": "sukar menelan",
+        "tr": "yutma güçlüğü",
+        "zh": "吞咽困难"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "blurred-vision",
+      "terms": {
+        "ru": "затуманенное зрение",
+        "en": "blurred vision",
+        "es": "visión borrosa",
+        "fr": "vision floue",
+        "ar": "رؤية ضبابية",
+        "hi": "धुंधली दृष्टि",
+        "pt": "visão turva",
+        "id": "penglihatan kabur",
+        "ms": "penglihatan kabur",
+        "tr": "bulanık görme",
+        "zh": "视力模糊"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "hearing-loss",
+      "terms": {
+        "ru": "потеря слуха",
+        "en": "hearing loss",
+        "es": "pérdida auditiva",
+        "fr": "perte auditive",
+        "ar": "فقدان السمع",
+        "hi": "श्रवण हानि",
+        "pt": "perda auditiva",
+        "id": "gangguan pendengaran",
+        "ms": "kehilangan pendengaran",
+        "tr": "işitme kaybı",
+        "zh": "听力损失"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "palpitations",
+      "terms": {
+        "ru": "сердцебиение",
+        "en": "palpitations",
+        "es": "palpitaciones",
+        "fr": "palpitations",
+        "ar": "خفقان",
+        "hi": "धड़कन की तेज़ी",
+        "pt": "palpitações",
+        "id": "palpitasi",
+        "ms": "palpitasi",
+        "tr": "çarpıntı",
+        "zh": "心悸"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "heartburn",
+      "terms": {
+        "ru": "изжога",
+        "en": "heartburn",
+        "es": "acidez",
+        "fr": "brûlures d'estomac",
+        "ar": "حرقة المعدة",
+        "hi": "अम्लता",
+        "pt": "azia",
+        "id": "mulas",
+        "ms": "pedih ulu hati",
+        "tr": "mide ekşimesi",
+        "zh": "胃灼热"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "bloating",
+      "terms": {
+        "ru": "вздутие",
+        "en": "bloating",
+        "es": "hinchazón abdominal",
+        "fr": "ballonnement",
+        "ar": "انتفاخ",
+        "hi": "पेट फूलना",
+        "pt": "inchaço abdominal",
+        "id": "kembung",
+        "ms": "kembung",
+        "tr": "şişkinlik",
+        "zh": "腹胀"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "painful-urination",
+      "terms": {
+        "ru": "болезненное мочеиспускание",
+        "en": "painful urination",
+        "es": "micción dolorosa",
+        "fr": "miction douloureuse",
+        "ar": "التبول المؤلم",
+        "hi": "दर्दनाक पेशाब",
+        "pt": "dor ao urinar",
+        "id": "nyeri saat buang air kecil",
+        "ms": "sakit ketika kencing",
+        "tr": "ağrılı idrar yapma",
+        "zh": "排尿疼痛"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "blood-in-urine",
+      "terms": {
+        "ru": "кровь в моче",
+        "en": "blood in urine",
+        "es": "sangre en la orina",
+        "fr": "sang dans les urines",
+        "ar": "دم في البول",
+        "hi": "मूत्र में रक्त",
+        "pt": "sangue na urina",
+        "id": "darah dalam urin",
+        "ms": "darah dalam air kencing",
+        "tr": "idrarda kan",
+        "zh": "尿中带血"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "blood-in-stool",
+      "terms": {
+        "ru": "кровь в стуле",
+        "en": "blood in stool",
+        "es": "sangre en las heces",
+        "fr": "sang dans les selles",
+        "ar": "دم في البراز",
+        "hi": "मल में रक्त",
+        "pt": "sangue nas fezes",
+        "id": "darah dalam tinja",
+        "ms": "darah dalam najis",
+        "tr": "dışkıda kan",
+        "zh": "大便带血"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "urinary-frequency",
+      "terms": {
+        "ru": "учащенное мочеиспускание",
+        "en": "urinary frequency",
+        "es": "frecuencia urinaria",
+        "fr": "fréquence urinaire",
+        "ar": "تكرار التبول",
+        "hi": "बार-बार पेशाब आना",
+        "pt": "frequência urinária",
+        "id": "frekuensi buang air kecil",
+        "ms": "kekerapan kencing",
+        "tr": "sık idrara çıkma",
+        "zh": "尿频"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "night-sweats",
+      "terms": {
+        "ru": "ночная потливость",
+        "en": "night sweats",
+        "es": "sudores nocturnos",
+        "fr": "sueurs nocturnes",
+        "ar": "التعرق الليلي",
+        "hi": "रात को पसीना आना",
+        "pt": "suores noturnos",
+        "id": "keringat malam",
+        "ms": "berpeluh malam",
+        "tr": "gece terlemeleri",
+        "zh": "夜间盗汗"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "insomnia",
+      "terms": {
+        "ru": "бессонница",
+        "en": "insomnia",
+        "es": "insomnio",
+        "fr": "insomnie",
+        "ar": "أرق",
+        "hi": "अनिद्रा",
+        "pt": "insônia",
+        "id": "insomnia",
+        "ms": "insomnia",
+        "tr": "uykusuzluk",
+        "zh": "失眠"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "confusion",
+      "terms": {
+        "ru": "путаница",
+        "en": "confusion",
+        "es": "confusión",
+        "fr": "confusion",
+        "ar": "ارتباك",
+        "hi": "भ्रम",
+        "pt": "confusão",
+        "id": "kebingungan",
+        "ms": "kekeliruan",
+        "tr": "konfüzyon",
+        "zh": "意识混乱"
+      },
+      "category": "symptoms"
+    },
+    {
+      "id": "brain",
+      "terms": {
+        "ru": "мозг",
+        "en": "brain",
+        "es": "cerebro",
+        "fr": "cerveau",
+        "ar": "دماغ",
+        "hi": "मस्तिष्क",
+        "pt": "cérebro",
+        "id": "otak",
+        "ms": "otak",
+        "tr": "beyin",
+        "zh": "大脑"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "spinal-cord",
+      "terms": {
+        "ru": "спинной мозг",
+        "en": "spinal cord",
+        "es": "médula espinal",
+        "fr": "moelle épinière",
+        "ar": "الحبل الشوكي",
+        "hi": "मेरुदंड",
+        "pt": "medula espinhal",
+        "id": "sumsum tulang belakang",
+        "ms": "saraf tunjang",
+        "tr": "omurilik",
+        "zh": "脊髓"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "nerve",
+      "terms": {
+        "ru": "нерв",
+        "en": "nerve",
+        "es": "nervio",
+        "fr": "nerf",
+        "ar": "عصب",
+        "hi": "तंत्रिका",
+        "pt": "nervo",
+        "id": "saraf",
+        "ms": "saraf",
+        "tr": "sinir",
+        "zh": "神经"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "artery",
+      "terms": {
+        "ru": "артерия",
+        "en": "artery",
+        "es": "arteria",
+        "fr": "artère",
+        "ar": "شريان",
+        "hi": "धमनी",
+        "pt": "artéria",
+        "id": "arteri",
+        "ms": "arteri",
+        "tr": "arter",
+        "zh": "动脉"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "vein",
+      "terms": {
+        "ru": "вена",
+        "en": "vein",
+        "es": "vena",
+        "fr": "veine",
+        "ar": "وريد",
+        "hi": "शिरा",
+        "pt": "veia",
+        "id": "vena",
+        "ms": "vena",
+        "tr": "toplardamar",
+        "zh": "静脉"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "blood-vessel",
+      "terms": {
+        "ru": "кровеносный сосуд",
+        "en": "blood vessel",
+        "es": "vaso sanguíneo",
+        "fr": "vaisseau sanguin",
+        "ar": "وعاء دموي",
+        "hi": "रक्त वाहिका",
+        "pt": "vaso sanguíneo",
+        "id": "pembuluh darah",
+        "ms": "saluran darah",
+        "tr": "kan damarları",
+        "zh": "血管"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "stomach",
+      "terms": {
+        "ru": "желудок",
+        "en": "stomach",
+        "es": "estómago",
+        "fr": "estomac",
+        "ar": "معدة",
+        "hi": "पेट",
+        "pt": "estômago",
+        "id": "lambung",
+        "ms": "perut",
+        "tr": "mide",
+        "zh": "胃"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "intestine",
+      "terms": {
+        "ru": "кишечник",
+        "en": "intestine",
+        "es": "intestino",
+        "fr": "intestin",
+        "ar": "أمعاء",
+        "hi": "आंत",
+        "pt": "intestino",
+        "id": "usus",
+        "ms": "usus",
+        "tr": "bağırsak",
+        "zh": "肠"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "colon",
+      "terms": {
+        "ru": "толстая кишка",
+        "en": "colon",
+        "es": "colon",
+        "fr": "côlon",
+        "ar": "قولون",
+        "hi": "बड़ी आंत",
+        "pt": "cólon",
+        "id": "kolon",
+        "ms": "kolon",
+        "tr": "kolon",
+        "zh": "结肠"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "pancreas",
+      "terms": {
+        "ru": "поджелудочная железа",
+        "en": "pancreas",
+        "es": "páncreas",
+        "fr": "pancréas",
+        "ar": "البنكرياس",
+        "hi": "अग्न्याशय",
+        "pt": "pâncreas",
+        "id": "pankreas",
+        "ms": "pankreas",
+        "tr": "pankreas",
+        "zh": "胰腺"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "gallbladder",
+      "terms": {
+        "ru": "желчный пузырь",
+        "en": "gallbladder",
+        "es": "vesícula biliar",
+        "fr": "vésicule biliaire",
+        "ar": "المرارة",
+        "hi": "पित्ताशय",
+        "pt": "vesícula biliar",
+        "id": "kantong empedu",
+        "ms": "pundi hempedu",
+        "tr": "safra kesesi",
+        "zh": "胆囊"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "spleen",
+      "terms": {
+        "ru": "селезёнка",
+        "en": "spleen",
+        "es": "bazo",
+        "fr": "rate",
+        "ar": "طحال",
+        "hi": "प्लीहा",
+        "pt": "baço",
+        "id": "limpa",
+        "ms": "limfa",
+        "tr": "dalak",
+        "zh": "脾脏"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "bladder",
+      "terms": {
+        "ru": "мочевой пузырь",
+        "en": "bladder",
+        "es": "vejiga",
+        "fr": "vessie",
+        "ar": "المثانة",
+        "hi": "मूत्राशय",
+        "pt": "bexiga",
+        "id": "kandung kemih",
+        "ms": "pundi kencing",
+        "tr": "mesane",
+        "zh": "膀胱"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "urethra",
+      "terms": {
+        "ru": "уретра",
+        "en": "urethra",
+        "es": "uretra",
+        "fr": "urètre",
+        "ar": "الإحليل",
+        "hi": "मूत्रमार्ग",
+        "pt": "uretra",
+        "id": "uretra",
+        "ms": "uretra",
+        "tr": "üretra",
+        "zh": "尿道"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "prostate",
+      "terms": {
+        "ru": "предстательная железа",
+        "en": "prostate",
+        "es": "próstata",
+        "fr": "prostate",
+        "ar": "غدة البروستاتا",
+        "hi": "प्रोस्टेट ग्रंथि",
+        "pt": "próstata",
+        "id": "prostat",
+        "ms": "prostat",
+        "tr": "prostat",
+        "zh": "前列腺"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "uterus",
+      "terms": {
+        "ru": "матка",
+        "en": "uterus",
+        "es": "útero",
+        "fr": "utérus",
+        "ar": "رحم",
+        "hi": "गर्भाशय",
+        "pt": "útero",
+        "id": "rahim",
+        "ms": "rahim",
+        "tr": "rahim",
+        "zh": "子宫"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "ovary",
+      "terms": {
+        "ru": "яичник",
+        "en": "ovary",
+        "es": "ovario",
+        "fr": "ovaire",
+        "ar": "مبيض",
+        "hi": "अंडाशय",
+        "pt": "ovário",
+        "id": "indung telur",
+        "ms": "ovari",
+        "tr": "yumurtalık",
+        "zh": "卵巢"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "thyroid-gland",
+      "terms": {
+        "ru": "щитовидная железа",
+        "en": "thyroid gland",
+        "es": "glándula tiroides",
+        "fr": "glande thyroïde",
+        "ar": "الغدة الدرقية",
+        "hi": "थायरॉयड ग्रंथि",
+        "pt": "glândula tireoide",
+        "id": "kelenjar tiroid",
+        "ms": "kelenjar tiroid",
+        "tr": "tiroid bezi",
+        "zh": "甲状腺"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "lymph-node",
+      "terms": {
+        "ru": "лимфатический узел",
+        "en": "lymph node",
+        "es": "ganglio linfático",
+        "fr": "ganglion lymphatique",
+        "ar": "عقدة لمفاوية",
+        "hi": "लसीका ग्रंथि",
+        "pt": "nódulo linfático",
+        "id": "kelenjar getah bening",
+        "ms": "kelenjar limfa",
+        "tr": "lenf nodu",
+        "zh": "淋巴结"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "skin",
+      "terms": {
+        "ru": "кожа",
+        "en": "skin",
+        "es": "piel",
+        "fr": "peau",
+        "ar": "جلد",
+        "hi": "त्वचा",
+        "pt": "pele",
+        "id": "kulit",
+        "ms": "kulit",
+        "tr": "deri",
+        "zh": "皮肤"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "bone",
+      "terms": {
+        "ru": "кость",
+        "en": "bone",
+        "es": "hueso",
+        "fr": "os",
+        "ar": "عظم",
+        "hi": "हड्डी",
+        "pt": "osso",
+        "id": "tulang",
+        "ms": "tulang",
+        "tr": "kemik",
+        "zh": "骨头"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "joint",
+      "terms": {
+        "ru": "сустав",
+        "en": "joint",
+        "es": "articulación",
+        "fr": "articulation",
+        "ar": "مفصل",
+        "hi": "संयुक्त",
+        "pt": "articulação",
+        "id": "sendi",
+        "ms": "sendi",
+        "tr": "eklem",
+        "zh": "关节"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "muscle",
+      "terms": {
+        "ru": "мышца",
+        "en": "muscle",
+        "es": "músculo",
+        "fr": "muscle",
+        "ar": "عضلة",
+        "hi": "मांसपेशी",
+        "pt": "músculo",
+        "id": "otot",
+        "ms": "otot",
+        "tr": "kas",
+        "zh": "肌肉"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "tendon",
+      "terms": {
+        "ru": "сухожилие",
+        "en": "tendon",
+        "es": "tendón",
+        "fr": "tendon",
+        "ar": "وتر",
+        "hi": "रस्सी",
+        "pt": "tendão",
+        "id": "tendon",
+        "ms": "tendon",
+        "tr": "tendon",
+        "zh": "肌腱"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "ligament",
+      "terms": {
+        "ru": "связка",
+        "en": "ligament",
+        "es": "ligamento",
+        "fr": "ligament",
+        "ar": "رباط",
+        "hi": "लिगामेंट",
+        "pt": "ligamento",
+        "id": "ligamen",
+        "ms": "ligamen",
+        "tr": "ligament",
+        "zh": "韧带"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "neck",
+      "terms": {
+        "ru": "шея",
+        "en": "neck",
+        "es": "cuello",
+        "fr": "cou",
+        "ar": "رقبة",
+        "hi": "गर्दन",
+        "pt": "pescoço",
+        "id": "leher",
+        "ms": "leher",
+        "tr": "boyun",
+        "zh": "颈部"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "throat",
+      "terms": {
+        "ru": "горло",
+        "en": "throat",
+        "es": "garganta",
+        "fr": "gorge",
+        "ar": "حلق",
+        "hi": "गला",
+        "pt": "garganta",
+        "id": "tenggorokan",
+        "ms": "tekak",
+        "tr": "boğaz",
+        "zh": "喉咙"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "chest",
+      "terms": {
+        "ru": "грудь",
+        "en": "chest",
+        "es": "pecho",
+        "fr": "poitrine",
+        "ar": "صدر",
+        "hi": "छाती",
+        "pt": "peito",
+        "id": "dada",
+        "ms": "dada",
+        "tr": "göğüs",
+        "zh": "胸部"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "abdomen",
+      "terms": {
+        "ru": "живот",
+        "en": "abdomen",
+        "es": "abdomen",
+        "fr": "abdomen",
+        "ar": "بطن",
+        "hi": "पेट",
+        "pt": "abdômen",
+        "id": "abdomen",
+        "ms": "abdomen",
+        "tr": "karın",
+        "zh": "腹部"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "pelvis",
+      "terms": {
+        "ru": "таз",
+        "en": "pelvis",
+        "es": "pelvis",
+        "fr": "bassin",
+        "ar": "حوض",
+        "hi": "श्रोणि",
+        "pt": "pelve",
+        "id": "panggul",
+        "ms": "panggul",
+        "tr": "pelvis",
+        "zh": "骨盆"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "hip",
+      "terms": {
+        "ru": "бедро",
+        "en": "hip",
+        "es": "cadera",
+        "fr": "hanche",
+        "ar": "ورك",
+        "hi": "कूल्हा",
+        "pt": "quadril",
+        "id": "pinggul",
+        "ms": "pinggul",
+        "tr": "kalça",
+        "zh": "臀部"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "ankle",
+      "terms": {
+        "ru": "лодыжка",
+        "en": "ankle",
+        "es": "tobillo",
+        "fr": "cheville",
+        "ar": "كاحل",
+        "hi": "टखना",
+        "pt": "tornozelo",
+        "id": "pergelangan kaki",
+        "ms": "buku lali",
+        "tr": "ayak bileği",
+        "zh": "踝关节"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "foot",
+      "terms": {
+        "ru": "стопа",
+        "en": "foot",
+        "es": "pie",
+        "fr": "pied",
+        "ar": "قدم",
+        "hi": "पैर",
+        "pt": "pé",
+        "id": "kaki",
+        "ms": "kaki",
+        "tr": "ayak",
+        "zh": "脚"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "hand",
+      "terms": {
+        "ru": "рука",
+        "en": "hand",
+        "es": "mano",
+        "fr": "main",
+        "ar": "يد",
+        "hi": "हाथ",
+        "pt": "mão",
+        "id": "tangan",
+        "ms": "tangan",
+        "tr": "el",
+        "zh": "手"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "wrist",
+      "terms": {
+        "ru": "запястье",
+        "en": "wrist",
+        "es": "muñeca",
+        "fr": "poignet",
+        "ar": "معصم",
+        "hi": "कलाई",
+        "pt": "pulso",
+        "id": "pergelangan tangan",
+        "ms": "pergelangan tangan",
+        "tr": "bilek",
+        "zh": "手腕"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "elbow",
+      "terms": {
+        "ru": "локоть",
+        "en": "elbow",
+        "es": "codo",
+        "fr": "coude",
+        "ar": "كوع",
+        "hi": "कोहनी",
+        "pt": "cotovelo",
+        "id": "siku",
+        "ms": "siku",
+        "tr": "dirsek",
+        "zh": "肘"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "finger",
+      "terms": {
+        "ru": "палец",
+        "en": "finger",
+        "es": "dedo",
+        "fr": "doigt",
+        "ar": "إصبع",
+        "hi": "उंगली",
+        "pt": "dedo",
+        "id": "jari",
+        "ms": "jari",
+        "tr": "parmak",
+        "zh": "手指"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "toe",
+      "terms": {
+        "ru": "палец ноги",
+        "en": "toe",
+        "es": "dedo del pie",
+        "fr": "orteil",
+        "ar": "إصبع القدم",
+        "hi": "पैर की अंगुली",
+        "pt": "dedo do pé",
+        "id": "jari kaki",
+        "ms": "jari kaki",
+        "tr": "ayak parmağı",
+        "zh": "脚趾"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "eye",
+      "terms": {
+        "ru": "глаз",
+        "en": "eye",
+        "es": "ojo",
+        "fr": "œil",
+        "ar": "عين",
+        "hi": "आंख",
+        "pt": "olho",
+        "id": "mata",
+        "ms": "mata",
+        "tr": "göz",
+        "zh": "眼睛"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "ear",
+      "terms": {
+        "ru": "ухо",
+        "en": "ear",
+        "es": "oreja",
+        "fr": "oreille",
+        "ar": "أذن",
+        "hi": "कान",
+        "pt": "orelha",
+        "id": "telinga",
+        "ms": "telinga",
+        "tr": "kulak",
+        "zh": "耳朵"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "nose",
+      "terms": {
+        "ru": "нос",
+        "en": "nose",
+        "es": "nariz",
+        "fr": "nez",
+        "ar": "أنف",
+        "hi": "नाक",
+        "pt": "nariz",
+        "id": "hidung",
+        "ms": "hidung",
+        "tr": "burun",
+        "zh": "鼻子"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "mouth",
+      "terms": {
+        "ru": "рот",
+        "en": "mouth",
+        "es": "boca",
+        "fr": "bouche",
+        "ar": "فم",
+        "hi": "मुँह",
+        "pt": "boca",
+        "id": "mulut",
+        "ms": "mulut",
+        "tr": "ağız",
+        "zh": "嘴"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "tooth",
+      "terms": {
+        "ru": "зуб",
+        "en": "tooth",
+        "es": "diente",
+        "fr": "dent",
+        "ar": "سن",
+        "hi": "दांत",
+        "pt": "dente",
+        "id": "gigi",
+        "ms": "gigi",
+        "tr": "diş",
+        "zh": "牙齿"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "gum",
+      "terms": {
+        "ru": "десна",
+        "en": "gum",
+        "es": "encía",
+        "fr": "gencive",
+        "ar": "لثة",
+        "hi": "मसूड़ा",
+        "pt": "gengiva",
+        "id": "gusi",
+        "ms": "gusi",
+        "tr": "diş eti",
+        "zh": "牙龈"
+      },
+      "category": "anatomy"
+    },
+    {
+      "id": "diabetes-mellitus",
+      "terms": {
+        "ru": "сахарный диабет",
+        "en": "diabetes mellitus",
+        "es": "diabetes mellitus",
+        "fr": "diabète sucré",
+        "ar": "داء السكري",
+        "hi": "मधुमेह",
+        "pt": "diabetes mellitus",
+        "id": "diabetes mellitus",
+        "ms": "diabetes mellitus",
+        "tr": "diabetes mellitus",
+        "zh": "糖尿病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "type-1-diabetes",
+      "terms": {
+        "ru": "диабет 1 типа",
+        "en": "type 1 diabetes",
+        "es": "diabetes tipo 1",
+        "fr": "diabète de type 1",
+        "ar": "داء السكري من النوع 1",
+        "hi": "टाइप 1 मधुमेह",
+        "pt": "diabetes tipo 1",
+        "id": "diabetes tipe 1",
+        "ms": "diabetes tipe 1",
+        "tr": "tip 1 diyabet",
+        "zh": "1型糖尿病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "type-2-diabetes",
+      "terms": {
+        "ru": "диабет 2 типа",
+        "en": "type 2 diabetes",
+        "es": "diabetes tipo 2",
+        "fr": "diabète de type 2",
+        "ar": "داء السكري من النوع 2",
+        "hi": "टाइप 2 मधुमेह",
+        "pt": "diabetes tipo 2",
+        "id": "diabetes tipe 2",
+        "ms": "diabetes tipe 2",
+        "tr": "tip 2 diyabet",
+        "zh": "2型糖尿病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "asthma",
+      "terms": {
+        "ru": "астма",
+        "en": "asthma",
+        "es": "asma",
+        "fr": "asthme",
+        "ar": "الربو",
+        "hi": "दमा",
+        "pt": "asma",
+        "id": "asma",
+        "ms": "asma",
+        "tr": "astım",
+        "zh": "哮喘"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "chronic-obstructive-pulmonary-disease",
+      "terms": {
+        "ru": "хроническая обструктивная болезнь легких",
+        "en": "chronic obstructive pulmonary disease",
+        "es": "enfermedad pulmonar obstructiva crónica",
+        "fr": "maladie pulmonaire obstructive chronique",
+        "ar": "مرض الانسداد الرئوي المزمن",
+        "hi": "क्रॉनिक ऑब्सट्रक्टिव पल्मोनरी डिजीज",
+        "pt": "doença pulmonar obstrutiva crônica",
+        "id": "penyakit paru obstruktif kronis",
+        "ms": "penyakit paru obstruktif kronik",
+        "tr": "kronik obstrüktif akciğer hastalığı",
+        "zh": "慢性阻塞性肺病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "pneumonia",
+      "terms": {
+        "ru": "пневмония",
+        "en": "pneumonia",
+        "es": "neumonía",
+        "fr": "pneumonie",
+        "ar": "الالتهاب الرئوي",
+        "hi": "निमोनिया",
+        "pt": "pneumonia",
+        "id": "pneumonia",
+        "ms": "pneumonia",
+        "tr": "pnömoni",
+        "zh": "肺炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "bronchitis",
+      "terms": {
+        "ru": "бронхит",
+        "en": "bronchitis",
+        "es": "bronquitis",
+        "fr": "bronchite",
+        "ar": "التهاب الشعب الهوائية",
+        "hi": "ब्रोंकाइटिस",
+        "pt": "bronquite",
+        "id": "bronkitis",
+        "ms": "bronkitis",
+        "tr": "bronşit",
+        "zh": "支气管炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "influenza",
+      "terms": {
+        "ru": "грипп",
+        "en": "influenza",
+        "es": "gripe",
+        "fr": "grippe",
+        "ar": "الإنفلونزا",
+        "hi": "इन्फ्लूएंजा",
+        "pt": "gripe",
+        "id": "influenza",
+        "ms": "influenza",
+        "tr": "influenza",
+        "zh": "流感"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "tuberculosis",
+      "terms": {
+        "ru": "туберкулёз",
+        "en": "tuberculosis",
+        "es": "tuberculosis",
+        "fr": "tuberculose",
+        "ar": "السل",
+        "hi": "क्षय रोग",
+        "pt": "tuberculose",
+        "id": "tuberkulosis",
+        "ms": "tuberkulosis",
+        "tr": "tüberküloz",
+        "zh": "结核病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "stroke",
+      "terms": {
+        "ru": "инсульт",
+        "en": "stroke",
+        "es": "accidente cerebrovascular",
+        "fr": "accident vasculaire cérébral",
+        "ar": "سكتة دماغية",
+        "hi": "स्ट्रोक",
+        "pt": "acidente vascular cerebral",
+        "id": "stroke",
+        "ms": "stroke",
+        "tr": "inme",
+        "zh": "中风"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "ischemic-stroke",
+      "terms": {
+        "ru": "ишемический инсульт",
+        "en": "ischemic stroke",
+        "es": "accidente cerebrovascular isquémico",
+        "fr": "accident vasculaire cérébral ischémique",
+        "ar": "السكتة الدماغية الإقفارية",
+        "hi": "इस्कीमिक स्ट्रोक",
+        "pt": "acidente vascular cerebral isquêmico",
+        "id": "stroke iskemik",
+        "ms": "stroke iskemik",
+        "tr": "iskemik inme",
+        "zh": "缺血性中风"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "hemorrhagic-stroke",
+      "terms": {
+        "ru": "геморрагический инсульт",
+        "en": "hemorrhagic stroke",
+        "es": "accidente cerebrovascular hemorrágico",
+        "fr": "accident vasculaire cérébral hémorragique",
+        "ar": "السكتة الدماغية النزفية",
+        "hi": "रक्तस्रावी स्ट्रोक",
+        "pt": "acidente vascular cerebral hemorrágico",
+        "id": "stroke hemoragik",
+        "ms": "stroke hemoragik",
+        "tr": "hemorajik inme",
+        "zh": "出血性中风"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "heart-failure",
+      "terms": {
+        "ru": "сердечная недостаточность",
+        "en": "heart failure",
+        "es": "insuficiencia cardíaca",
+        "fr": "insuffisance cardiaque",
+        "ar": "فشل القلب",
+        "hi": "हृदय विफलता",
+        "pt": "insuficiência cardíaca",
+        "id": "gagal jantung",
+        "ms": "gagal jantung",
+        "tr": "kalp yetmezliği",
+        "zh": "心力衰竭"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "atrial-fibrillation",
+      "terms": {
+        "ru": "мерцательная аритмия",
+        "en": "atrial fibrillation",
+        "es": "fibrilación auricular",
+        "fr": "fibrillation auriculaire",
+        "ar": "الرجفان الأذيني",
+        "hi": "एट्रियल फिब्रिलेशन",
+        "pt": "fibrilação atrial",
+        "id": "fibrilasi atrium",
+        "ms": "fibrilasi atrium",
+        "tr": "atriyal fibrilasyon",
+        "zh": "心房颤动"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "deep-vein-thrombosis",
+      "terms": {
+        "ru": "тромбоз глубоких вен",
+        "en": "deep vein thrombosis",
+        "es": "trombosis venosa profunda",
+        "fr": "thrombose veineuse profonde",
+        "ar": "تخثر الأوردة العميقة",
+        "hi": "गहरी शिरा थrombosis",
+        "pt": "trombose venosa profunda",
+        "id": "trombosis vena dalam",
+        "ms": "trombosis vena dalam",
+        "tr": "derin ven trombozu",
+        "zh": "深静脉血栓"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "anemia",
+      "terms": {
+        "ru": "анемия",
+        "en": "anemia",
+        "es": "anemia",
+        "fr": "anémie",
+        "ar": "فقر الدم",
+        "hi": "अनीमिया",
+        "pt": "anemia",
+        "id": "anemia",
+        "ms": "anemia",
+        "tr": "anemi",
+        "zh": "贫血"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "iron-deficiency-anemia",
+      "terms": {
+        "ru": "железодефицитная анемия",
+        "en": "iron deficiency anemia",
+        "es": "anemia por deficiencia de hierro",
+        "fr": "anémie ferriprive",
+        "ar": "فقر الدم الناجم عن نقص الحديد",
+        "hi": "लौह अभाव अनीमिया",
+        "pt": "anemia por deficiência de ferro",
+        "id": "anemia defisiensi besi",
+        "ms": "anemia kekurangan zat besi",
+        "tr": "demir eksikliği anemisi",
+        "zh": "缺铁性贫血"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "chronic-kidney-disease",
+      "terms": {
+        "ru": "хроническая болезнь почек",
+        "en": "chronic kidney disease",
+        "es": "enfermedad renal crónica",
+        "fr": "maladie rénale chronique",
+        "ar": "مرض الكلى المزمن",
+        "hi": "दीर्घकालिक गुर्दा रोग",
+        "pt": "doença renal crônica",
+        "id": "penyakit ginjal kronis",
+        "ms": "penyakit buah pinggang kronik",
+        "tr": "kronik böbrek hastalığı",
+        "zh": "慢性肾病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "acute-kidney-injury",
+      "terms": {
+        "ru": "острое повреждение почек",
+        "en": "acute kidney injury",
+        "es": "lesión renal aguda",
+        "fr": "lésion rénale aiguë",
+        "ar": "إصابة الكلى الحادة",
+        "hi": "तीव्र गुर्दा चोट",
+        "pt": "lesão renal aguda",
+        "id": "cedera ginjal akut",
+        "ms": "kecederaan buah pinggang akut",
+        "tr": "akut böbrek hasarı",
+        "zh": "急性肾损伤"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "urinary-tract-infection",
+      "terms": {
+        "ru": "инфекция мочевыводящих путей",
+        "en": "urinary tract infection",
+        "es": "infección del tracto urinario",
+        "fr": "infection urinaire",
+        "ar": "عدوى المسالك البولية",
+        "hi": "मूत्र मार्ग संक्रमण",
+        "pt": "infecção do trato urinário",
+        "id": "infeksi saluran kemih",
+        "ms": "jangkitan saluran kencing",
+        "tr": "idrar yolu enfeksiyonu",
+        "zh": "尿路感染"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "kidney-stone",
+      "terms": {
+        "ru": "камень в почке",
+        "en": "kidney stone",
+        "es": "cálculo renal",
+        "fr": "calcul rénal",
+        "ar": "حصوة الكلى",
+        "hi": "गुर्दा पथरी",
+        "pt": "cálculo renal",
+        "id": "batu ginjal",
+        "ms": "batu karang buah pinggang",
+        "tr": "böbrek taşı",
+        "zh": "肾结石"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "hepatitis",
+      "terms": {
+        "ru": "гепатит",
+        "en": "hepatitis",
+        "es": "hepatitis",
+        "fr": "hépatite",
+        "ar": "التهاب الكبد",
+        "hi": "हेपेटाइटिस",
+        "pt": "hepatite",
+        "id": "hepatitis",
+        "ms": "hepatitis",
+        "tr": "hepatit",
+        "zh": "肝炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "cirrhosis",
+      "terms": {
+        "ru": "цирроз",
+        "en": "cirrhosis",
+        "es": "cirrosis",
+        "fr": "cirrhose",
+        "ar": "تليف الكبد",
+        "hi": "सिरोसिस",
+        "pt": "cirrose",
+        "id": "sirosis",
+        "ms": "sirosis",
+        "tr": "siroz",
+        "zh": "肝硬化"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "gastritis",
+      "terms": {
+        "ru": "гастрит",
+        "en": "gastritis",
+        "es": "gastritis",
+        "fr": "gastrite",
+        "ar": "التهاب المعدة",
+        "hi": "गैस्ट्राइटिस",
+        "pt": "gastrite",
+        "id": "gastritis",
+        "ms": "gastritis",
+        "tr": "gastrit",
+        "zh": "胃炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "peptic-ulcer",
+      "terms": {
+        "ru": "пептическая язва",
+        "en": "peptic ulcer",
+        "es": "úlcera péptica",
+        "fr": "ulcère peptique",
+        "ar": "قرحة هضمية",
+        "hi": "पेप्टिक अल्सर",
+        "pt": "úlcera péptica",
+        "id": "ulkus peptikum",
+        "ms": "ulser peptik",
+        "tr": "peptik ülser",
+        "zh": "消化性溃疡"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "gastroesophageal-reflux-disease",
+      "terms": {
+        "ru": "гастроэзофагеальная рефлюксная болезнь",
+        "en": "gastroesophageal reflux disease",
+        "es": "enfermedad por reflujo gastroesofágico",
+        "fr": "maladie de reflux gastro-œsophagien",
+        "ar": "مرض الارتجاع المعدي المريئي",
+        "hi": "गैस्ट्रोइसोफेजियल रिफ्लक्स रोग",
+        "pt": "doença do refluxo gastroesofágico",
+        "id": "penyakit refluks gastroesofagus",
+        "ms": "penyakit refluks gastroesofagus",
+        "tr": "gastroözofageal reflü hastalığı",
+        "zh": "胃食管反流病"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "appendicitis",
+      "terms": {
+        "ru": "аппендицит",
+        "en": "appendicitis",
+        "es": "apendicitis",
+        "fr": "appendicite",
+        "ar": "التهاب الزائدة الدودية",
+        "hi": "अपेंडिसाइटिस",
+        "pt": "apendicite",
+        "id": "apendisitis",
+        "ms": "apendisitis",
+        "tr": "apandisit",
+        "zh": "阑尾炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "pancreatitis",
+      "terms": {
+        "ru": "панкреатит",
+        "en": "pancreatitis",
+        "es": "pancreatitis",
+        "fr": "pancréatite",
+        "ar": "التهاب البنكرياس",
+        "hi": "अग्नाशयशोथ",
+        "pt": "pancreatite",
+        "id": "pankreatitis",
+        "ms": "pankreatitis",
+        "tr": "pankreatit",
+        "zh": "胰腺炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "cholecystitis",
+      "terms": {
+        "ru": "холецистит",
+        "en": "cholecystitis",
+        "es": "colecistitis",
+        "fr": "cholécystite",
+        "ar": "التهاب المرارة",
+        "hi": "पित्ताशयशोथ",
+        "pt": "colecistite",
+        "id": "kolesistitis",
+        "ms": "kolesistitis",
+        "tr": "kolesistit",
+        "zh": "胆囊炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "hypothyroidism",
+      "terms": {
+        "ru": "гипотиреоз",
+        "en": "hypothyroidism",
+        "es": "hipotiroidismo",
+        "fr": "hypothyroïdie",
+        "ar": "قصور الغدة الدرقية",
+        "hi": "हाइपोथायरायडिज्म",
+        "pt": "hipotireoidismo",
+        "id": "hipotiroidisme",
+        "ms": "hipotiroidisme",
+        "tr": "hipotiroidizm",
+        "zh": "甲状腺功能减退"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "hyperthyroidism",
+      "terms": {
+        "ru": "гипертиреоз",
+        "en": "hyperthyroidism",
+        "es": "hipertiroidismo",
+        "fr": "hyperthyroïdie",
+        "ar": "فرط نشاط الغدة الدرقية",
+        "hi": "हाइपरथायरायडिज्म",
+        "pt": "hipertireoidismo",
+        "id": "hipertiroidisme",
+        "ms": "hipertiroidisme",
+        "tr": "hipertiroidizm",
+        "zh": "甲状腺功能亢进"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "osteoporosis",
+      "terms": {
+        "ru": "остеопороз",
+        "en": "osteoporosis",
+        "es": "osteoporosis",
+        "fr": "ostéoporose",
+        "ar": "هشاشة العظام",
+        "hi": "अस्थि क्षय",
+        "pt": "osteoporose",
+        "id": "osteoporosis",
+        "ms": "osteoporosis",
+        "tr": "osteoporoz",
+        "zh": "骨质疏松"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "osteoarthritis",
+      "terms": {
+        "ru": "остеоартрит",
+        "en": "osteoarthritis",
+        "es": "osteoartritis",
+        "fr": "arthrose",
+        "ar": "التهاب المفاصل التنكسي",
+        "hi": "अस्थिसंधि शोथ",
+        "pt": "osteoartrite",
+        "id": "osteoartritis",
+        "ms": "osteoartritis",
+        "tr": "osteoartrit",
+        "zh": "骨关节炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "rheumatoid-arthritis",
+      "terms": {
+        "ru": "ревматоидный артрит",
+        "en": "rheumatoid arthritis",
+        "es": "artritis reumatoide",
+        "fr": "polyarthrite rhumatoïde",
+        "ar": "التهاب المفاصل الروماتويدي",
+        "hi": "रूमेटॉयड गठिया",
+        "pt": "artrite reumatoide",
+        "id": "artritis reumatoid",
+        "ms": "artritis reumatoid",
+        "tr": "romatoid artrit",
+        "zh": "类风湿关节炎"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "gout",
+      "terms": {
+        "ru": "подагра",
+        "en": "gout",
+        "es": "gota",
+        "fr": "goutte",
+        "ar": "النقرس",
+        "hi": "गाउट",
+        "pt": "gota",
+        "id": "asam urat",
+        "ms": "gout",
+        "tr": "gut",
+        "zh": "痛风"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "migraine",
+      "terms": {
+        "ru": "мигрень",
+        "en": "migraine",
+        "es": "migraña",
+        "fr": "migraine",
+        "ar": "الشقيقة",
+        "hi": "माइग्रेन",
+        "pt": "enxaqueca",
+        "id": "migrain",
+        "ms": "migrain",
+        "tr": "migren",
+        "zh": "偏头痛"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "epilepsy",
+      "terms": {
+        "ru": "эпилепсия",
+        "en": "epilepsy",
+        "es": "epilepsia",
+        "fr": "épilepsie",
+        "ar": "الصرع",
+        "hi": "मिर्गी",
+        "pt": "epilepsia",
+        "id": "epilepsi",
+        "ms": "epilepsi",
+        "tr": "epilepsi",
+        "zh": "癫痫"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "depression",
+      "terms": {
+        "ru": "депрессия",
+        "en": "depression",
+        "es": "depresión",
+        "fr": "dépression",
+        "ar": "الاكتئاب",
+        "hi": "अवसाद",
+        "pt": "depressão",
+        "id": "depresi",
+        "ms": "kemurungan",
+        "tr": "depresyon",
+        "zh": "抑郁症"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "anxiety-disorder",
+      "terms": {
+        "ru": "тревожное расстройство",
+        "en": "anxiety disorder",
+        "es": "trastorno de ansiedad",
+        "fr": "trouble anxieux",
+        "ar": "اضطراب القلق",
+        "hi": "चिंता विकार",
+        "pt": "transtorno de ansiedade",
+        "id": "gangguan kecemasan",
+        "ms": "gangguan kebimbangan",
+        "tr": "anksiyete bozukluğu",
+        "zh": "焦虑症"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "anaphylaxis",
+      "terms": {
+        "ru": "анафилаксия",
+        "en": "anaphylaxis",
+        "es": "anafilaxia",
+        "fr": "anaphylaxie",
+        "ar": "تأق",
+        "hi": "एनाफिलेक्सिस",
+        "pt": "anafilaxia",
+        "id": "anafilaksis",
+        "ms": "anafilaksis",
+        "tr": "anafilaksi",
+        "zh": "过敏性休克"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "sepsis",
+      "terms": {
+        "ru": "сепсис",
+        "en": "sepsis",
+        "es": "sepsis",
+        "fr": "sepsis",
+        "ar": "تعفن الدم",
+        "hi": "सेप्सिस",
+        "pt": "sepse",
+        "id": "sepsis",
+        "ms": "sepsis",
+        "tr": "sepsis",
+        "zh": "败血症"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "dehydration",
+      "terms": {
+        "ru": "обезвоживание",
+        "en": "dehydration",
+        "es": "deshidratación",
+        "fr": "déshydratation",
+        "ar": "الجفاف",
+        "hi": "निर्जलीकरण",
+        "pt": "desidratação",
+        "id": "dehidrasi",
+        "ms": "dehidrasi",
+        "tr": "dehidrasyon",
+        "zh": "脱水"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "fracture",
+      "terms": {
+        "ru": "перелом",
+        "en": "fracture",
+        "es": "fractura",
+        "fr": "fracture",
+        "ar": "كسر",
+        "hi": "फ्रैक्चर",
+        "pt": "fratura",
+        "id": "fraktur",
+        "ms": "fraktur",
+        "tr": "kırık",
+        "zh": "骨折"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "sprain",
+      "terms": {
+        "ru": "растяжение",
+        "en": "sprain",
+        "es": "esguince",
+        "fr": "entorse",
+        "ar": "التواء",
+        "hi": "मोड़ना",
+        "pt": "entorse",
+        "id": "terkilir",
+        "ms": "terkilir",
+        "tr": "burkulma",
+        "zh": "扭伤"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "burn",
+      "terms": {
+        "ru": "ожог",
+        "en": "burn",
+        "es": "quemadura",
+        "fr": "brûlure",
+        "ar": "حرق",
+        "hi": "जलना",
+        "pt": "queimadura",
+        "id": "luka bakar",
+        "ms": "lecur",
+        "tr": "yanık",
+        "zh": "烧伤"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "concussion",
+      "terms": {
+        "ru": "сотрясение мозга",
+        "en": "concussion",
+        "es": "conmoción cerebral",
+        "fr": "commotion cérébrale",
+        "ar": "ارتجاج في المخ",
+        "hi": "मस्तिष्क झटका",
+        "pt": "concussão",
+        "id": " gegar otak",
+        "ms": "gegatan otak",
+        "tr": "sarsıntı",
+        "zh": "脑震荡"
+      },
+      "category": "diagnoses"
+    },
+    {
+      "id": "physical-examination",
+      "terms": {
+        "ru": "физикальное обследование",
+        "en": "physical examination",
+        "es": "examen físico",
+        "fr": "examen physique",
+        "ar": "الفحص البدني",
+        "hi": "शारीरिक परीक्षा",
+        "pt": "exame físico",
+        "id": "pemeriksaan fisik",
+        "ms": "pemeriksaan fizikal",
+        "tr": "fizik muayene",
+        "zh": "体格检查"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "blood-test",
+      "terms": {
+        "ru": "анализ крови",
+        "en": "blood test",
+        "es": "análisis de sangre",
+        "fr": "analyse sanguine",
+        "ar": "فحص الدم",
+        "hi": "रक्त परीक्षण",
+        "pt": "exame de sangue",
+        "id": "tes darah",
+        "ms": "ujian darah",
+        "tr": "kan tahlili",
+        "zh": "血液检查"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "urinalysis",
+      "terms": {
+        "ru": "анализ мочи",
+        "en": "urinalysis",
+        "es": "análisis de orina",
+        "fr": "analyse d'urine",
+        "ar": "تحليل البول",
+        "hi": "मूत्र परीक्षण",
+        "pt": "análise de urina",
+        "id": "analisis urin",
+        "ms": "analisis urin",
+        "tr": "idrar tahlili",
+        "zh": "尿液分析"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "complete-blood-count",
+      "terms": {
+        "ru": "общий анализ крови",
+        "en": "complete blood count",
+        "es": "hemograma completo",
+        "fr": "numération formule sanguine complète",
+        "ar": "تعداد الدم الكامل",
+        "hi": "पूर्ण रक्त गणना",
+        "pt": "hemograma completo",
+        "id": "hitungan darah lengkap",
+        "ms": "kiraan darah lengkap",
+        "tr": "tam kan sayımı",
+        "zh": "全血细胞计数"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "platelet-count",
+      "terms": {
+        "ru": "количество тромбоцитов",
+        "en": "platelet count",
+        "es": "recuento de plaquetas",
+        "fr": "numération plaquettaire",
+        "ar": "عدد الصفائح الدموية",
+        "hi": "प्लेटलेट गणना",
+        "pt": "contagem de plaquetas",
+        "id": "jumlah trombosit",
+        "ms": "kiraan platelet",
+        "tr": "trombosit sayısı",
+        "zh": "血小板计数"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "white-blood-cell-count",
+      "terms": {
+        "ru": "количество лейкоцитов",
+        "en": "white blood cell count",
+        "es": "recuento de leucocitos",
+        "fr": "numération des leucocytes",
+        "ar": "عدد خلايا الدم البيضاء",
+        "hi": "श्वेत रक्त कोशिका गणना",
+        "pt": "contagem de leucócitos",
+        "id": "jumlah sel darah putih",
+        "ms": "kiraan sel darah putih",
+        "tr": "beyaz kan hücresi sayısı",
+        "zh": "白细胞计数"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "creatinine",
+      "terms": {
+        "ru": "креатинин",
+        "en": "creatinine",
+        "es": "creatinina",
+        "fr": "créatinine",
+        "ar": "الكرياتينين",
+        "hi": "क्रिएटिनिन",
+        "pt": "creatinina",
+        "id": "kreatinin",
+        "ms": "kreatinin",
+        "tr": "kreatinin",
+        "zh": "肌酐"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "urea",
+      "terms": {
+        "ru": "мочевина",
+        "en": "urea",
+        "es": "urea",
+        "fr": "urée",
+        "ar": "اليوريا",
+        "hi": "यूरिया",
+        "pt": "uréia",
+        "id": "urea",
+        "ms": "urea",
+        "tr": "üre",
+        "zh": "尿素"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "potassium",
+      "terms": {
+        "ru": "калий",
+        "en": "potassium",
+        "es": "potasio",
+        "fr": "potassium",
+        "ar": "البوتاسيوم",
+        "hi": "पोटैशियम",
+        "pt": "potássio",
+        "id": "kalium",
+        "ms": "kalium",
+        "tr": "potasyum",
+        "zh": "钾"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "sodium",
+      "terms": {
+        "ru": "натрий",
+        "en": "sodium",
+        "es": "sodio",
+        "fr": "sodium",
+        "ar": "الصوديوم",
+        "hi": "सोडियम",
+        "pt": "sódio",
+        "id": "natrium",
+        "ms": "natrium",
+        "tr": "sodyum",
+        "zh": "钠"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "calcium",
+      "terms": {
+        "ru": "кальций",
+        "en": "calcium",
+        "es": "calcio",
+        "fr": "calcium",
+        "ar": "الكالسيوم",
+        "hi": "कैल्शियम",
+        "pt": "cálcio",
+        "id": "kalsium",
+        "ms": "kalsium",
+        "tr": "kalsiyum",
+        "zh": "钙"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "magnesium",
+      "terms": {
+        "ru": "магний",
+        "en": "magnesium",
+        "es": "magnesio",
+        "fr": "magnésium",
+        "ar": "المغنيسيوم",
+        "hi": "मैग्नीशियम",
+        "pt": "magnésio",
+        "id": "magnesium",
+        "ms": "magnesium",
+        "tr": "magnezyum",
+        "zh": "镁"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "bilirubin",
+      "terms": {
+        "ru": "билирубин",
+        "en": "bilirubin",
+        "es": "bilirrubina",
+        "fr": "bilirubine",
+        "ar": "البيليروبين",
+        "hi": "बिलिरुबिन",
+        "pt": "bilirrubina",
+        "id": "bilirubin",
+        "ms": "bilirubin",
+        "tr": "bilirubin",
+        "zh": "胆红素"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "alanine-aminotransferase",
+      "terms": {
+        "ru": "аланинаминотрансфераза",
+        "en": "alanine aminotransferase",
+        "es": "alanina aminotransferasa",
+        "fr": "alanine aminotransférase",
+        "ar": "ألانين أمينوترانسفيراز",
+        "hi": "एलानिन अमीनोट्रांसफेरेज",
+        "pt": "alanina aminotransferase",
+        "id": "alanin aminotransferase",
+        "ms": "alanin aminotransferase",
+        "tr": "alanin aminotransferaz",
+        "zh": "丙氨酸氨基转移酶"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "aspartate-aminotransferase",
+      "terms": {
+        "ru": "аспартатаминотрансфераза",
+        "en": "aspartate aminotransferase",
+        "es": "aspartato aminotransferasa",
+        "fr": "aspartate aminotransférase",
+        "ar": "أسبارتات أمينوترانسفيراز",
+        "hi": "एस्पार्टेट अमीनोट्रांसफेरेज",
+        "pt": "aspartato aminotransferase",
+        "id": "aspartat aminotransferase",
+        "ms": "aspartat aminotransferase",
+        "tr": "aspartat aminotransferaz",
+        "zh": "天冬氨酸氨基转移酶"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "c-reactive-protein",
+      "terms": {
+        "ru": "С-реактивный белок",
+        "en": "C reactive protein",
+        "es": "proteína C reactiva",
+        "fr": "protéine C réactive",
+        "ar": "بروتين سي التفاعلي",
+        "hi": "सी रिएक्टिव प्रोटीन",
+        "pt": "proteína C reativa",
+        "id": "protein C reaktif",
+        "ms": "protein C reaktif",
+        "tr": "C reaktif protein",
+        "zh": "C反应蛋白"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "erythrocyte-sedimentation-rate",
+      "terms": {
+        "ru": "скорость оседания эритроцитов",
+        "en": "erythrocyte sedimentation rate",
+        "es": "velocidad de sedimentación globular",
+        "fr": "vitesse de sédimentation des érythrocytes",
+        "ar": "معدل ترسيب كريات الدم الحمراء",
+        "hi": "एरिथ्रोसाइट सेडिमेंटेशन रेट",
+        "pt": "velocidade de sedimentação de eritrócitos",
+        "id": "laju endap eritrosit",
+        "ms": "kadar endapan eritrosit",
+        "tr": "eritrosit sedimentasyon hızı",
+        "zh": "红细胞沉降率"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "glycated-hemoglobin",
+      "terms": {
+        "ru": "гликированный гемоглобин",
+        "en": "glycated hemoglobin",
+        "es": "hemoglobina glucosilada",
+        "fr": "hémoglobine glyquée",
+        "ar": "الهيموغلوبين الغليكوزيلاتي",
+        "hi": "ग्लाइकेटेड हीमोग्लोबिन",
+        "pt": "hemoglobina glicada",
+        "id": "hemoglobin terglikasi",
+        "ms": "hemoglobin terglikasi",
+        "tr": "glikozile hemoglobin",
+        "zh": "糖化血红蛋白"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "total-cholesterol",
+      "terms": {
+        "ru": "общий холестерин",
+        "en": "total cholesterol",
+        "es": "colesterol total",
+        "fr": "cholestérol total",
+        "ar": "الكوليسترول الكلي",
+        "hi": "कुल कोलेस्ट्रॉल",
+        "pt": "colesterol total",
+        "id": "kolesterol total",
+        "ms": "kolesterol total",
+        "tr": "total kolesterol",
+        "zh": "总胆固醇"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "low-density-lipoprotein-cholesterol",
+      "terms": {
+        "ru": "холестерин ЛПНП",
+        "en": "low density lipoprotein cholesterol",
+        "es": "colesterol LDL",
+        "fr": "cholestérol LDL",
+        "ar": "كوليسترول البروتين الدهني منخفض الكثافة",
+        "hi": "एलडीएल कोलेस्ट्रॉल",
+        "pt": "colesterol LDL",
+        "id": "kolesterol LDL",
+        "ms": "kolesterol LDL",
+        "tr": "düşük yoğunluklu lipoprotein kolesterol",
+        "zh": "低密度脂蛋白胆固醇"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "high-density-lipoprotein-cholesterol",
+      "terms": {
+        "ru": "холестерин ЛПВП",
+        "en": "high density lipoprotein cholesterol",
+        "es": "colesterol HDL",
+        "fr": "cholestérol HDL",
+        "ar": "كوليسترول البروتين الدهني عالي الكثافة",
+        "hi": "एचडीएल कोलेस्ट्रॉल",
+        "pt": "colesterol HDL",
+        "id": "kolesterol HDL",
+        "ms": "kolesterol HDL",
+        "tr": "yüksek yoğunluklu lipoprotein kolesterol",
+        "zh": "高密度脂蛋白胆固醇"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "triglycerides",
+      "terms": {
+        "ru": "триглицериды",
+        "en": "triglycerides",
+        "es": "triglicéridos",
+        "fr": "triglycérides",
+        "ar": "الدهون الثلاثية",
+        "hi": "ट्राइग्लिसराइड्स",
+        "pt": "triglicerídeos",
+        "id": "trigliserida",
+        "ms": "trigliserida",
+        "tr": "trigliseritler",
+        "zh": "甘油三酯"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "troponin",
+      "terms": {
+        "ru": "тропонин",
+        "en": "troponin",
+        "es": "troponina",
+        "fr": "troponine",
+        "ar": "تروبونين",
+        "hi": "ट्रोपोनिन",
+        "pt": "troponina",
+        "id": "troponin",
+        "ms": "troponin",
+        "tr": "troponin",
+        "zh": "肌钙蛋白"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "d-dimer",
+      "terms": {
+        "ru": "D-димер",
+        "en": "D dimer",
+        "es": "D dímero",
+        "fr": "D-dimère",
+        "ar": "دي دايمر",
+        "hi": "डी डायमर",
+        "pt": "D dímero",
+        "id": "D dimer",
+        "ms": "D dimer",
+        "tr": "D dimer",
+        "zh": "D-二聚体"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "ferritin",
+      "terms": {
+        "ru": "ферритин",
+        "en": "ferritin",
+        "es": "ferritina",
+        "fr": "ferritine",
+        "ar": "فيريتين",
+        "hi": "फेरिटिन",
+        "pt": "ferritina",
+        "id": "ferritin",
+        "ms": "ferritin",
+        "tr": "ferritin",
+        "zh": "铁蛋白"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "thyroid-stimulating-hormone",
+      "terms": {
+        "ru": "тиреотропный гормон",
+        "en": "thyroid stimulating hormone",
+        "es": "hormona estimulante de tiroides",
+        "fr": "hormone stimulant la thyroïde",
+        "ar": "الهرمون المنشط للغدة الدرقية",
+        "hi": "थायरॉयड उत्तेजक हार्मोन",
+        "pt": "hormônio estimulante da tireoide",
+        "id": "hormon perangsang tiroid",
+        "ms": "hormon perangsang tiroid",
+        "tr": "tiroid uyarıcı hormon",
+        "zh": "促甲状腺激素"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "ultrasound",
+      "terms": {
+        "ru": "ультразвук",
+        "en": "ultrasound",
+        "es": "ultrasonido",
+        "fr": "échographie",
+        "ar": "الموجات فوق الصوتية",
+        "hi": "अल्ट्रासाउंड",
+        "pt": "ultrassom",
+        "id": "ultrasonografi",
+        "ms": "ultrasound",
+        "tr": "ultrason",
+        "zh": "超声"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "x-ray",
+      "terms": {
+        "ru": "рентген",
+        "en": "X ray",
+        "es": "radiografía",
+        "fr": "radiographie",
+        "ar": "الأشعة السينية",
+        "hi": "एक्स-रे",
+        "pt": "raio X",
+        "id": "sinar-X",
+        "ms": "sinar-X",
+        "tr": "röntgen",
+        "zh": "X射线"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "echocardiography",
+      "terms": {
+        "ru": "эхокардиография",
+        "en": "echocardiography",
+        "es": "ecocardiografía",
+        "fr": "échocardiographie",
+        "ar": "تخطيط صدى القلب",
+        "hi": "इकोकार्डियोग्राफी",
+        "pt": "ecocardiografia",
+        "id": "ekokardiografi",
+        "ms": "ekokardiografi",
+        "tr": "ekokardiyografi",
+        "zh": "超声心动图"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "endoscopy",
+      "terms": {
+        "ru": "эндоскопия",
+        "en": "endoscopy",
+        "es": "endoscopía",
+        "fr": "endoscopie",
+        "ar": "التنظير الداخلي",
+        "hi": "एंडोस्कोपी",
+        "pt": "endoscopia",
+        "id": "endoskopi",
+        "ms": "endoskopi",
+        "tr": "endoskopi",
+        "zh": "内窥镜检查"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "colonoscopy",
+      "terms": {
+        "ru": "колоноскопия",
+        "en": "colonoscopy",
+        "es": "colonoscopía",
+        "fr": "coloscopie",
+        "ar": "تنظير القولون",
+        "hi": "कोलोन्स्कोपी",
+        "pt": "colonoscopia",
+        "id": "kolonoskopi",
+        "ms": "kolonoskopi",
+        "tr": "kolonoskopi",
+        "zh": "结肠镜检查"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "biopsy",
+      "terms": {
+        "ru": "биопсия",
+        "en": "biopsy",
+        "es": "biopsia",
+        "fr": "biopsie",
+        "ar": "خزعة",
+        "hi": "बायोप्सी",
+        "pt": "biópsia",
+        "id": "biopsi",
+        "ms": "biopsi",
+        "tr": "biyopsi",
+        "zh": "活检"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "blood-culture",
+      "terms": {
+        "ru": "посев крови",
+        "en": "blood culture",
+        "es": "cultivo de sangre",
+        "fr": "hémoculture",
+        "ar": "زرع الدم",
+        "hi": "रक्त संस्कृति",
+        "pt": "hemocultura",
+        "id": "kultur darah",
+        "ms": "kultur darah",
+        "tr": "kan kültürü",
+        "zh": "血培养"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "urine-culture",
+      "terms": {
+        "ru": "посев мочи",
+        "en": "urine culture",
+        "es": "cultivo de orina",
+        "fr": "culture d'urine",
+        "ar": "زرع البول",
+        "hi": "मूत्र संस्कृति",
+        "pt": "urocultura",
+        "id": "kultur urin",
+        "ms": "kultur urin",
+        "tr": "idrar kültürü",
+        "zh": "尿培养"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "spirometry",
+      "terms": {
+        "ru": "спирометрия",
+        "en": "spirometry",
+        "es": "espirometría",
+        "fr": "spirométrie",
+        "ar": "قياس التنفس",
+        "hi": "स्पाइरोमेट्री",
+        "pt": "espirometria",
+        "id": "spirometri",
+        "ms": "spirometri",
+        "tr": "spirometri",
+        "zh": "肺活量测定"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "pulse-oximetry",
+      "terms": {
+        "ru": "пульсоксиметрия",
+        "en": "pulse oximetry",
+        "es": "oximetría de pulso",
+        "fr": "oxymétrie de pouls",
+        "ar": "مقياس التأكسج النبضي",
+        "hi": "पल्स ऑक्सीमेट्री",
+        "pt": "oximetria de pulso",
+        "id": "oksimetri nadi",
+        "ms": "oksimetri nadi",
+        "tr": "nabız oksimetresi",
+        "zh": "脉搏血氧测定"
+      },
+      "category": "examinations"
+    },
+    {
+      "id": "furosemide",
+      "terms": {
+        "ru": "фуросемид",
+        "en": "furosemide",
+        "es": "furosemida",
+        "fr": "furosémide",
+        "ar": "فوروسيميد",
+        "hi": "फ्यूरोसेमाइड",
+        "pt": "furosemida",
+        "id": "furosemid",
+        "ms": "furosemid",
+        "tr": "furosemid",
+        "zh": "呋塞米"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "spironolactone",
+      "terms": {
+        "ru": "спиронолактон",
+        "en": "spironolactone",
+        "es": "espironolactona",
+        "fr": "spironolactone",
+        "ar": "سبيرونولاكتون",
+        "hi": "स्पिरोनोलैक्टोन",
+        "pt": "espironolactona",
+        "id": "spironolakton",
+        "ms": "spironolakton",
+        "tr": "spironolakton",
+        "zh": "螺内酯"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "hydrochlorothiazide",
+      "terms": {
+        "ru": "гидрохлоротиазид",
+        "en": "hydrochlorothiazide",
+        "es": "hidroclorotiazida",
+        "fr": "hydrochlorothiazide",
+        "ar": "هيدروكلوروثيازيد",
+        "hi": "हाइड्रोक्लोरोथियाजाइड",
+        "pt": "hidroclorotiazida",
+        "id": "hidroklorotiazid",
+        "ms": "hidroklorotiazid",
+        "tr": "hidroklorotiyazid",
+        "zh": "氢氯噻嗪"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "valsartan",
+      "terms": {
+        "ru": "валсартан",
+        "en": "valsartan",
+        "es": "valsartán",
+        "fr": "valsartan",
+        "ar": "فالسارتان",
+        "hi": "वालसार्टन",
+        "pt": "valsartana",
+        "id": "valsartan",
+        "ms": "valsartan",
+        "tr": "valsartan",
+        "zh": "缬沙坦"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "ramipril",
+      "terms": {
+        "ru": "рамиприл",
+        "en": "ramipril",
+        "es": "ramipril",
+        "fr": "ramipril",
+        "ar": "راميبريل",
+        "hi": "रामिप्रिल",
+        "pt": "ramipril",
+        "id": "ramipril",
+        "ms": "ramipril",
+        "tr": "ramipril",
+        "zh": "赖米普利"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "nitroglycerin",
+      "terms": {
+        "ru": "нитроглицерин",
+        "en": "nitroglycerin",
+        "es": "nitroglicerina",
+        "fr": "nitroglycérine",
+        "ar": "نتروجلسرين",
+        "hi": "नाइट्रोग्लिसरीन",
+        "pt": "nitroglicerina",
+        "id": "nitrogliserin",
+        "ms": "nitrogliserin",
+        "tr": "nitrogliserin",
+        "zh": "硝酸甘油"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "digoxin",
+      "terms": {
+        "ru": "дигоксин",
+        "en": "digoxin",
+        "es": "digoxina",
+        "fr": "digoxine",
+        "ar": "ديجوكسين",
+        "hi": "डायगॉक्सिन",
+        "pt": "digoxina",
+        "id": "digoksin",
+        "ms": "digoksin",
+        "tr": "digoksin",
+        "zh": "地高辛"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "amiodarone",
+      "terms": {
+        "ru": "амиодарон",
+        "en": "amiodarone",
+        "es": "amiodarona",
+        "fr": "amiodarone",
+        "ar": "أميودارون",
+        "hi": "एमियोडारोन",
+        "pt": "amiodarona",
+        "id": "amiodaron",
+        "ms": "amiodaron",
+        "tr": "amiodaron",
+        "zh": "胺碘酮"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "apixaban",
+      "terms": {
+        "ru": "апиксабан",
+        "en": "apixaban",
+        "es": "apixabán",
+        "fr": "apixaban",
+        "ar": "أبيكسابان",
+        "hi": "एपिक्साबान",
+        "pt": "apixabana",
+        "id": "apiksaban",
+        "ms": "apiksaban",
+        "tr": "apiksaban",
+        "zh": "阿哌沙班"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "rivaroxaban",
+      "terms": {
+        "ru": "ривароксабан",
+        "en": "rivaroxaban",
+        "es": "rivaroxabán",
+        "fr": "rivaroxaban",
+        "ar": "ريفاروكسبان",
+        "hi": "रिवारोक्साबान",
+        "pt": "rivaroxabana",
+        "id": "rivaroksaban",
+        "ms": "rivaroksaban",
+        "tr": "rivaroksaban",
+        "zh": "利伐沙班"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "heparin",
+      "terms": {
+        "ru": "гепарин",
+        "en": "heparin",
+        "es": "heparina",
+        "fr": "héparine",
+        "ar": "هيبارين",
+        "hi": "हिपारिन",
+        "pt": "heparina",
+        "id": "heparin",
+        "ms": "heparin",
+        "tr": "heparin",
+        "zh": "肝素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "enoxaparin",
+      "terms": {
+        "ru": "эноксапарин",
+        "en": "enoxaparin",
+        "es": "enoxaparina",
+        "fr": "énoxaparine",
+        "ar": "إنوكسابارين",
+        "hi": "एनोक्सापारिन",
+        "pt": "enoxaparina",
+        "id": "enoksaparin",
+        "ms": "enoksaparin",
+        "tr": "enoksaparin",
+        "zh": "依诺肝素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "azithromycin",
+      "terms": {
+        "ru": "азитромицин",
+        "en": "azithromycin",
+        "es": "azitromicina",
+        "fr": "azithromycine",
+        "ar": "أزيثرومايسين",
+        "hi": "एज़िथ्रोमाइसिन",
+        "pt": "azitromicina",
+        "id": "azitromisin",
+        "ms": "azitromisin",
+        "tr": "azitromisin",
+        "zh": "阿奇霉素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "clarithromycin",
+      "terms": {
+        "ru": "кларитромицин",
+        "en": "clarithromycin",
+        "es": "claritromicina",
+        "fr": "clarithromycine",
+        "ar": "كلاريثروميسين",
+        "hi": "क्लैरिथ्रोमाइसिन",
+        "pt": "claritromicina",
+        "id": "klaritromisin",
+        "ms": "klaritromisin",
+        "tr": "klaritromisin",
+        "zh": "克拉霉素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "doxycycline",
+      "terms": {
+        "ru": "доксициклин",
+        "en": "doxycycline",
+        "es": "doxiciclina",
+        "fr": "doxycycline",
+        "ar": "دوكسيسيكلين",
+        "hi": "डॉक्सीसाइक्लिन",
+        "pt": "doxiciclina",
+        "id": "doksisiklin",
+        "ms": "doksisiklin",
+        "tr": "doksisiklin",
+        "zh": "多西环素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "ceftriaxone",
+      "terms": {
+        "ru": "цефтриаксон",
+        "en": "ceftriaxone",
+        "es": "ceftriaxona",
+        "fr": "céftriaxone",
+        "ar": "سيفترياكسون",
+        "hi": "सेफ्ट्रियाक्सोन",
+        "pt": "ceftriaxona",
+        "id": "seftriakson",
+        "ms": "seftriakson",
+        "tr": "seftriakson",
+        "zh": "头孢曲松"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "cephalexin",
+      "terms": {
+        "ru": "цефалексин",
+        "en": "cephalexin",
+        "es": "cefalexina",
+        "fr": "céphalexine",
+        "ar": "سيفاليكسين",
+        "hi": "सेफालेक्सिन",
+        "pt": "cefalexina",
+        "id": "sefaleksin",
+        "ms": "sefaleksin",
+        "tr": "sefaleksin",
+        "zh": "头孢氨苄"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "ciprofloxacin",
+      "terms": {
+        "ru": "ципрофлоксацин",
+        "en": "ciprofloxacin",
+        "es": "ciprofloxacino",
+        "fr": "ciprofloxacine",
+        "ar": "سيبروفلوكساسين",
+        "hi": "सिप्रोफ्लोक्सासिन",
+        "pt": "ciprofloxacino",
+        "id": "siprofloxacin",
+        "ms": "siprofloxacin",
+        "tr": "siprofloxacin",
+        "zh": "环丙沙星"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "metronidazole",
+      "terms": {
+        "ru": "метронидазол",
+        "en": "metronidazole",
+        "es": "metronidazol",
+        "fr": "métronidazole",
+        "ar": "ميترونيدازول",
+        "hi": "मेट्रोनिडाज़ोल",
+        "pt": "metronidazol",
+        "id": "metronidazol",
+        "ms": "metronidazol",
+        "tr": "metronidazol",
+        "zh": "甲硝唑"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "fluconazole",
+      "terms": {
+        "ru": "флуконазол",
+        "en": "fluconazole",
+        "es": "fluconazol",
+        "fr": "fluconazole",
+        "ar": "فلوكونازول",
+        "hi": "फ्लुकोनाज़ोल",
+        "pt": "fluconazol",
+        "id": "flukonazol",
+        "ms": "flukonazol",
+        "tr": "flukonazol",
+        "zh": "氟康唑"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "acyclovir",
+      "terms": {
+        "ru": "ацикловир",
+        "en": "acyclovir",
+        "es": "aciclovir",
+        "fr": "aciclovir",
+        "ar": "أسيكلوفير",
+        "hi": "एसाइक्लोविर",
+        "pt": "aciclovir",
+        "id": "asiklovir",
+        "ms": "asiklovir",
+        "tr": "asiklovir",
+        "zh": "阿昔洛韦"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "oseltamivir",
+      "terms": {
+        "ru": "озельтамивир",
+        "en": "oseltamivir",
+        "es": "oseltamivir",
+        "fr": "oseltamivir",
+        "ar": "أوسيلتاميفير",
+        "hi": "ओसेल्टामिविर",
+        "pt": "oseltamivir",
+        "id": "oseltamivir",
+        "ms": "oseltamivir",
+        "tr": "oseltamivir",
+        "zh": "奥司他韦"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "prednisolone",
+      "terms": {
+        "ru": "преднизолон",
+        "en": "prednisolone",
+        "es": "prednisolona",
+        "fr": "prednisolone",
+        "ar": "بريدنيزولون",
+        "hi": "प्रेडनिसोलोन",
+        "pt": "prednisolona",
+        "id": "prednisolon",
+        "ms": "prednisolon",
+        "tr": "prednisolon",
+        "zh": "泼尼松龙"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "dexamethasone",
+      "terms": {
+        "ru": "дексаметазон",
+        "en": "dexamethasone",
+        "es": "dexametasona",
+        "fr": "dexaméthasone",
+        "ar": "ديكساميثازون",
+        "hi": "डेक्सामेथासोन",
+        "pt": "dexametasona",
+        "id": "deksametason",
+        "ms": "deksametason",
+        "tr": "deksametason",
+        "zh": "地塞米松"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "hydrocortisone",
+      "terms": {
+        "ru": "гидрокортизон",
+        "en": "hydrocortisone",
+        "es": "hidrocortisona",
+        "fr": "hydrocortisone",
+        "ar": "هيدروكورتيزون",
+        "hi": "हाइड्रोकॉर्टिसोन",
+        "pt": "hidrocortisona",
+        "id": "hidrokortison",
+        "ms": "hidrokortison",
+        "tr": "hidrokortison",
+        "zh": "氢化可的松"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "budesonide",
+      "terms": {
+        "ru": "будесонид",
+        "en": "budesonide",
+        "es": "budesonida",
+        "fr": "budesonide",
+        "ar": "بوديزونيد",
+        "hi": "बुडेसोनाइड",
+        "pt": "budesonida",
+        "id": "budesonid",
+        "ms": "budesonid",
+        "tr": "budesonid",
+        "zh": "布地奈德"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "ipratropium",
+      "terms": {
+        "ru": "ипратропий",
+        "en": "ipratropium",
+        "es": "ipratropio",
+        "fr": "ipratropium",
+        "ar": "إبراتروبيوم",
+        "hi": "इप्राट्रोपियम",
+        "pt": "ipratropio",
+        "id": "ipratropium",
+        "ms": "ipratropium",
+        "tr": "ipratropium",
+        "zh": "异丙托溴铵"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "levothyroxine",
+      "terms": {
+        "ru": "левотироксин",
+        "en": "levothyroxine",
+        "es": "levotiroxina",
+        "fr": "lévothyroxine",
+        "ar": "ليفوثيروكسين",
+        "hi": "लेवोथाइरोक्सिन",
+        "pt": "levotiroxina",
+        "id": "levotiroksin",
+        "ms": "levotiroksin",
+        "tr": "levotiroksin",
+        "zh": "左甲状腺素钠"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "gliclazide",
+      "terms": {
+        "ru": "гликлазид",
+        "en": "gliclazide",
+        "es": "gliclazida",
+        "fr": "gliclazide",
+        "ar": "جليكلازيد",
+        "hi": "ग्लिक्लाजाइड",
+        "pt": "gliclazida",
+        "id": "gliklazid",
+        "ms": "gliklazid",
+        "tr": "gliklazid",
+        "zh": "格列齐特"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "empagliflozin",
+      "terms": {
+        "ru": "эмпаглифлозин",
+        "en": "empagliflozin",
+        "es": "empagliflozina",
+        "fr": "empagliflozine",
+        "ar": "إمباجليفلوزين",
+        "hi": "एम्पाग्लिफ्लोज़िन",
+        "pt": "empagliflozina",
+        "id": "empagliflozin",
+        "ms": "empagliflozin",
+        "tr": "empagliflozin",
+        "zh": "恩格列净"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "semaglutide",
+      "terms": {
+        "ru": "семаглутид",
+        "en": "semaglutide",
+        "es": "semaglutida",
+        "fr": "sémaglutide",
+        "ar": "سيماغلوتايد",
+        "hi": "सेमाग्लुटाइड",
+        "pt": "semaglutida",
+        "id": "semaglutide",
+        "ms": "semaglutide",
+        "tr": "semaglutide",
+        "zh": "司美格鲁肽"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "ondansetron",
+      "terms": {
+        "ru": "ондансетрон",
+        "en": "ondansetron",
+        "es": "ondansetrón",
+        "fr": "ondansétron",
+        "ar": "أوندانسيترون",
+        "hi": "ओन्डान्सेट्रॉन",
+        "pt": "ondansetrona",
+        "id": "ondansetron",
+        "ms": "ondansetron",
+        "tr": "ondansetron",
+        "zh": "昂丹司琼"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "metoclopramide",
+      "terms": {
+        "ru": "метоклопрамид",
+        "en": "metoclopramide",
+        "es": "metoclopramida",
+        "fr": "métoclopramide",
+        "ar": "ميتوكلوبراميد",
+        "hi": "मेटोक्लोप्रामाइड",
+        "pt": "metoclopramida",
+        "id": "metoklopramid",
+        "ms": "metoklopramid",
+        "tr": "metoklopramid",
+        "zh": "甲氧氯普胺"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "pantoprazole",
+      "terms": {
+        "ru": "пантопразол",
+        "en": "pantoprazole",
+        "es": "pantoprazol",
+        "fr": "pantoprazole",
+        "ar": "بانتوبرازول",
+        "hi": "पैंटोप्राजोल",
+        "pt": "pantoprazol",
+        "id": "pantoprazol",
+        "ms": "pantoprazol",
+        "tr": "pantoprazol",
+        "zh": "泮托拉唑"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "loperamide",
+      "terms": {
+        "ru": "лоперамид",
+        "en": "loperamide",
+        "es": "loperamida",
+        "fr": "lopéramide",
+        "ar": "لوبيراميد",
+        "hi": "लोपरामाइड",
+        "pt": "loperamida",
+        "id": "loperamid",
+        "ms": "loperamid",
+        "tr": "loperamid",
+        "zh": "洛哌丁胺"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "cetirizine",
+      "terms": {
+        "ru": "цетиризин",
+        "en": "cetirizine",
+        "es": "cetirizina",
+        "fr": "cétirizine",
+        "ar": "سيتيريزين",
+        "hi": "सेटिरिज़िन",
+        "pt": "cetirizina",
+        "id": "setirizin",
+        "ms": "setirizin",
+        "tr": "setirizin",
+        "zh": "西替利嗪"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "loratadine",
+      "terms": {
+        "ru": "лоратадин",
+        "en": "loratadine",
+        "es": "loratadina",
+        "fr": "loratadine",
+        "ar": "لوراتادين",
+        "hi": "लोराटाडिन",
+        "pt": "loratadina",
+        "id": "loratadin",
+        "ms": "loratadin",
+        "tr": "loratadin",
+        "zh": "氯雷他定"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "epinephrine",
+      "terms": {
+        "ru": "эпинефрин",
+        "en": "epinephrine",
+        "es": "epinefrina",
+        "fr": "épinéphrine",
+        "ar": "إبينفرين",
+        "hi": "एपिनेफ्रिन",
+        "pt": "epinefrina",
+        "id": "epinefrin",
+        "ms": "epinefrin",
+        "tr": "epinefrin",
+        "zh": "肾上腺素"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "morphine",
+      "terms": {
+        "ru": "морфин",
+        "en": "morphine",
+        "es": "morfina",
+        "fr": "morphine",
+        "ar": "مورفين",
+        "hi": "मॉर्फिन",
+        "pt": "morfina",
+        "id": "morfin",
+        "ms": "morfina",
+        "tr": "morfin",
+        "zh": "吗啡"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "tramadol",
+      "terms": {
+        "ru": "трамадол",
+        "en": "tramadol",
+        "es": "tramadol",
+        "fr": "tramadol",
+        "ar": "ترامادول",
+        "hi": "ट्रामाडोल",
+        "pt": "tramadol",
+        "id": "tramadol",
+        "ms": "tramadol",
+        "tr": "tramadol",
+        "zh": "曲马多"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "diclofenac",
+      "terms": {
+        "ru": "диклофенак",
+        "en": "diclofenac",
+        "es": "diclofenaco",
+        "fr": "diclofénac",
+        "ar": "ديكلوفيناك",
+        "hi": "डाइक्लोफेनाक",
+        "pt": "diclofenaco",
+        "id": "diklofenak",
+        "ms": "diklofenak",
+        "tr": "diklofenak",
+        "zh": "双氯芬酸"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "naproxen",
+      "terms": {
+        "ru": "напроксен",
+        "en": "naproxen",
+        "es": "naproxeno",
+        "fr": "naproxène",
+        "ar": "نابروكسين",
+        "hi": "नेप्रोक्सेन",
+        "pt": "naproxeno",
+        "id": "naproksen",
+        "ms": "naproksen",
+        "tr": "naproksen",
+        "zh": "萘普生"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "lidocaine",
+      "terms": {
+        "ru": "лидокаин",
+        "en": "lidocaine",
+        "es": "lidocaína",
+        "fr": "lidocaïne",
+        "ar": "ليدوكائين",
+        "hi": "लिडोकेन",
+        "pt": "lidocaína",
+        "id": "lidokain",
+        "ms": "lidokain",
+        "tr": "lidokain",
+        "zh": "利多卡因"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "sertraline",
+      "terms": {
+        "ru": "сертралин",
+        "en": "sertraline",
+        "es": "sertralina",
+        "fr": "sertraline",
+        "ar": "سيرترالين",
+        "hi": "सर्ट्रालिन",
+        "pt": "sertralina",
+        "id": "sertralin",
+        "ms": "sertralin",
+        "tr": "sertralin",
+        "zh": "舍曲林"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "fluoxetine",
+      "terms": {
+        "ru": "флуоксетин",
+        "en": "fluoxetine",
+        "es": "fluoxetina",
+        "fr": "fluoxétine",
+        "ar": "فلوكستين",
+        "hi": "फ्लुओक्सेटीन",
+        "pt": "fluoxetina",
+        "id": "fluoksetin",
+        "ms": "fluoksetin",
+        "tr": "fluoksetin",
+        "zh": "氟西汀"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "diazepam",
+      "terms": {
+        "ru": "диазепам",
+        "en": "diazepam",
+        "es": "diazepam",
+        "fr": "diazépam",
+        "ar": "ديازيبام",
+        "hi": "डायजेपाम",
+        "pt": "diazepam",
+        "id": "diazepam",
+        "ms": "diazepam",
+        "tr": "diazepam",
+        "zh": "地西泮"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "lorazepam",
+      "terms": {
+        "ru": "лоразепам",
+        "en": "lorazepam",
+        "es": "lorazepam",
+        "fr": "lorazépam",
+        "ar": "لورازيبام",
+        "hi": "लोराज़ेपाम",
+        "pt": "lorazepam",
+        "id": "lorazepam",
+        "ms": "lorazepam",
+        "tr": "lorazepam",
+        "zh": "劳拉西泮"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "levetiracetam",
+      "terms": {
+        "ru": "леветирацетам",
+        "en": "levetiracetam",
+        "es": "levetiracetam",
+        "fr": "lévétiracétam",
+        "ar": "ليفوتيراسيتام",
+        "hi": "लेवेटिरासेटम",
+        "pt": "levetiracetam",
+        "id": "levetiracetam",
+        "ms": "levetiracetam",
+        "tr": "levetirasetam",
+        "zh": "左乙拉西坦"
+      },
+      "category": "medicines"
+    },
+    {
+      "id": "inhalation",
+      "terms": {
+        "ru": "ингаляция",
+        "en": "inhalation",
+        "es": "inhalación",
+        "fr": "inhalation",
+        "ar": "استنشاق",
+        "hi": "इनहेलेशन",
+        "pt": "inalação",
+        "id": "inhalasi",
+        "ms": "inhalasi",
+        "tr": "inhalasyon",
+        "zh": "吸入"
+      },
+      "category": "care"
+    },
+    {
+      "id": "rectally",
+      "terms": {
+        "ru": "ректально",
+        "en": "rectally",
+        "es": "por vía rectal",
+        "fr": "par voie rectale",
+        "ar": "عن طريق المستقيم",
+        "hi": "गुदा मार्ग से",
+        "pt": "retal",
+        "id": "rektal",
+        "ms": "rektal",
+        "tr": "rektal yolla",
+        "zh": "直肠给药"
+      },
+      "category": "care"
+    },
+    {
+      "id": "eye-drops",
+      "terms": {
+        "ru": "глазные капли",
+        "en": "eye drops",
+        "es": "gotas oftálmicas",
+        "fr": "gouttes ophtalmiques",
+        "ar": "قطرات العين",
+        "hi": "आँख की बूंदें",
+        "pt": "colírio",
+        "id": "tetes mata",
+        "ms": "titis mata",
+        "tr": "göz damlası",
+        "zh": "眼药水"
+      },
+      "category": "care"
+    },
+    {
+      "id": "ear-drops",
+      "terms": {
+        "ru": "ушные капли",
+        "en": "ear drops",
+        "es": "gotas óticas",
+        "fr": "gouttes auriculaires",
+        "ar": "قطرات الأذن",
+        "hi": "कान की बूंदें",
+        "pt": "gotas auriculares",
+        "id": "tetes telinga",
+        "ms": "titis telinga",
+        "tr": "kulak damlası",
+        "zh": "耳滴剂"
+      },
+      "category": "care"
+    },
+    {
+      "id": "nasal-spray",
+      "terms": {
+        "ru": "назальный спрей",
+        "en": "nasal spray",
+        "es": "spray nasal",
+        "fr": "spray nasal",
+        "ar": "بخاخ أنفي",
+        "hi": "नाक स्प्रे",
+        "pt": "spray nasal",
+        "id": "semprot hidung",
+        "ms": "semburan hidung",
+        "tr": "burun spreyi",
+        "zh": "鼻喷雾剂"
+      },
+      "category": "care"
+    },
+    {
+      "id": "tablet",
+      "terms": {
+        "ru": "таблетка",
+        "en": "tablet",
+        "es": "tableta",
+        "fr": "comprimé",
+        "ar": "قرص",
+        "hi": "गोलियाँ",
+        "pt": "comprimido",
+        "id": "tablet",
+        "ms": "tablet",
+        "tr": "tablet",
+        "zh": "片剂"
+      },
+      "category": "care"
+    },
+    {
+      "id": "capsule",
+      "terms": {
+        "ru": "капсула",
+        "en": "capsule",
+        "es": "cápsula",
+        "fr": "capsule",
+        "ar": "كبسولة",
+        "hi": "कैप्सूल",
+        "pt": "cápsula",
+        "id": "kapsul",
+        "ms": "kapsul",
+        "tr": "kapsül",
+        "zh": "胶囊"
+      },
+      "category": "care"
+    },
+    {
+      "id": "oral-solution",
+      "terms": {
+        "ru": "оральный раствор",
+        "en": "oral solution",
+        "es": "solución oral",
+        "fr": "solution orale",
+        "ar": "محلول فموي",
+        "hi": "मौखिक घोल",
+        "pt": "solução oral",
+        "id": "larutan oral",
+        "ms": "larutan oral",
+        "tr": "oral solüsyon",
+        "zh": "口服溶液"
+      },
+      "category": "care"
+    },
+    {
+      "id": "injection",
+      "terms": {
+        "ru": "инъекция",
+        "en": "injection",
+        "es": "inyección",
+        "fr": "injection",
+        "ar": "حقن",
+        "hi": "इंजेक्शन",
+        "pt": "injeção",
+        "id": "injeksi",
+        "ms": "suntikan",
+        "tr": "enjeksiyon",
+        "zh": "注射"
+      },
+      "category": "care"
+    },
+    {
+      "id": "infusion",
+      "terms": {
+        "ru": "инфузия",
+        "en": "infusion",
+        "es": "infusión",
+        "fr": "perfusions",
+        "ar": "تسريب",
+        "hi": "इन्फ्यूजन",
+        "pt": "infusão",
+        "id": "infus",
+        "ms": "infus",
+        "tr": "infüzyon",
+        "zh": "输液"
+      },
+      "category": "care"
+    },
+    {
+      "id": "ointment",
+      "terms": {
+        "ru": "мазь",
+        "en": "ointment",
+        "es": "pomada",
+        "fr": "pommade",
+        "ar": "مرهم",
+        "hi": "मलहम",
+        "pt": "pomada",
+        "id": "salep",
+        "ms": "salap",
+        "tr": "merhem",
+        "zh": "软膏"
+      },
+      "category": "care"
+    },
+    {
+      "id": "cream",
+      "terms": {
+        "ru": "крем",
+        "en": "cream",
+        "es": "crema",
+        "fr": "crème",
+        "ar": "كريم",
+        "hi": "क्रीम",
+        "pt": "creme",
+        "id": "krim",
+        "ms": "krim",
+        "tr": "krem",
+        "zh": "乳膏"
+      },
+      "category": "care"
+    },
+    {
+      "id": "suppository",
+      "terms": {
+        "ru": "свеча",
+        "en": "suppository",
+        "es": "supositorio",
+        "fr": "suppositoire",
+        "ar": "تحاميل",
+        "hi": "मलहम",
+        "pt": "supositório",
+        "id": "suppositoria",
+        "ms": "suppositoria",
+        "tr": "supozituvar",
+        "zh": "栓剂"
+      },
+      "category": "care"
+    },
+    {
+      "id": "dressing",
+      "terms": {
+        "ru": "повязка",
+        "en": "dressing",
+        "es": "vendaje",
+        "fr": "pansement",
+        "ar": "ضمادة",
+        "hi": "पट्टी",
+        "pt": "curativo",
+        "id": "perban",
+        "ms": "balutan",
+        "tr": "bandaj",
+        "zh": "敷料"
+      },
+      "category": "care"
+    },
+    {
+      "id": "suture",
+      "terms": {
+        "ru": "шов",
+        "en": "suture",
+        "es": "sutura",
+        "fr": "suture",
+        "ar": "خياطة",
+        "hi": "टांका",
+        "pt": "sutura",
+        "id": "jahitan",
+        "ms": "jahitan",
+        "tr": "dikiş",
+        "zh": "缝合"
+      },
+      "category": "care"
+    },
+    {
+      "id": "vaccination",
+      "terms": {
+        "ru": "вакцинация",
+        "en": "vaccination",
+        "es": "vacunación",
+        "fr": "vaccination",
+        "ar": "تطعيم",
+        "hi": "टीकाकरण",
+        "pt": "vacinação",
+        "id": "vaksinasi",
+        "ms": "vaksinasi",
+        "tr": "aşılama",
+        "zh": "疫苗接种"
+      },
+      "category": "care"
+    },
+    {
+      "id": "surgery",
+      "terms": {
+        "ru": "хирургия",
+        "en": "surgery",
+        "es": "cirugía",
+        "fr": "chirurgie",
+        "ar": "جراحة",
+        "hi": "शल्य चिकित्सा",
+        "pt": "cirurgia",
+        "id": "bedah",
+        "ms": "pembedahan",
+        "tr": "cerrahi",
+        "zh": "外科手术"
+      },
+      "category": "care"
+    },
+    {
+      "id": "local-anesthesia",
+      "terms": {
+        "ru": "местная анестезия",
+        "en": "local anesthesia",
+        "es": "anestesia local",
+        "fr": "anesthésie locale",
+        "ar": "تخدير موضعي",
+        "hi": "स्थानीय संज्ञाहरण",
+        "pt": "anestesia local",
+        "id": "anestesi lokal",
+        "ms": "bius lokal",
+        "tr": "lokal anestezi",
+        "zh": "局部麻醉"
+      },
+      "category": "care"
+    },
+    {
+      "id": "general-anesthesia",
+      "terms": {
+        "ru": "общая анестезия",
+        "en": "general anesthesia",
+        "es": "anestesia general",
+        "fr": "anesthésie générale",
+        "ar": "تخدير عام",
+        "hi": "सामान्य संज्ञाहरण",
+        "pt": "anestesia geral",
+        "id": "anestesi umum",
+        "ms": "bius umum",
+        "tr": "genel anestezi",
+        "zh": "全身麻醉"
+      },
+      "category": "care"
+    },
+    {
+      "id": "oxygen-therapy",
+      "terms": {
+        "ru": "кислородотерапия",
+        "en": "oxygen therapy",
+        "es": "terapia de oxígeno",
+        "fr": "oxygénothérapie",
+        "ar": "علاج بالأكسجين",
+        "hi": "ऑक्सीजन थेरेपी",
+        "pt": "oxigenoterapia",
+        "id": "terapi oksigen",
+        "ms": "terapi oksigen",
+        "tr": "oksijen tedavisi",
+        "zh": "氧气治疗"
+      },
+      "category": "care"
+    },
+    {
+      "id": "blood-transfusion",
+      "terms": {
+        "ru": "переливание крови",
+        "en": "blood transfusion",
+        "es": "transfusión de sangre",
+        "fr": "transfusion sanguine",
+        "ar": "نقل دم",
+        "hi": "रक्त संक्रमण",
+        "pt": "transfusão de sangue",
+        "id": "transfusi darah",
+        "ms": "transfusi darah",
+        "tr": "kan transfüzyonu",
+        "zh": "输血"
+      },
+      "category": "care"
+    },
+    {
+      "id": "dialysis",
+      "terms": {
+        "ru": "диализ",
+        "en": "dialysis",
+        "es": "diálisis",
+        "fr": "dialyse",
+        "ar": "غسيل الكلى",
+        "hi": "डायलिसिस",
+        "pt": "diálise",
+        "id": "dialisis",
+        "ms": "dialisis",
+        "tr": "diyaliz",
+        "zh": "透析"
+      },
+      "category": "care"
+    },
+    {
+      "id": "rehabilitation",
+      "terms": {
+        "ru": "реабилитация",
+        "en": "rehabilitation",
+        "es": "rehabilitación",
+        "fr": "rééducation",
+        "ar": "تأهيل",
+        "hi": "पुनर्वास",
+        "pt": "reabilitação",
+        "id": "rehabilitasi",
+        "ms": "rehabilitasi",
+        "tr": "rehabilitasyon",
+        "zh": "康复"
+      },
+      "category": "care"
+    },
+    {
+      "id": "follow-up-appointment",
+      "terms": {
+        "ru": "повторный приём",
+        "en": "follow up appointment",
+        "es": "cita de seguimiento",
+        "fr": "rendez-vous de suivi",
+        "ar": "موعد متابعة",
+        "hi": "फॉलो-अप अपॉइंटमेंट",
+        "pt": "consulta de acompanhamento",
+        "id": "janji tindak lanjut",
+        "ms": "temujanji susulan",
+        "tr": "takip randevusu",
+        "zh": "复诊预约"
+      },
+      "category": "care"
+    },
+    {
+      "id": "informed-consent",
+      "terms": {
+        "ru": "информированное согласие",
+        "en": "informed consent",
+        "es": "consentimiento informado",
+        "fr": "consentement éclairé",
+        "ar": "موافقة مستنيرة",
+        "hi": "सूचित सहमति",
+        "pt": "consentimento informado",
+        "id": "persetujuan informasi",
+        "ms": "persetujuan dimaklumkan",
+        "tr": "bilgilendirilmiş onam",
+        "zh": "知情同意"
+      },
+      "category": "care"
+    },
+    {
+      "id": "contraindication",
+      "terms": {
+        "ru": "противопоказание",
+        "en": "contraindication",
+        "es": "contraindicación",
+        "fr": "contre-indication",
+        "ar": "موانع الاستخدام",
+        "hi": "विरोधाभास",
+        "pt": "contraindicação",
+        "id": "kontraindikasi",
+        "ms": "kontraindikasi",
+        "tr": "kontrendikasyon",
+        "zh": "禁忌症"
+      },
+      "category": "care"
+    },
+    {
+      "id": "side-effect",
+      "terms": {
+        "ru": "побочный эффект",
+        "en": "side effect",
+        "es": "efecto secundario",
+        "fr": "effet secondaire",
+        "ar": "أثر جانبي",
+        "hi": "दुष्प्रभाव",
+        "pt": "efeito colateral",
+        "id": "efek samping",
+        "ms": "kesan sampingan",
+        "tr": "yan etki",
+        "zh": "副作用"
+      },
+      "category": "care"
+    },
+    {
+      "id": "overdose",
+      "terms": {
+        "ru": "передозировка",
+        "en": "overdose",
+        "es": "sobredosis",
+        "fr": "surdosage",
+        "ar": "جرعة زائدة",
+        "hi": "अधिक मात्रा",
+        "pt": "overdose",
+        "id": "overdosis",
+        "ms": "overdosis",
+        "tr": "aşırı doz",
+        "zh": "过量"
+      },
+      "category": "care"
+    },
+    {
+      "id": "drug-interaction",
+      "terms": {
+        "ru": "лекарственное взаимодействие",
+        "en": "drug interaction",
+        "es": "interacción medicamentosa",
+        "fr": "interaction médicamenteuse",
+        "ar": "تفاعل دوائي",
+        "hi": "दवा क्रिया",
+        "pt": "interação medicamentosa",
+        "id": "interaksi obat",
+        "ms": "interaksi ubat",
+        "tr": "ilaç etkileşimi",
+        "zh": "药物相互作用"
+      },
+      "category": "care"
+    },
+    {
+      "id": "pregnancy",
+      "terms": {
+        "ru": "беременность",
+        "en": "pregnancy",
+        "es": "embarazo",
+        "fr": "grossesse",
+        "ar": "الحمل",
+        "hi": "गर्भावस्था",
+        "pt": "gravidez",
+        "id": "kehamilan",
+        "ms": "kehamilan",
+        "tr": "gebelik",
+        "zh": "怀孕"
+      },
+      "category": "care"
+    },
+    {
+      "id": "breastfeeding",
+      "terms": {
+        "ru": "грудное вскармливание",
+        "en": "breastfeeding",
+        "es": "lactancia",
+        "fr": "allaitement",
+        "ar": "الرضاعة الطبيعية",
+        "hi": "स्तनपान",
+        "pt": "amamentação",
+        "id": "menyusui",
+        "ms": "penyusuan",
+        "tr": "emzirme",
+        "zh": "母乳喂养"
+      },
+      "category": "care"
+    },
+    {
+      "id": "fasting",
+      "terms": {
+        "ru": "голодание",
+        "en": "fasting",
+        "es": "ayuno",
+        "fr": "jeûne",
+        "ar": "صيام",
+        "hi": "उपवास",
+        "pt": "jejum",
+        "id": "puasa",
+        "ms": "berpuasa",
+        "tr": "oruç",
+        "zh": "禁食"
+      },
+      "category": "care"
+    },
+    {
+      "id": "before-meals",
+      "terms": {
+        "ru": "до еды",
+        "en": "before meals",
+        "es": "antes de las comidas",
+        "fr": "avant les repas",
+        "ar": "قبل الوجبات",
+        "hi": "भोजन से पहले",
+        "pt": "antes das refeições",
+        "id": "sebelum makan",
+        "ms": "sebelum makan",
+        "tr": "yemeklerden önce",
+        "zh": "饭前"
+      },
+      "category": "care"
+    },
+    {
+      "id": "after-meals",
+      "terms": {
+        "ru": "после еды",
+        "en": "after meals",
+        "es": "después de las comidas",
+        "fr": "après les repas",
+        "ar": "بعد الوجبات",
+        "hi": "भोजन के बाद",
+        "pt": "após as refeições",
+        "id": "setelah makan",
+        "ms": "selepas makan",
+        "tr": "yemeklerden sonra",
+        "zh": "饭后"
+      },
+      "category": "care"
+    },
+    {
+      "id": "once-daily",
+      "terms": {
+        "ru": "один раз в день",
+        "en": "once daily",
+        "es": "una vez al día",
+        "fr": "une fois par jour",
+        "ar": "مرة واحدة يومياً",
+        "hi": "दिन में एक बार",
+        "pt": "uma vez ao dia",
+        "id": "sekali sehari",
+        "ms": "sekali sehari",
+        "tr": "günde bir kez",
+        "zh": "每日一次"
+      },
+      "category": "care"
+    },
+    {
+      "id": "every-other-day",
+      "terms": {
+        "ru": "через день",
+        "en": "every other day",
+        "es": "día por medio",
+        "fr": "un jour sur deux",
+        "ar": "يوم بعد يوم",
+        "hi": "एक दिन छोड़कर",
+        "pt": "dia sim, dia não",
+        "id": "selang sehari",
+        "ms": "selang sehari",
+        "tr": "bir gün ara ile",
+        "zh": "隔日一次"
+      },
+      "category": "care"
+    },
+    {
+      "id": "every-8-hours",
+      "terms": {
+        "ru": "каждые 8 часов",
+        "en": "every 8 hours",
+        "es": "cada 8 horas",
+        "fr": "toutes les 8 heures",
+        "ar": "كل 8 ساعات",
+        "hi": "हर 8 घंटे",
+        "pt": "a cada 8 horas",
+        "id": "setiap 8 jam",
+        "ms": "setiap 8 jam",
+        "tr": "her 8 saatte bir",
+        "zh": "每8小时一次"
+      },
+      "category": "care"
+    },
+    {
+      "id": "millimole-per-liter",
+      "terms": {
+        "ru": "миллимоль на литр",
+        "en": "millimole per liter",
+        "es": "milimol por litro",
+        "fr": "millimole par litre",
+        "ar": "ميليمول لكل لتر",
+        "hi": "मिलीमोल प्रति लीटर",
+        "pt": "milimol por litro",
+        "id": "milimol per liter",
+        "ms": "milimol per liter",
+        "tr": "milimol/litre",
+        "zh": "毫摩尔每升"
+      },
+      "category": "care"
+    },
+    {
+      "id": "milligram-per-deciliter",
+      "terms": {
+        "ru": "миллиграмм на децилитр",
+        "en": "milligram per deciliter",
+        "es": "miligramo por decilitro",
+        "fr": "milligramme par décilitre",
+        "ar": "ميليغرام لكل ديسيلتر",
+        "hi": "मिलीग्राम प्रति डेसीलीटर",
+        "pt": "miligramas por decilitro",
+        "id": "miligram per desiliter",
+        "ms": "miligram per desiliter",
+        "tr": "miligram/desilitre",
+        "zh": "毫克每分升"
+      },
+      "category": "care"
+    },
+    {
+      "id": "beats-per-minute",
+      "terms": {
+        "ru": "ударов в минуту",
+        "en": "beats per minute",
+        "es": "latidos por minuto",
+        "fr": "battements par minute",
+        "ar": "نبضات في الدقيقة",
+        "hi": "धड़कन प्रति मिनट",
+        "pt": "batimentos por minuto",
+        "id": "denyut per menit",
+        "ms": "denyut per minit",
+        "tr": "dakikadaki atım sayısı",
+        "zh": "每分钟心跳数"
+      },
+      "category": "care"
+    },
+    {
+      "id": "oxygen-saturation",
+      "terms": {
+        "ru": "сатурация кислорода",
+        "en": "oxygen saturation",
+        "es": "saturación de oxígeno",
+        "fr": "saturation en oxygène",
+        "ar": "تشبع الأكسجين",
+        "hi": "ऑक्सीजन संतृप्ति",
+        "pt": "saturação de oxigênio",
+        "id": "saturasi oksigen",
+        "ms": "saturasi oksigen",
+        "tr": "oksijen satürasyonu",
+        "zh": "血氧饱和度"
+      },
+      "category": "care"
+    }
+  ]
+}

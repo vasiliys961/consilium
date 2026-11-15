@@ -1,0 +1,1481 @@
+/**
+ * Стриминг для OpenRouter API
+ * Реализует Server-Sent Events (SSE) для постепенного получения ответов и двухэтапный анализ
+ */
+
+import { calculateCombinedCost, calculateCost, formatCostLog } from './cost-calculator';
+import { type ImageType, type Specialty, SYSTEM_PROMPT, DIALOGUE_SYSTEM_PROMPT, STRATEGIC_SYSTEM_PROMPT, prepareVisionDataForTextPrompt, resolvePromptRuntimeVars } from './prompts';
+import { isAnthropicModel, isGeoRestrictionStatus, isOpenAIGeoRestrictionError, shouldUseStage2GeoFallback } from './geo-restriction';
+import { getValidatedOpusModel } from './validated-opus-model';
+import { fetchLlmChatCompletions, getLlmApiKey, getLlmChatCompletionsUrl } from './llm-provider';
+
+
+// Актуальные модели (последние флагманы 2025-2026)
+const MODELS = {
+  OPUS: 'anthropic/claude-opus-5.5',                       // Claude Opus 5.5
+  OPUS_VALIDATED: getValidatedOpusModel(),                 // Default: Opus 5.5, rollback: VALIDATED_OPUS_MODEL=5
+  SONNET: 'anthropic/claude-sonnet-5.5',                   // Claude Sonnet 5.5
+  GPT_5_2: 'openai/gpt-6.1-sol',                  // GPT-6.1 Sol (legacy key name kept for compatibility)
+  HAIKU: 'anthropic/claude-haiku-4.5',                   // Claude Haiku 4.5
+  LLAMA: 'meta-llama/llama-3.2-90b-vision-instruct',     // Резерв
+  GEMINI_3_FLASH: 'google/gemini-3.8-flash',       // Gemini 3 Flash Preview
+  GEMINI_3_PRO: 'google/gemini-3.1-pro-preview', // Complex Gemini reasoning
+};
+
+function isNetworkStage2Error(error: any): boolean {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('fetch failed') ||
+    message.includes('und_err_connect_timeout') ||
+    message.includes('etimedout') ||
+    message.includes('econnreset') ||
+    message.includes('econnrefused') ||
+    message.includes('enotfound') ||
+    message.includes('network')
+  );
+}
+
+function getStage2FallbackModel(primaryModel: string): string | null {
+  if (isAnthropicModel(primaryModel)) {
+    return MODELS.GPT_5_2;
+  }
+  if (primaryModel === MODELS.GPT_5_2) {
+    return MODELS.SONNET;
+  }
+  return null;
+}
+
+function getChatFallbackModel(primaryModel: string): string | null {
+  if (primaryModel === MODELS.GPT_5_2) {
+    return MODELS.SONNET;
+  }
+  return null;
+}
+
+function shouldUsePermissionFallback(primaryModel: string, status: number, errorText: string): boolean {
+  if (primaryModel !== MODELS.GPT_5_2) return false;
+  const normalized = (errorText || '').toLowerCase();
+  return (
+    status === 401 ||
+    status === 403 ||
+    normalized.includes('permission_denied') ||
+    normalized.includes('provider returned error') ||
+    normalized.includes('azure')
+  );
+}
+
+/**
+ * Вспомогательная функция для преобразования потока с добавлением расчета стоимости
+ */
+function createTransformWithUsage(
+  stream: ReadableStream, 
+  model: string, 
+  initialUsage?: { prompt_tokens: number, completion_tokens: number, model?: string, total_cost?: number, stages?: Array<{ model: string; prompt_tokens: number; completion_tokens: number }> },
+  isEstimate: boolean = false
+): ReadableStream<Uint8Array> {
+  const reader = stream.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let usageReceived = false;
+  let totalContent = ''; // Собираем весь контент для fallback-расчёта
+
+  return new ReadableStream({
+    async start(controller) {
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            // КРИТИЧНО: Fallback ПЕРЕД закрытием контроллера
+            if (!usageReceived && totalContent) {
+              try {
+                const { calculateCost, formatCostLog } = await import('./cost-calculator');
+                const { estimateTokens } = await import('./adaptive-tokens');
+                
+                const approxOutputTokens = estimateTokens(totalContent);
+                // Если у нас есть оценка или реальные данные из прошлых этапов
+                const approxInputTokens = initialUsage?.prompt_tokens || 0;
+                const totalTokens = approxInputTokens + approxOutputTokens;
+                
+                const stageTwoCost = calculateCost(0, approxOutputTokens, model);
+                const stageOneCostUnits = isEstimate
+                  ? 0
+                  : (typeof initialUsage?.total_cost === 'number'
+                    ? initialUsage.total_cost
+                    : (Array.isArray(initialUsage?.stages) && initialUsage.stages.length > 0
+                      ? calculateCombinedCost(initialUsage.stages).totalCostUnits
+                      : (initialUsage?.model
+                        ? calculateCost(initialUsage.prompt_tokens || 0, initialUsage.completion_tokens || 0, initialUsage.model).totalCostUnits
+                        : 0)));
+                const totalCostUnits = stageOneCostUnits + stageTwoCost.totalCostUnits;
+                
+                console.log(`✅ [STREAMING FALLBACK] Анализ завершен (${model})`);
+                if (initialUsage && initialUsage.prompt_tokens > 0) {
+                  console.log(`   🔸 Входные токены (оценка): ${initialUsage.prompt_tokens}`);
+                }
+                if (!isEstimate && (typeof initialUsage?.total_cost === 'number' || (Array.isArray(initialUsage?.stages) && initialUsage.stages.length > 0))) {
+                  console.log(`   📊 ИТОГО (примерно, комбинированно): ${totalTokens.toLocaleString('ru-RU')} токенов, ${totalCostUnits.toFixed(2)} ед.`);
+                } else {
+                  console.log(`   📊 ИТОГО (примерно): ${formatCostLog(model, approxInputTokens, approxOutputTokens, totalTokens)}`);
+                }
+                
+                // Отправляем usage клиенту ПЕРЕД завершением
+                const usageUpdate = {
+                  usage: {
+                    prompt_tokens: approxInputTokens,
+                    completion_tokens: approxOutputTokens,
+                    total_tokens: totalTokens,
+                    total_cost: totalCostUnits
+                  },
+                  model: model
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(usageUpdate)}\n\n`));
+              } catch (e) {
+                console.error('[USAGE FALLBACK] Ошибка расчёта:', e);
+              }
+            }
+            // Отдаем [DONE] только после отправки usage/fallback
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            break; // Выходим из цикла
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          
+          // Не пробрасываем provider [DONE] напрямую: иначе UI может завершить чтение
+          // до получения отдельного чанка с usage/cost.
+          const chunkWithoutDone = chunk.replace(/data:\s*\[DONE\]\s*\n\n/g, '');
+          if (chunkWithoutDone) {
+            controller.enqueue(encoder.encode(chunkWithoutDone));
+          }
+          
+          // Обрабатываем контент для fallback и точного usage
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6).trim();
+              if (dataStr === '[DONE]') continue;
+              
+              try {
+                const data = JSON.parse(dataStr);
+                
+                // Собираем текст ответа
+                if (data.choices?.[0]?.delta?.content) {
+                  totalContent += data.choices[0].delta.content;
+                }
+                
+                if (data.usage) {
+                  usageReceived = true; // Пометили, что usage пришёл
+                  
+                  // МГНОВЕННО рассчитываем и логируем (без таймаутов)
+                  try {
+                    const { calculateCost, formatCostLog } = await import('./cost-calculator');
+                    
+                    // Если это НЕ оценка, а реальные данные из прошлого этапа (Gemini), то суммируем.
+                    // Если это была просто оценка для fallback в чате (isEstimate=true), 
+                    // то НЕ суммируем, так как data.usage уже включает входные токены.
+                    const totalPrompt = data.usage.prompt_tokens + (isEstimate ? 0 : (initialUsage?.prompt_tokens || 0));
+                    const totalCompletion = data.usage.completion_tokens + (isEstimate ? 0 : (initialUsage?.completion_tokens || 0));
+                    const totalTokens = totalPrompt + totalCompletion;
+
+                    const stageTwoPrompt = data.usage.prompt_tokens || 0;
+                    const stageTwoCompletion = data.usage.completion_tokens || 0;
+                    const stageTwoCost = calculateCost(stageTwoPrompt, stageTwoCompletion, model);
+                    const stageOneCostUnits = isEstimate
+                      ? 0
+                      : (typeof initialUsage?.total_cost === 'number'
+                        ? initialUsage.total_cost
+                        : (Array.isArray(initialUsage?.stages) && initialUsage.stages.length > 0
+                          ? calculateCombinedCost(initialUsage.stages).totalCostUnits
+                          : (initialUsage?.model
+                            ? calculateCost(initialUsage.prompt_tokens || 0, initialUsage.completion_tokens || 0, initialUsage.model).totalCostUnits
+                            : 0)));
+                    const totalCostUnits = stageOneCostUnits + stageTwoCost.totalCostUnits;
+                    
+                    console.log(`✅ [STREAMING] Анализ завершен успешно (${model})`);
+                    if (initialUsage && !isEstimate && (initialUsage.prompt_tokens > 0 || initialUsage.completion_tokens > 0)) {
+                      console.log(`   🔸 Предварительные токены: ${initialUsage.prompt_tokens + initialUsage.completion_tokens}`);
+                    }
+                    if (!isEstimate && (typeof initialUsage?.total_cost === 'number' || (Array.isArray(initialUsage?.stages) && initialUsage.stages.length > 0))) {
+                      console.log(`   📊 ИТОГО (комбинированно): ${totalTokens.toLocaleString('ru-RU')} токенов, ${totalCostUnits.toFixed(2)} ед.`);
+                    } else {
+                      console.log(`   📊 ИТОГО: ${formatCostLog(model, totalPrompt, totalCompletion, totalTokens)}`);
+                    }
+                    
+                    // Отправляем обновленный usage отдельным чанком
+                    const usageUpdate = {
+                      usage: {
+                        prompt_tokens: totalPrompt,
+                        completion_tokens: totalCompletion,
+                        total_tokens: totalTokens,
+                        total_cost: totalCostUnits
+                      },
+                      model: model
+                    };
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(usageUpdate)}\n\n`));
+                  } catch (e) {
+                    console.error('[USAGE] Ошибка вычисления:', e);
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (error) {
+        controller.error(error);
+      } finally {
+        controller.close();
+        reader.releaseLock();
+      }
+    }
+  });
+}
+
+/**
+ * Streaming быстрый анализ (Gemini 3.0 JSON -> Gemini 3.0 Professor Mode)
+ */
+export async function analyzeImageFastStreaming(
+  prompt: string,
+  imagesBase64: string | string[],
+  imageType?: string,
+  clinicalContext?: string,
+  specialty?: Specialty,
+  history: any[] = [],
+  isRadiologyOnly: boolean = false,
+  isComparative: boolean = false
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const allImages = Array.isArray(imagesBase64) ? imagesBase64 : [imagesBase64];
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    try {
+      // 1. Форсированный старт потока (Padding)
+      const padding = ': ' + ' '.repeat(2048) + '\n\n';
+      await writer.write(encoder.encode(padding));
+
+      const loadingHeader = `## 🩺 FAST ANALYSIS (${allImages.length} image${allImages.length !== 1 ? 's' : ''})...\n\n> *Extracting data via Gemini Vision...*\n\n---\n\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: loadingHeader } }] })}\n\n`));
+
+      // 2. Запускаем фоновый Heartbeat на весь период анализа
+      heartbeat = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      const { extractImageJSON } = await import('./openrouter');
+      const extractionResult = await extractImageJSON({
+        imagesBase64: allImages,
+        modality: imageType || 'unknown',
+        specialty: specialty,
+        enableSmartRouting: false,
+        preferModel: MODELS.GEMINI_3_FLASH,
+        isComparative
+      });
+      const jsonExtraction = extractionResult.data;
+      const initialUsage = extractionResult.usage;
+
+      const { getDirectivePrompt, RADIOLOGY_PROTOCOL_PROMPT } = await import('./prompts');
+      const directivePrompt = getDirectivePrompt(imageType as any, prompt, specialty);
+
+      // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+      const basePrompt = isRadiologyOnly ? RADIOLOGY_PROTOCOL_PROMPT : (specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT);
+      let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+      
+      const mainPrompt = `Below are the extracted image data. As an expert medical AI assistant with professor-level competency, analyze them.
+    
+=== STRUCTURED DATA FROM GEMINI 3.0 ===
+${JSON.stringify(prepareVisionDataForTextPrompt(jsonExtraction), null, 2)}
+
+=== CONTEXT ===
+${clinicalContext || 'None'}
+
+=== INSTRUCTION ===
+${directivePrompt}`;
+
+      const model = MODELS.GEMINI_3_FLASH;
+
+      const response = await fetch(getLlmChatCompletionsUrl(), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://doctor-opus.online',
+          'X-Title': 'Doctor Opus'
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+            { role: 'user', content: mainPrompt }
+          ],
+          max_tokens: 8000, // Оптимизировано: быстрый режим Gemini, достаточно для базового протокола
+          temperature: 0.1,
+          stream: true,
+          stream_options: { include_usage: true }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Fast analysis failed: ${response.status} - ${errorText}`);
+      }
+
+      // Heartbeat остановится в finally
+      const transformer = createTransformWithUsage(response.body!, model, initialUsage);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+      }
+    } catch (error: any) {
+      console.error('Fast Stream Error:', error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      try { await writer.close(); } catch {}
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming оптимизированный анализ (Gemini JSON → Основная модель)
+ */
+export async function analyzeImageOpusTwoStageStreaming(
+  prompt: string,
+  imageBase64: string,
+  imageType?: ImageType,
+  clinicalContext?: string,
+  specialty?: Specialty,
+  model: string = MODELS.SONNET,
+  history: any[] = [],
+  isRadiologyOnly: boolean = false,
+  mimeType: string = 'image/png'
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  // Запускаем процесс асинхронно
+  (async () => {
+    let heartbeat: any;
+    let loadingInterval: any;
+    try {
+      // 1. Форсированный старт потока (Padding) - 4KB для обхода агрессивных прокси
+      const padding = ': ' + ' '.repeat(4096) + '\n\n';
+      await writer.write(encoder.encode(padding));
+
+      let loadingSeconds = 0;
+      const getLoadingHeader = (sec: number) => {
+        const dots = '.'.repeat((sec % 3) + 1);
+        return `## 🩺 PREPARING ANALYSIS${dots}\n\n> *Stage 1: Extracting structured data via Gemini Vision... (${sec}s)*\n\n---\n\n`;
+      };
+
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: getLoadingHeader(0) } }] })}\n\n`));
+
+      // 2. Умная индикация загрузки с ротацией сообщений (каждые 4 секунды)
+      const stage1Messages = [
+        "🔍 Analyzing anatomical structures",
+        "📏 Measuring lesion dimensions",
+        "⚡ Evaluating tissue density (HU)",
+        "🩺 Checking contrast enhancement",
+        "🔬 Detailing pathological changes"
+      ];
+      
+      loadingInterval = setInterval(async () => {
+        loadingSeconds += 2;
+        try {
+          // Каждые 4 секунды меняем сообщение, между ними — точки
+          if (loadingSeconds % 4 === 0) {
+            const msgIndex = Math.floor(loadingSeconds / 4) % stage1Messages.length;
+            const statusMsg = `\n\n> ${stage1Messages[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {
+          if (loadingInterval) clearInterval(loadingInterval);
+        }
+      }, 2000);
+
+      // 3. Фоновый Heartbeat для поддержания канала
+      heartbeat = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      console.log(`🚀 [OPTIMIZED STREAMING] Шаг 1: Извлечение JSON...`);
+      const { extractImageJSON } = await import('./openrouter');
+      const extractionResult = await extractImageJSON({ imageBase64, modality: imageType || 'unknown', specialty, enableSmartRouting: true });
+      const jsonExtraction = extractionResult.data;
+      const initialUsage = extractionResult.usage;
+      
+      // Останавливаем индикацию Этапа 1
+      if (loadingInterval) clearInterval(loadingInterval);
+      
+      // Показываем краткую сводку извлеченных данных
+      const findingsCount = jsonExtraction?.findings?.length || 0;
+      const metricsCount = Object.keys(jsonExtraction?.metrics || {}).length || 0;
+      const summaryLine = `\n\n✅ **Data extracted:** ${findingsCount} findings, ${metricsCount} metrics\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: summaryLine } }] })}\n\n`));
+      
+      // Обновляем статус перед запуском второй модели
+      const stage2Header = `\n> *Stage 2: Clinical analysis via ${model.includes('opus') ? 'Opus' : 'Sonnet 5.5'}...*\n\n---\n\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: stage2Header } }] })}\n\n`));
+
+      const { getDirectivePrompt, RADIOLOGY_PROTOCOL_PROMPT, STRATEGIC_SYSTEM_PROMPT } = await import('./prompts');
+      const directivePrompt = getDirectivePrompt(imageType || 'universal', prompt, specialty);
+
+      // Формируем единый контекст для основной модели
+      const mainPrompt = `INSTRUCTION: ${directivePrompt}
+
+### TECHNICAL IMAGE DATA (JSON):
+${JSON.stringify(prepareVisionDataForTextPrompt(jsonExtraction), null, 2)}
+
+${clinicalContext ? `### PATIENT CLINICAL CONTEXT:\n${clinicalContext}\n\n` : ''}ANALYZE THE DATA AND GENERATE A COMPLETE REPORT.`;
+
+      // Настройка системного промпта
+      const { TITAN_CONTEXTS } = await import('./prompts');
+      // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+      const basePrompt = isRadiologyOnly ? RADIOLOGY_PROTOCOL_PROMPT : (specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT);
+      let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+      if (specialty && TITAN_CONTEXTS[specialty]) {
+        systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+      }
+
+      console.log(`📡 [OPTIMIZED STREAMING] Шаг 2: Запуск ${model} (единый поток)...`);
+      const fallbackModel = getStage2FallbackModel(model);
+      let stage2ModelUsed = model;
+
+      const runStage2Request = async (targetModel: string) => {
+        return fetch(getLlmChatCompletionsUrl(), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://doctor-opus.online',
+            'X-Title': 'Doctor Opus'
+          },
+          body: JSON.stringify({
+            model: targetModel,
+            messages: [
+              { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: mainPrompt },
+                  { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+                ]
+              }
+            ],
+            max_tokens: 8000, // Оптимизировано: одно изображение, достаточно для экспертного протокола
+            temperature: 0.1,
+            stream: true,
+            stream_options: { include_usage: true }
+          })
+        });
+      };
+
+      // Запускаем второй интервал для Этапа 2 с ротацией сообщений
+      const stage2Messages = [
+        "📝 Generating diagnostic protocol",
+        "🧠 Building differential diagnosis",
+        "⚕️ Evaluating clinical significance",
+        "📊 Synthesizing clinical hypotheses"
+      ];
+      
+      let stage2Seconds = 0;
+      const stage2Interval = setInterval(async () => {
+        stage2Seconds += 2;
+        try {
+          // Каждые 4 секунды меняем сообщение
+          if (stage2Seconds % 4 === 0) {
+            const msgIndex = Math.floor(stage2Seconds / 4) % stage2Messages.length;
+            const statusMsg = `\n\n> ${stage2Messages[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {}
+      }, 2000);
+      let response: Response;
+      try {
+        response = await runStage2Request(model);
+      } catch (primaryError: any) {
+        const shouldFallback = !!fallbackModel && isNetworkStage2Error(primaryError);
+        if (!shouldFallback) {
+          throw primaryError;
+        }
+
+        const switchMsg = `\n\n> Primary model timed out or had a network issue. Switching to ${fallbackModel} fallback...\n\n`;
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+        stage2ModelUsed = fallbackModel!;
+        response = await runStage2Request(stage2ModelUsed);
+      } finally {
+        clearInterval(stage2Interval);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const shouldFallback = !!fallbackModel && stage2ModelUsed === model && shouldUseStage2GeoFallback(model, response.status, errorText);
+        if (shouldFallback) {
+          const switchMsg = `\n\n> Primary model is temporarily unavailable in the current provider region. Switching to ${fallbackModel} fallback...\n\n`;
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+          stage2ModelUsed = fallbackModel!;
+          response = await runStage2Request(stage2ModelUsed);
+        } else {
+          throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+        }
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+      }
+
+      // Перенаправляем поток через наш трансформер с учетом начальных токенов Gemini
+      const transformer = createTransformWithUsage(response.body!, stage2ModelUsed, initialUsage);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+        process.stdout.write('·');
+      }
+
+    } catch (error: any) {
+      console.error('Optimized Stream Error:', error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      if (loadingInterval) clearInterval(loadingInterval);
+      try { await writer.close(); } catch {}
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming оптимизированный анализ для множественных изображений (Gemini JSON → Основная модель)
+ */
+export async function analyzeMultipleImagesOpusTwoStageStreaming(
+  prompt: string,
+  imagesBase64: string[],
+  imageType?: ImageType,
+  clinicalContext?: string,
+  mimeTypes: string[] = [],
+  model: string = MODELS.SONNET,
+  specialty?: Specialty,
+  history: any[] = [],
+  isRadiologyOnly: boolean = false,
+  isComparative: boolean = false
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    let loadingInterval: any;
+    try {
+      // 1. Форсированный старт потока
+      const padding = ': ' + ' '.repeat(4096) + '\n\n';
+      await writer.write(encoder.encode(padding));
+
+      let loadingSeconds = 0;
+      const getLoadingHeader = (sec: number) => {
+        const dots = '.'.repeat((sec % 3) + 1);
+        return isComparative
+          ? `## 🩺 PREPARING COMPARATIVE ANALYSIS${dots}\n\n> *Stage 1: Collecting and analyzing data from multiple images via Gemini Vision... (${sec}s)*\n\n---\n\n`
+          : `## 🩺 PREPARING SLICE SERIES ANALYSIS${dots}\n\n> *Stage 1: Collecting data from multiple images of a single study... (${sec}s)*\n\n---\n\n`;
+      };
+
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: getLoadingHeader(0) } }] })}\n\n`));
+
+      // 2. Умная индикация загрузки с ротацией сообщений
+      const stage1Messages = [
+        "🔍 Analyzing image series",
+        "📏 Comparing structural changes",
+        "⚡ Evaluating process dynamics",
+        "🩺 Detecting new findings",
+        "🔬 Correlating metric data"
+      ];
+      
+      loadingInterval = setInterval(async () => {
+        loadingSeconds += 2;
+        try {
+          if (loadingSeconds % 4 === 0) {
+            const msgIndex = Math.floor(loadingSeconds / 4) % stage1Messages.length;
+            const statusMsg = `\n\n> ${stage1Messages[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {
+          if (loadingInterval) clearInterval(loadingInterval);
+        }
+      }, 2000);
+
+      // 3. Запускаем фоновый Heartbeat на весь период анализа
+      heartbeat = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      console.log(`🚀 [MULTI-OPTIMIZED STREAMING] Шаг 1: Извлечение JSON...`);
+      const { extractImageJSON } = await import('./openrouter');
+      const extractionResult = await extractImageJSON({
+        imagesBase64,
+        modality: imageType || 'unknown',
+        specialty: specialty,
+        enableSmartRouting: true,
+        isComparative
+      });
+      const jsonExtraction = extractionResult.data;
+      const initialUsage = extractionResult.usage;
+      
+      // Останавливаем индикацию Этапа 1
+      if (loadingInterval) clearInterval(loadingInterval);
+      
+      // Показываем краткую сводку
+      const findingsCount = jsonExtraction?.findings?.length || 0;
+      const metricsCount = Object.keys(jsonExtraction?.metrics || {}).length || 0;
+      const summaryLine = `\n\n✅ **Data extracted:** ${findingsCount} findings, ${metricsCount} metrics from ${imagesBase64.length} images\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: summaryLine } }] })}\n\n`));
+      
+      const stage2Header = isComparative
+        ? `\n> *Stage 2: Detailed clinical comparison via ${model.includes('opus') ? 'Opus' : 'Sonnet 5.5'}...*\n\n---\n\n`
+        : `\n> *Stage 2: Detailed series analysis via ${model.includes('opus') ? 'Opus' : 'Sonnet 5.5'}...*\n\n---\n\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: stage2Header } }] })}\n\n`));
+
+      const { getDirectivePrompt, RADIOLOGY_PROTOCOL_PROMPT } = await import('./prompts');
+      const directivePrompt = getDirectivePrompt(imageType || 'universal', prompt, specialty);
+
+      const mainPrompt = `INSTRUCTION: ${directivePrompt}
+
+### ${isComparative ? 'COMPARATIVE IMAGE DATA' : 'DATA FROM MULTIPLE IMAGES OF A SINGLE STUDY'} (JSON):
+${JSON.stringify(prepareVisionDataForTextPrompt(jsonExtraction), null, 2)}
+
+${clinicalContext ? `### PATIENT CLINICAL CONTEXT:\n${clinicalContext}\n\n` : ''}ANALYZE THE DATA AND GENERATE A COMPLETE REPORT.`;
+
+      // Настройка системного промпта
+      const { TITAN_CONTEXTS } = await import('./prompts');
+      // Выбираем системный промпт
+      const basePrompt = isRadiologyOnly ? RADIOLOGY_PROTOCOL_PROMPT : (specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT);
+      let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+      if (specialty && TITAN_CONTEXTS[specialty]) {
+        systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+      }
+
+      console.log(`📡 [MULTI-OPTIMIZED STREAMING] Шаг 2: Запуск ${model} (единый поток)...`);
+      
+      const stage2Messages = [
+        "📝 Generating comparative protocol",
+        "🧠 Evaluating change dynamics",
+        "⚕️ Analyzing progression/regression",
+        "📊 Synthesizing clinical conclusions"
+      ];
+      
+      let stage2Seconds = 0;
+      const stage2Interval = setInterval(async () => {
+        stage2Seconds += 2;
+        try {
+          if (stage2Seconds % 4 === 0) {
+            const msgIndex = Math.floor(stage2Seconds / 4) % stage2Messages.length;
+            const statusMsg = `\n\n> ${stage2Messages[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {}
+      }, 2000);
+
+      const contentItems: any[] = [
+        { type: 'text', text: mainPrompt },
+        ...imagesBase64.map((img, i) => ({
+          type: 'image_url',
+          image_url: { url: `data:${mimeTypes[i] || 'image/png'};base64,${img}` }
+        }))
+      ];
+
+      const fallbackModel = getStage2FallbackModel(model);
+      let stage2ModelUsed = model;
+      const runStage2Request = async (targetModel: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 180 секунд для сравнения
+        try {
+          return await fetch(getLlmChatCompletionsUrl(), {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://doctor-opus.online',
+              'X-Title': 'Doctor Opus'
+            },
+            body: JSON.stringify({
+              model: targetModel,
+              messages: [
+                { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+                { role: 'user', content: contentItems }
+              ],
+              max_tokens: 12000, // Оптимизировано: множественные изображения, сравнительный анализ
+              temperature: 0.1,
+              stream: true,
+              stream_options: { include_usage: true }
+            }),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      let response: Response;
+      try {
+        response = await runStage2Request(model);
+      } catch (primaryError: any) {
+        const shouldFallback = !!fallbackModel && isNetworkStage2Error(primaryError);
+        if (!shouldFallback) {
+          throw primaryError;
+        }
+        const switchMsg = `\n\n> Primary model timed out or had a network issue. Switching to ${fallbackModel} fallback...\n\n`;
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+        stage2ModelUsed = fallbackModel!;
+        response = await runStage2Request(stage2ModelUsed);
+      } finally {
+        clearInterval(stage2Interval);
+      }
+
+      // Heartbeat остановится в finally
+      if (!response.ok) {
+        const errorText = await response.text();
+        const shouldFallback = !!fallbackModel && stage2ModelUsed === model && shouldUseStage2GeoFallback(model, response.status, errorText);
+        if (shouldFallback) {
+          const switchMsg = `\n\n> Primary model is temporarily unavailable in the current provider region. Switching to ${fallbackModel} fallback...\n\n`;
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+          stage2ModelUsed = fallbackModel!;
+          response = await runStage2Request(stage2ModelUsed);
+        } else {
+          throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+        }
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+      }
+
+      const transformer = createTransformWithUsage(response.body!, stage2ModelUsed, initialUsage);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+        process.stdout.write('·');
+      }
+
+    } catch (error: any) {
+      console.error('Multi-Optimized Stream Error:', error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      if (loadingInterval) clearInterval(loadingInterval);
+      try { await writer.close(); } catch {};
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming анализ множественных изображений через Основную модель с использованием JSON от Gemini (Validated)
+ */
+export async function analyzeMultipleImagesWithJSONStreaming(
+  prompt: string,
+  imagesBase64: string[],
+  imageType?: ImageType,
+  clinicalContext?: string,
+  mimeTypes: string[] = [],
+  specialty?: Specialty,
+  model: string = MODELS.OPUS,
+  history: any[] = []
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    let loadingInterval: any;
+    try {
+      // Padding для форсирования flush
+      const padding = ': ' + ' '.repeat(4096) + '\n\n';
+      await writer.write(encoder.encode(padding));
+
+      let loadingSeconds = 0;
+      const getLoadingHeader = (sec: number) => {
+        const dots = '.'.repeat((sec % 3) + 1);
+        return `## 🩺 PREPARING EXPERT ANALYSIS${dots}\n\n> *Stage 1: Collecting data via Gemini Vision... (${sec}s)*\n\n---\n\n`;
+      };
+
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: getLoadingHeader(0) } }] })}\n\n`));
+
+      // 2. Умная индикация загрузки с ротацией сообщений
+      const stage1MessagesValidated = [
+        "🔍 Detailed analysis of all images",
+        "📏 Precision measurement of structures",
+        "⚡ Cross-verification of data",
+        "🩺 In-depth evaluation of findings",
+        "🔬 Final metric validation"
+      ];
+      
+      loadingInterval = setInterval(async () => {
+        loadingSeconds += 2;
+        try {
+          if (loadingSeconds % 4 === 0) {
+            const msgIndex = Math.floor(loadingSeconds / 4) % stage1MessagesValidated.length;
+            const statusMsg = `\n\n> ${stage1MessagesValidated[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {
+          if (loadingInterval) clearInterval(loadingInterval);
+        }
+      }, 2000);
+
+      // 3. Запускаем фоновый Heartbeat
+      heartbeat = setInterval(() => {
+        try {
+          writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      const { extractImageJSON } = await import('./openrouter');
+      const extractionResult = await extractImageJSON({ imagesBase64, modality: imageType || 'unknown', specialty, enableSmartRouting: true });
+      const jsonExtraction = extractionResult.data;
+      const initialUsage = extractionResult.usage;
+      
+      // Останавливаем индикацию и показываем сводку
+      if (loadingInterval) clearInterval(loadingInterval);
+      
+      const findingsCount = jsonExtraction?.findings?.length || 0;
+      const metricsCount = Object.keys(jsonExtraction?.metrics || {}).length || 0;
+      const summaryLine = `\n\n✅ **Data verified:** ${findingsCount} findings, ${metricsCount} metrics from ${imagesBase64.length} images\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: summaryLine } }] })}\n\n`));
+      
+      const stage2Header = `\n> *Stage 2: Expert analysis via Opus (maximum precision)...*\n\n---\n\n`;
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: stage2Header } }] })}\n\n`));
+
+      const { getDirectivePrompt } = await import('./prompts');
+      const directivePrompt = getDirectivePrompt(imageType || 'universal', prompt, specialty);
+
+      const mainPrompt = `INSTRUCTION: ${directivePrompt}
+
+### СТРУКТУРИРОВАННЫЕ ДАННЫЕ ИЗ ИЗОБРАЖЕНИЙ (JSON):
+${JSON.stringify(prepareVisionDataForTextPrompt(jsonExtraction), null, 2)}
+
+${clinicalContext ? `### PATIENT CLINICAL CONTEXT:\n${clinicalContext}\n\n` : ''}ANALYZE THE DATA AND GENERATE A COMPLETE EXPERT REPORT.`;
+
+      const { TITAN_CONTEXTS } = await import('./prompts');
+      // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+      const basePrompt = specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT;
+      let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+      if (specialty && TITAN_CONTEXTS[specialty]) {
+        systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+      }
+
+      console.log(`📡 [MULTI-VALIDATED STREAMING] Шаг 2: Запуск ${model} (единый поток)...`);
+      
+      const stage2MessagesValidated = [
+        "📝 Expert protocol generation",
+        "🧠 Deep differential analysis",
+        "⚕️ Critical evaluation of findings",
+        "📊 Synthesizing clinical conclusions"
+      ];
+      
+      let stage2SecondsValidated = 0;
+      const stage2Interval = setInterval(async () => {
+        stage2SecondsValidated += 2;
+        try {
+          if (stage2SecondsValidated % 4 === 0) {
+            const msgIndex = Math.floor(stage2SecondsValidated / 4) % stage2MessagesValidated.length;
+            const statusMsg = `\n\n> ${stage2MessagesValidated[msgIndex]}...`;
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: statusMsg } }] })}\n\n`));
+          } else {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: `.` } }] })}\n\n`));
+          }
+        } catch (e) {}
+      }, 2000);
+
+      const contentItems: any[] = [
+        { type: 'text', text: mainPrompt },
+        ...imagesBase64.map((img, i) => ({
+          type: 'image_url',
+          image_url: { url: `data:${mimeTypes[i] || 'image/png'};base64,${img}` }
+        }))
+      ];
+
+      const fallbackModel = getStage2FallbackModel(model);
+      let stage2ModelUsed = model;
+      const runStage2Request = async (targetModel: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 минуты для супер-точного Opus
+        try {
+          return await fetch(getLlmChatCompletionsUrl(), {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://doctor-opus.online',
+              'X-Title': 'Doctor Opus'
+            },
+            body: JSON.stringify({
+              model: targetModel,
+              messages: [
+                { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+                { role: 'user', content: contentItems }
+              ],
+              max_tokens: 10000, // Оптимизировано: validated режим с JSON-контекстом
+              temperature: 0.1,
+              stream: true,
+              stream_options: { include_usage: true }
+            }),
+            signal: controller.signal
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      let response: Response;
+      try {
+        response = await runStage2Request(model);
+      } catch (primaryError: any) {
+        const shouldFallback = !!fallbackModel && isNetworkStage2Error(primaryError);
+        if (!shouldFallback) {
+          throw primaryError;
+        }
+        const switchMsg = `\n\n> Primary model timed out or had a network issue. Switching to ${fallbackModel} fallback...\n\n`;
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+        stage2ModelUsed = fallbackModel!;
+        response = await runStage2Request(stage2ModelUsed);
+      } finally {
+        clearInterval(stage2Interval);
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const shouldFallback = !!fallbackModel && stage2ModelUsed === model && shouldUseStage2GeoFallback(model, response.status, errorText);
+        if (shouldFallback) {
+          const switchMsg = `\n\n> Primary model is temporarily unavailable in the current provider region. Switching to ${fallbackModel} fallback...\n\n`;
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: switchMsg } }] })}\n\n`));
+          stage2ModelUsed = fallbackModel!;
+          response = await runStage2Request(stage2ModelUsed);
+        } else {
+          throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+        }
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+      }
+
+      const transformer = createTransformWithUsage(response.body!, stage2ModelUsed, initialUsage);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+        process.stdout.write('·');
+      }
+    } catch (error: any) {
+      console.error('Multi-Validated Stream Error:', error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      if (loadingInterval) clearInterval(loadingInterval);
+      try { await writer.close(); } catch {};
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming анализ изображения через Основную модель с использованием JSON от Gemini
+ */
+export async function analyzeImageWithJSONStreaming(
+  jsonExtractionWrapper: any,
+  imageBase64: string,
+  prompt: string = 'Analyze the medical image.',
+  mimeType: string = 'image/png',
+  imageType?: ImageType,
+  clinicalContext?: string,
+  specialty?: Specialty,
+  model: string = MODELS.OPUS,
+  history: any[] = []
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const jsonExtraction = jsonExtractionWrapper.data || jsonExtractionWrapper;
+  const initialUsage = jsonExtractionWrapper.usage;
+
+  const { getDirectivePrompt } = await import('./prompts');
+  const directivePrompt = getDirectivePrompt(imageType || 'universal', prompt, specialty);
+
+  const mainPrompt = `INSTRUCTION: ${directivePrompt}
+
+### TECHNICAL IMAGE DATA (JSON):
+${JSON.stringify(prepareVisionDataForTextPrompt(jsonExtraction), null, 2)}
+
+${clinicalContext ? `### PATIENT CLINICAL CONTEXT:\n${clinicalContext}\n\n` : ''}ANALYZE THE DATA AND GENERATE A COMPLETE REPORT.`;
+
+  const { TITAN_CONTEXTS } = await import('./prompts');
+  // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+  const basePrompt = specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT;
+  let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+  
+  if (specialty && TITAN_CONTEXTS[specialty]) {
+    systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+  }
+
+  const fallbackModel = getStage2FallbackModel(model);
+  let modelUsed = model;
+
+  const runRequest = async (targetModel: string) => {
+    return fetch(getLlmChatCompletionsUrl(), {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://doctor-opus.online',
+        'X-Title': 'Doctor Opus'
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        messages: [
+          { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+          { 
+            role: 'user', 
+            content: [
+              { type: 'text', text: mainPrompt },
+              { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+            ]
+          }
+        ],
+        max_tokens: 8000, // Оптимизировано: одно изображение, базовый протокол
+        temperature: 0.1,
+        stream: true,
+        stream_options: { include_usage: true }
+      })
+    });
+  };
+
+  let response = await runRequest(model);
+  if (!response.ok) {
+    const errorText = await response.text();
+    const shouldFallback = !!fallbackModel && shouldUseStage2GeoFallback(model, response.status, errorText);
+    console.warn(`[GEO-DEBUG] stream model=${model} status=${response.status} shouldFallback=${shouldFallback} err=${errorText.substring(0, 300)}`);
+    if (shouldFallback) {
+      modelUsed = fallbackModel!;
+      response = await runRequest(modelUsed);
+    } else {
+      throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+    }
+  }
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Main model failed: ${response.status} - ${errorText}`);
+  }
+
+  return createTransformWithUsage(response.body!, modelUsed, initialUsage);
+}
+
+/**
+ * Streaming запрос для текстового чата
+ */
+export async function sendTextRequestStreaming(
+  prompt: string,
+  history: Array<{role: string, content: string}> = [],
+  model: string = MODELS.OPUS,
+  specialty?: Specialty,
+  customSystemPrompt?: string
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    try {
+      // 1. Форсированный старт потока
+      const initialPadding = ': ' + ' '.repeat(2048) + '\n\n';
+      await writer.write(encoder.encode(initialPadding));
+
+      // 2. Запускаем фоновый Heartbeat на весь период анализа
+      heartbeat = setInterval(async () => {
+        try {
+          // Отправляем комментарий раз в 5 секунд для поддержания канала
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      const { TITAN_CONTEXTS } = await import('./prompts');
+      const { calculateAdaptiveMaxTokens, estimateTokens } = await import('./adaptive-tokens');
+      
+      // Выбираем системный промпт: Всегда используем полный SYSTEM_PROMPT для глубины аналитики
+      // в ИИ-Ассистенте, если не указано иное
+      const basePrompt = (specialty === 'ai_consultant' || specialty === 'openevidence') ? SYSTEM_PROMPT : SYSTEM_PROMPT;
+      let systemPrompt = customSystemPrompt || basePrompt;
+      
+      // Для режима диалога (когда это НЕ первое сообщение и НЕ пересылка анализа)
+      // можно было бы использовать DIALOGUE_SYSTEM_PROMPT, но пользователь просит ПОЛНЫЙ промпт.
+      // Поэтому оставляем SYSTEM_PROMPT как основной.
+      
+      if (specialty && TITAN_CONTEXTS[specialty]) {
+        systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+      }
+
+      const messages = [
+        { role: 'system' as const, content: resolvePromptRuntimeVars(systemPrompt) },
+        ...history.map(msg => ({ role: msg.role as 'user' | 'assistant', content: msg.content })),
+        { role: 'user' as const, content: prompt }
+      ];
+
+      // Адаптивный расчёт max_tokens на основе длины диалога
+      const adaptiveMaxTokens = calculateAdaptiveMaxTokens({
+        systemPrompt,
+        history,
+        userPrompt: prompt,
+        mode: 'chat'
+      });
+
+      const REQUEST_TIMEOUT_MS = 45000;
+      let response: Response | null = null;
+      let modelUsed = model;
+
+      const runStreamingRequest = async (targetModel: string): Promise<Response> => {
+        return fetchLlmChatCompletions({
+          model: targetModel,
+          messages,
+          max_tokens: adaptiveMaxTokens,
+          temperature: 0.1,
+          stream: true,
+          stream_options: { include_usage: true }
+        }, {
+          timeoutMs: REQUEST_TIMEOUT_MS,
+          headers: {
+            'HTTP-Referer': 'https://openrouter.ai',
+            'X-Title': 'Medical AI'
+          }
+        });
+      };
+
+      response = await runStreamingRequest(modelUsed);
+
+      if (!response) {
+        throw new Error('OpenRouter streaming request failed: no response received');
+      }
+
+      const initialPromptTokens = estimateTokens(systemPrompt + prompt + history.map(m => m.content).join(' '));
+      const initialUsage = { prompt_tokens: initialPromptTokens, completion_tokens: 0 };
+
+      // Heartbeat остановится в finally
+      if (!response.ok) {
+        const errorText = await response.text();
+        const fallbackModel = getChatFallbackModel(modelUsed);
+        const shouldFallback = !!fallbackModel && (
+          (isGeoRestrictionStatus(response.status) && isOpenAIGeoRestrictionError(errorText)) ||
+          shouldUsePermissionFallback(modelUsed, response.status, errorText)
+        );
+        if (shouldFallback) {
+          console.warn(`⚠️ [TEXT STREAM FALLBACK] ${modelUsed} недоступна по региону, переключаемся на ${fallbackModel}`);
+          modelUsed = fallbackModel!;
+          response = await runStreamingRequest(modelUsed);
+        } else {
+          throw new Error(`API error: ${response.status} - ${errorText}`);
+        }
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      const transformer = createTransformWithUsage(response.body!, modelUsed, initialUsage, true);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+      }
+    } catch (error: any) {
+      if (heartbeat) clearInterval(heartbeat);
+      console.error(`❌ [TEXT STREAM ERROR]:`, error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      try { await writer.close(); } catch {}
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming анализ изображения через OpenRouter API
+ */
+export async function analyzeImageStreaming(
+  prompt: string,
+  imageBase64: string,
+  model: string = MODELS.OPUS,
+  mimeType: string = 'image/png',
+  clinicalContext?: string,
+  specialty?: Specialty,
+  history: Array<{role: string, content: string}> = [],
+  isRadiologyOnly: boolean = false
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { TITAN_CONTEXTS, RADIOLOGY_PROTOCOL_PROMPT, STRATEGIC_SYSTEM_PROMPT } = await import('./prompts');
+  
+  // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+  const basePrompt = isRadiologyOnly ? RADIOLOGY_PROTOCOL_PROMPT : (specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT);
+  let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+  
+  if (specialty && TITAN_CONTEXTS[specialty]) {
+    systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+  }
+
+  let fullPrompt = prompt;
+  if (clinicalContext) {
+    fullPrompt = `${prompt}\n\n=== PATIENT CLINICAL CONTEXT ===\n${clinicalContext}`;
+  }
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    try {
+      // 1. Форсированный старт потока
+      const initialPadding = ': ' + ' '.repeat(2048) + '\n\n';
+      await writer.write(encoder.encode(initialPadding));
+
+      // 2. Heartbeat для поддержания соединения
+      heartbeat = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      const response = await fetch(getLlmChatCompletionsUrl(), {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://doctor-opus.online',
+            'X-Title': 'Doctor Opus'
+          },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+            { 
+              role: 'user', 
+              content: [
+                { type: 'text', text: fullPrompt },
+                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } }
+              ] 
+            }
+          ],
+          max_tokens: 8000, // Оптимизировано: одно изображение, базовый протокол
+          temperature: 0.1,
+          stream: true,
+          stream_options: { include_usage: true }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      // Оценка входных токенов для корректного отображения стоимости
+      const { estimateTokens } = await import('./adaptive-tokens');
+      const initialPromptTokens = estimateTokens(systemPrompt + (typeof fullPrompt === 'string' ? fullPrompt : '') + history.map(m => m.content).join(' '));
+      const initialUsage = { prompt_tokens: initialPromptTokens, completion_tokens: 0 };
+
+      const transformer = createTransformWithUsage(response.body!, model, initialUsage, true);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+      }
+    } catch (error: any) {
+      console.error(`❌ [IMAGE STREAM ERROR]:`, error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      try { await writer.close(); } catch {}
+    }
+  })();
+
+  return readable;
+}
+
+/**
+ * Streaming анализ множественных images
+ */
+export async function analyzeMultipleImagesStreaming(
+  prompt: string,
+  imagesBase64: string[],
+  mimeTypes: string[] = [],
+  model: string = MODELS.OPUS,
+  clinicalContext?: string,
+  specialty?: Specialty,
+  history: Array<{role: string, content: string}> = [],
+  isRadiologyOnly: boolean = false
+): Promise<ReadableStream<Uint8Array>> {
+  const apiKey = getLlmApiKey();
+  if (!apiKey) throw new Error('LLM_API_KEY (или OPENROUTER_API_KEY) is not configured');
+
+  const { TITAN_CONTEXTS, RADIOLOGY_PROTOCOL_PROMPT, STRATEGIC_SYSTEM_PROMPT } = await import('./prompts');
+  
+  // Выбираем системный промпт: для первого сообщения - полная директива, для диалога - краткий режим
+  const basePrompt = isRadiologyOnly ? RADIOLOGY_PROTOCOL_PROMPT : (specialty === 'ai_consultant' ? SYSTEM_PROMPT : STRATEGIC_SYSTEM_PROMPT);
+  let systemPrompt = history.length > 0 ? DIALOGUE_SYSTEM_PROMPT : basePrompt;
+  
+  if (specialty && TITAN_CONTEXTS[specialty]) {
+    systemPrompt = `${systemPrompt}\n\n${TITAN_CONTEXTS[specialty]}`;
+  }
+
+  let fullPrompt = prompt;
+  if (clinicalContext) {
+    fullPrompt = `${prompt}\n\n=== PATIENT CLINICAL CONTEXT ===\n${clinicalContext}`;
+  }
+
+  const contentItems: any[] = [{ type: 'text', text: fullPrompt }];
+  imagesBase64.forEach((img, i) => {
+    contentItems.push({ type: 'image_url', image_url: { url: `data:${mimeTypes[i] || 'image/png'};base64,${img}` } });
+  });
+
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+
+  (async () => {
+    let heartbeat: any;
+    try {
+      // 1. Форсированный старт потока
+      const initialPadding = ': ' + ' '.repeat(2048) + '\n\n';
+      await writer.write(encoder.encode(initialPadding));
+
+      // 2. Heartbeat для поддержания соединения
+      heartbeat = setInterval(async () => {
+        try {
+          await writer.write(encoder.encode(': keep-alive heartbeat\n\n'));
+        } catch (e) {
+          if (heartbeat) clearInterval(heartbeat);
+        }
+      }, 5000);
+
+      const response = await fetch(getLlmChatCompletionsUrl(), {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://doctor-opus.online',
+            'X-Title': 'Doctor Opus'
+          },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: resolvePromptRuntimeVars(systemPrompt) },
+            { role: 'user', content: contentItems }
+          ],
+          max_tokens: 12000, // Оптимизировано: множественные изображения
+          temperature: 0.1,
+          stream: true,
+          stream_options: { include_usage: true }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error: ${response.status} - ${errorText}`);
+      }
+
+      // Оценка входных токенов для корректного отображения стоимости
+      const { estimateTokens } = await import('./adaptive-tokens');
+      const initialPromptTokens = estimateTokens(systemPrompt + (typeof fullPrompt === 'string' ? fullPrompt : '') + history.map(m => m.content).join(' '));
+      const initialUsage = { prompt_tokens: initialPromptTokens, completion_tokens: 0 };
+
+      const transformer = createTransformWithUsage(response.body!, model, initialUsage, true);
+      const reader = transformer.getReader();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+      }
+    } catch (error: any) {
+      console.error(`❌ [MULTI-IMAGE STREAM ERROR]:`, error);
+      try { await writer.write(encoder.encode(`data: ${JSON.stringify({ error: error.message })}\n\n`)); } catch {}
+    } finally {
+      if (heartbeat) clearInterval(heartbeat);
+      try { await writer.close(); } catch {}
+    }
+  })();
+
+  return readable;
+}

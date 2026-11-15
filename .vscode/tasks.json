@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Concilium: журнал моделей",
+      "type": "npm",
+      "script": "logs",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {"reveal": "always", "panel": "dedicated", "focus": false, "clear": false},
+      "runOptions": {"instanceLimit": 1}
+    }
+  ]
+}

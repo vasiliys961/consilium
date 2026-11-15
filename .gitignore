@@ -1,0 +1,31 @@
+node_modules
+.next
+.env
+.env.local
+
+*.tsbuildinfo
+
+.logs/
+
+integrations/radiology/models
+
+# Local semantic model assets (install with npm run setup:library-models)
+/public/models/
+/public/ort/
+
+# Audit/source repository: local secrets, runtime data and generated output
+.env.*
+!.env.example
+.vercel/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+/artifacts/
+/audit-exports/
+
+# Screenshots and generated QA materials
+/docs/qa/
+/docs/concilium-preview.png
+/integrations/radiology/web/browser-results/

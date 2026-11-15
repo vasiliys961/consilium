@@ -1,0 +1,164 @@
+/** Trigger an actually installed original MONAI 0.6.9 RetinaNet model.
+ * The approved public source CT is already on an isolated Linux worker;
+ * browser uploads exactly 64 hex hash characters, NEVER CT pixels.
+ */
+import {sha256} from "@noble/hashes/sha2.js";
+import {call,smallJson,pause,type WorkerSession} from "./local-worker.ts";
+import {parseBoundNoduleReport,readNoduleNiftiHeader,
+  type BoundNoduleReport,type NoduleNativeSource,MAX_MONAI_CT_BYTES}
+  from "./live-nodule-report.ts";
+
+const MODEL="monai-lung-nodule-ct-retinanet";
+const CHECKPOINT="b5e79231466adae93a6fe8e8594029e9add142914e223b879aa0343bb2402d01";
+const REVISION="7226a40a4c3713f7d5469559b7f2fc296fd54825";
+const JOBID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+
+export function verifiedOriginalNoduleWorker(cap:unknown):boolean {
+ if(!cap||typeof cap!=="object"||Array.isArray(cap))return false;
+ const c=cap as Record<string,unknown>;
+ return c.schema==="opus-monai-live-worker/v1"&&c.modelId===MODEL&&
+  c.modelVersion==="0.6.9"&&c.checkpointSha256===CHECKPOINT&&
+  c.modelRevision===REVISION&&c.originalWeightsVerified===true&&
+  c.mode==="local"&&c.sourceFormat==="original-nifti-uncompressed"&&
+  c.dataPolicy==="approved-public-reference-only"&&
+  c.patientMode===false&&typeof c.imageUpload==="boolean"&&typeof c.ready==="boolean"&&
+  c.unvalidatedResearch===true;
+}
+export function readyOriginalNoduleWorker(cap:unknown):boolean {
+ return verifiedOriginalNoduleWorker(cap)&&(cap as Record<string,unknown>).ready===true;
+}
+
+export async function originalNiftiSha256(source:Blob,signal?:AbortSignal):Promise<string>{
+ if(source.size<352||source.size>MAX_MONAI_CT_BYTES)
+   throw Error("Требуется исходная КТ NIfTI допустимого размера.");
+ const hash=sha256.create(),reader=source.stream().getReader();
+ let bytes=0;
+ try{
+  for(;;){
+   if(signal?.aborted)throw Error("Хеширование отменено.");
+   const chunk=await reader.read();if(chunk.done)break;
+   bytes+=chunk.value.byteLength;
+   if(bytes>MAX_MONAI_CT_BYTES)throw Error("Источник КТ превышает допустимый объём.");
+   hash.update(chunk.value);
+  }
+ }finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+ if(signal?.aborted||bytes!==source.size)throw Error("Исходная КТ изменилась при проверке.");
+ return Array.from(hash.digest(),b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+async function boundedReport(response:Response):Promise<string>{
+ const reader=response.body?.getReader();
+ if(!reader)throw Error("Настоящий MONAI worker вернул пустой ответ.");
+ const chunks:Uint8Array[]=[];let size=0;
+ try{
+  for(;;){
+   const x=await reader.read();if(x.done)break;
+   size+=x.value.byteLength;
+   if(size>1024*1024)throw Error("Слишком большой ответ MONAI.");
+   chunks.push(x.value);
+  }
+ }finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+ const data=new Uint8Array(size);let i=0;
+ for(const part of chunks){data.set(part,i);i+=part.length;}
+ return new TextDecoder().decode(data);
+}
+
+/** Automatic server route: no browser-visible token or arbitrary URL. */
+export async function autoMonaiRequest(path:string,init:RequestInit={}):Promise<Response>{
+ if(!/^\/v1\/nodule\/(capabilities|upload|jobs\/[a-f0-9-]{36}(?:\/report)?)$/.test(path))
+  throw Error("Неверный путь MONAI.");
+ const res=await fetch("/api/local-nodule"+path,{
+  ...init,credentials:"same-origin",redirect:"error",cache:"no-store",
+ });
+ if(!res.ok)throw Error("Оригинальная MONAI недоступна (HTTP "+res.status+").");
+ return res;
+}
+export async function checkAutomaticMonaiReady(signal?:AbortSignal):Promise<boolean>{
+ try{
+  const cap=await smallJson(await autoMonaiRequest("/v1/nodule/capabilities",{signal}));
+  return readyOriginalNoduleWorker(cap)&&cap.imageUpload===true;
+ }catch{return false;}
+}
+
+export type AutomaticMonaiStatus={ready:boolean;location:"local"|"private"|null;
+ reason:"ready"|"not_configured"|"unreachable"|"unverified"|"not_ready"};
+export async function checkAutomaticMonaiExecutor(signal?:AbortSignal):Promise<AutomaticMonaiStatus>{
+ try{
+  const cap=await smallJson(await autoMonaiRequest("/v1/nodule/capabilities",{signal}));
+  const execution=cap.automaticExecution as {location?:unknown;attempts?:{status?:unknown}[]}|undefined;
+  const location=execution?.location==="local"||execution?.location==="private"?execution.location:null;
+  if(readyOriginalNoduleWorker(cap)&&cap.imageUpload===true)return {ready:true,location,reason:"ready"};
+  const statuses=Array.isArray(execution?.attempts)?execution.attempts.map(x=>x.status):[];
+  return {ready:false,location:null,reason:statuses.includes("not_ready")?"not_ready":
+    statuses.includes("unverified")?"unverified":statuses.length?"unreachable":"not_configured"};
+ }catch{return {ready:false,location:null,reason:"unreachable"};}
+}
+
+export async function executeRealNodule(
+ session:WorkerSession|null,source:File,signal:AbortSignal,
+ onProgress?:(text:string)=>void,
+ onExecutorSelected?:(location:"local"|"private")=>void,
+):Promise<{source:NoduleNativeSource;report:BoundNoduleReport}> {
+ if(signal.aborted)throw Error("Задание отменено.");
+ let executorBinding:string|null=null;
+ const invoke=(path:string,init:RequestInit={})=>{
+  if(session)return call(session,path,init);
+  const headers=new Headers(init.headers);
+  if(executorBinding)headers.set("X-Opus-Monai-Job-Binding",executorBinding);
+  return autoMonaiRequest(path,{...init,headers});
+ };
+ const native=await readNoduleNiftiHeader(source);
+ onProgress?.("Проверяем исходную КТ и подлинные MONAI-веса...");
+ const cap=await smallJson(await invoke("/v1/nodule/capabilities",{signal}));
+ if(!readyOriginalNoduleWorker(cap))
+   throw Error("MONAI RetinaNet ещё не установлен/не готов на выделенном Linux-worker.");
+ const fileHash=await originalNiftiSha256(source,signal);
+ const uploadEnabled=cap.imageUpload===true;
+ if(!session&&!uploadEnabled)throw Error("Для новой DICOM-КТ требуется оригинальный MONAI worker с загрузкой NIfTI.");
+ let jobId:string|null=null;
+ try{
+  const answer=await smallJson(await invoke(uploadEnabled?"/v1/nodule/upload":"/v1/nodule/jobs",{
+   method:"POST",signal,headers:uploadEnabled?{
+    "Content-Type":"application/octet-stream","X-Opus-Source-Sha256":fileHash,
+    ...(session?{}:{"X-Opus-Public-Research-Authorization":"approved-nonpatient-source"})
+   }:{"Content-Type":"application/json"},
+   body:uploadEnabled?source:JSON.stringify({schema:"opus-monai-nodule-request/v1",
+    sourceSha256:fileHash,dataPolicy:"approved-public-reference-only"}),
+  }));
+  if(answer.schema!=="opus-monai-job/v1"||typeof answer.jobId!=="string"||
+     !JOBID.test(answer.jobId)||answer.state!=="running")
+    throw Error("MONAI worker не подтвердил запуск настоящей модели.");
+  jobId=answer.jobId;
+  if(!session){
+   if(typeof answer.executorBinding!=="string"||answer.executorBinding.length>240||
+     (answer.executorLocation!=="local"&&answer.executorLocation!=="private"))
+    throw Error("Сервер не привязал задание MONAI к выбранному исполнителю.");
+   executorBinding=answer.executorBinding;
+   onExecutorSelected?.(answer.executorLocation);
+   onProgress?.(answer.executorLocation==="private"?
+    "Узлы лёгких: оригинальная MONAI запущена на подключённом приватном сервере.":
+    "Узлы лёгких: оригинальная MONAI запущена через локальный канал.");
+  }
+  for(;;){
+   if(signal.aborted)throw Error("Анализ MONAI отменён.");
+   const state=await smallJson(await invoke(`/v1/nodule/jobs/${jobId}`,{signal}));
+   if(state.schema!=="opus-monai-job/v1"||state.jobId!==jobId)
+    throw Error("Несовместимый ответ MONAI-worker.");
+   if(state.state==="failed")throw Error("MONAI не завершил настоящий инференс: "+String(state.reason??"ошибка"));
+   if(state.state==="succeeded")break;
+   if(state.state!=="running")throw Error("Недостоверный статус MONAI-worker.");
+   onProgress?.("Настоящая MONAI RetinaNet обрабатывает исходную КТ на Linux CPU...");
+   await pause(signal);
+  }
+  const raw=await boundedReport(await invoke(`/v1/nodule/jobs/${jobId}/report`,{signal}));
+  const verified=parseBoundNoduleReport(raw,native);
+  if(verified.source.sha256!==fileHash)
+    throw Error("MONAI-срезы не принадлежат открытому исходному исследованию.");
+  onProgress?.("Настоящий инференс завершён; показываем кандидатов на исходной КТ.");
+  return {source:native,report:verified};
+ }finally{
+  if(jobId)await invoke(`/v1/nodule/jobs/${jobId}`,{
+   method:"DELETE",signal:AbortSignal.timeout(10000),
+  }).catch(()=>{});
+ }
+}

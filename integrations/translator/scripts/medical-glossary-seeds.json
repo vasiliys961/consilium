@@ -1,0 +1,2373 @@
+[
+  {
+    "id": "metoprolol",
+    "category": "drugs",
+    "english": "metoprolol",
+    "existingForms": [
+      "метопролол",
+      "metoprolol",
+      "美托洛尔",
+      "メトプロロール"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "penicillin",
+    "category": "drugs",
+    "english": "penicillin",
+    "existingForms": [
+      "пенициллин",
+      "penicil",
+      "青霉素",
+      "ペニシリン"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "aspirin",
+    "category": "drugs",
+    "english": "aspirin",
+    "existingForms": [
+      "аспирин",
+      "aspirin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "ibuprofen",
+    "category": "drugs",
+    "english": "ibuprofen",
+    "existingForms": [
+      "ибупрофен",
+      "ibuprofen"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "paracetamol",
+    "category": "drugs",
+    "english": "paracetamol",
+    "existingForms": [
+      "парацетамол",
+      "paracetamol",
+      "acetaminophen"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "amoxicillin",
+    "category": "drugs",
+    "english": "amoxicillin",
+    "existingForms": [
+      "амоксициллин",
+      "amoxicillin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "warfarin",
+    "category": "drugs",
+    "english": "warfarin",
+    "existingForms": [
+      "варфарин",
+      "warfarin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "insulin",
+    "category": "drugs",
+    "english": "insulin",
+    "existingForms": [
+      "инсулин",
+      "insulin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "lisinopril",
+    "category": "drugs",
+    "english": "lisinopril",
+    "existingForms": [
+      "лизиноприл",
+      "lisinopril"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "enalapril",
+    "category": "drugs",
+    "english": "enalapril",
+    "existingForms": [
+      "эналаприл",
+      "enalapril"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "amlodipine",
+    "category": "drugs",
+    "english": "amlodipine",
+    "existingForms": [
+      "амлодипин",
+      "amlodipine"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "bisoprolol",
+    "category": "drugs",
+    "english": "bisoprolol",
+    "existingForms": [
+      "бисопролол",
+      "bisoprolol"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "atorvastatin",
+    "category": "drugs",
+    "english": "atorvastatin",
+    "existingForms": [
+      "аторвастатин",
+      "atorvastatin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "clopidogrel",
+    "category": "drugs",
+    "english": "clopidogrel",
+    "existingForms": [
+      "клопидогрел",
+      "clopidogrel"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "omeprazole",
+    "category": "drugs",
+    "english": "omeprazole",
+    "existingForms": [
+      "омепразол",
+      "omeprazole"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "losartan",
+    "category": "drugs",
+    "english": "losartan",
+    "existingForms": [
+      "лозартан",
+      "losartan"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "metformin",
+    "category": "drugs",
+    "english": "metformin",
+    "existingForms": [
+      "метформин",
+      "metformin"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "salbutamol",
+    "category": "drugs",
+    "english": "salbutamol",
+    "existingForms": [
+      "сальбутамол",
+      "salbutamol",
+      "albuterol"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "dyspnea",
+    "category": "terms",
+    "english": "dyspnea",
+    "existingForms": [
+      "одыш",
+      "dyspnea",
+      "shortness of breath",
+      "short of breath",
+      "disnea",
+      "dispneia",
+      "essoufflement",
+      "dyspnee",
+      "呼吸困难",
+      "呼吸困難",
+      "息切れ"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "edema",
+    "category": "terms",
+    "english": "edema",
+    "existingForms": [
+      "отек",
+      "edema",
+      "oedeme",
+      "水肿",
+      "浮腫"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "myocardial-infarction",
+    "category": "terms",
+    "english": "myocardial-infarction",
+    "existingForms": [
+      "инфаркт",
+      "myocardial infarction",
+      "heart attack",
+      "infarto",
+      "infarctus",
+      "enfarte",
+      "心肌梗死",
+      "心肌梗塞",
+      "心筋梗塞"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "arrhythmia",
+    "category": "terms",
+    "english": "arrhythmia",
+    "existingForms": [
+      "аритм",
+      "arrhythmia",
+      "фибрилляц",
+      "fibrillation",
+      "arritmi",
+      "arythmi",
+      "心律失常",
+      "不整脈"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "anticoagulant",
+    "category": "terms",
+    "english": "anticoagulant",
+    "existingForms": [
+      "антикоагулянт",
+      "anticoagulant",
+      "anticoagul",
+      "抗凝"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "hypertension",
+    "category": "terms",
+    "english": "hypertension",
+    "existingForms": [
+      "гипертенз",
+      "hypertension",
+      "hipertens",
+      "高血压",
+      "高血圧"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "hypotension",
+    "category": "terms",
+    "english": "hypotension",
+    "existingForms": [
+      "гипотенз",
+      "hypotension",
+      "hipotens",
+      "低血压",
+      "低血圧"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "glucose",
+    "category": "terms",
+    "english": "glucose",
+    "existingForms": [
+      "глюкоз",
+      "glucose",
+      "blood sugar",
+      "glucos",
+      "glicose",
+      "glicem",
+      "glycem",
+      "血糖"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "allergy",
+    "category": "terms",
+    "english": "allergy",
+    "existingForms": [
+      "аллерги",
+      "allerg",
+      "alergi",
+      "过敏",
+      "アレルギー"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "angina",
+    "category": "terms",
+    "english": "angina",
+    "existingForms": [
+      "стенокард",
+      "angin",
+      "心绞痛",
+      "狭心症"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "paresthesia",
+    "category": "terms",
+    "english": "paresthesia",
+    "existingForms": [
+      "парестез",
+      "paresthesia"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "bp",
+    "category": "abbreviations",
+    "english": "bp",
+    "existingForms": [
+      "bp",
+      "blood pressure",
+      "артериальное давление",
+      "давление"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "hr",
+    "category": "abbreviations",
+    "english": "hr",
+    "existingForms": [
+      "hr",
+      "heart rate",
+      "чсс",
+      "пульс"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "ecg",
+    "category": "abbreviations",
+    "english": "ecg",
+    "existingForms": [
+      "ecg",
+      "ekg",
+      "экг",
+      "электрокардиограм"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "ct",
+    "category": "abbreviations",
+    "english": "ct",
+    "existingForms": [
+      "ct",
+      "кт"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mri",
+    "category": "abbreviations",
+    "english": "mri",
+    "existingForms": [
+      "mri",
+      "мрт"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "cbc",
+    "category": "abbreviations",
+    "english": "cbc",
+    "existingForms": [
+      "cbc",
+      "оак"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "hb",
+    "category": "abbreviations",
+    "english": "hb",
+    "existingForms": [
+      "hb",
+      "hgb",
+      "гемоглобин"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "inr",
+    "category": "abbreviations",
+    "english": "inr",
+    "existingForms": [
+      "inr",
+      "мно"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "spo2",
+    "category": "abbreviations",
+    "english": "spo2",
+    "existingForms": [
+      "spo2",
+      "сатурац"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "icu",
+    "category": "abbreviations",
+    "english": "icu",
+    "existingForms": [
+      "icu",
+      "орит"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "er",
+    "category": "abbreviations",
+    "english": "er",
+    "existingForms": [
+      "er",
+      "ed",
+      "приемн"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "bid",
+    "category": "abbreviations",
+    "english": "bid",
+    "existingForms": [
+      "bid",
+      "twice a day",
+      "twice daily",
+      "два раза в день",
+      "dos veces al dia",
+      "deux fois par jour",
+      "duas vezes por dia",
+      "每天两次",
+      "一日两次",
+      "1日2回"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "tid",
+    "category": "abbreviations",
+    "english": "tid",
+    "existingForms": [
+      "tid",
+      "three times a day",
+      "три раза в день",
+      "tres veces al dia",
+      "trois fois par jour",
+      "每天三次"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "qid",
+    "category": "abbreviations",
+    "english": "qid",
+    "existingForms": [
+      "qid",
+      "four times a day",
+      "четыре раза в день"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "prn",
+    "category": "abbreviations",
+    "english": "prn",
+    "existingForms": [
+      "prn",
+      "as needed",
+      "при необходимости",
+      "по необходимости",
+      "si es necesario",
+      "au besoin",
+      "se necessario",
+      "必要时",
+      "必要時"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "ms",
+    "category": "abbreviations",
+    "english": "ms",
+    "existingForms": [
+      "ms"
+    ],
+    "ambiguous": true
+  },
+  {
+    "id": "cp",
+    "category": "abbreviations",
+    "english": "cp",
+    "existingForms": [
+      "cp"
+    ],
+    "ambiguous": true
+  },
+  {
+    "id": "heart",
+    "category": "anatomy",
+    "english": "heart",
+    "existingForms": [
+      "сердц",
+      "серце",
+      "heart",
+      "corazon",
+      "coeur",
+      "herz",
+      "cuore",
+      "心脏",
+      "心臓",
+      "심장",
+      "हृदय",
+      "jantung",
+      "tim",
+      "قلب",
+      "kalp",
+      "serce"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "lung",
+    "category": "anatomy",
+    "english": "lung",
+    "existingForms": [
+      "легк",
+      "леген",
+      "lung",
+      "pulmones",
+      "el pulmon",
+      "poumon",
+      "lunge",
+      "polmone",
+      "肺部",
+      "肺",
+      "폐",
+      "फेफड़",
+      "paru",
+      "phổi",
+      "رئة",
+      "akciğer",
+      "płuco"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "arm",
+    "category": "anatomy",
+    "english": "arm",
+    "existingForms": [
+      "рук",
+      "рука",
+      "arm",
+      "hand",
+      "brazo",
+      "le bras",
+      "au bras",
+      "braccio",
+      "手臂",
+      "腕",
+      "팔",
+      "बांह",
+      "lengan",
+      "cánh tay",
+      "ذراع",
+      "kol",
+      "ramię"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "pulmonary-artery",
+    "category": "anatomy",
+    "english": "pulmonary-artery",
+    "existingForms": [
+      "легочной артери",
+      "pulmonary artery"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "knee",
+    "category": "anatomy",
+    "english": "knee",
+    "existingForms": [
+      "колен",
+      "колін",
+      "knee",
+      "rodilla",
+      "genou",
+      "knie",
+      "ginocchio",
+      "joelho",
+      "膝盖",
+      "膝",
+      "무릎",
+      "घुटन",
+      "lutut",
+      "đầu gối",
+      "ركبة",
+      "diz",
+      "kolano"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "shoulder",
+    "category": "anatomy",
+    "english": "shoulder",
+    "existingForms": [
+      "плеч",
+      "shoulder",
+      "hombro",
+      "epaule",
+      "schulter",
+      "spalla",
+      "ombro",
+      "肩膀",
+      "肩",
+      "어깨",
+      "कंध",
+      "bahu",
+      "bả vai",
+      "كتف",
+      "omuz",
+      "bark"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "liver",
+    "category": "anatomy",
+    "english": "liver",
+    "existingForms": [
+      "печен",
+      "печін",
+      "liver",
+      "higado",
+      "foie",
+      "leber",
+      "fegato",
+      "figado",
+      "肝脏",
+      "肝臓",
+      "간",
+      "यकृत",
+      "hati",
+      "gan",
+      "كبد",
+      "karaciğer",
+      "wątroba"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "kidney",
+    "category": "anatomy",
+    "english": "kidney",
+    "existingForms": [
+      "почк",
+      "нирк",
+      "kidney",
+      "rinon",
+      "reins",
+      "niere",
+      "i reni",
+      "rim",
+      "rins",
+      "肾脏",
+      "腎臓",
+      "신장",
+      "गुर्द",
+      "ginjal",
+      "thận",
+      "كلية",
+      "böbrek",
+      "buah pinggang",
+      "nerka"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "left",
+    "category": "laterality",
+    "english": "left",
+    "existingForms": [
+      "left",
+      "лево",
+      "левый",
+      "левая",
+      "левое",
+      "левой",
+      "левом",
+      "левую",
+      "izquierd",
+      "gauche",
+      "links",
+      "sinistra",
+      "sinistro",
+      "esquerd",
+      "左侧",
+      "左边",
+      "左側",
+      "左",
+      "왼쪽",
+      "좌측",
+      "बाईं",
+      "बायां",
+      "kiri",
+      "bên trái",
+      "أيسر",
+      "يسار",
+      "sol",
+      "ліви",
+      "ліво",
+      "lewy",
+      "lewa",
+      "lewe"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "right",
+    "category": "laterality",
+    "english": "right",
+    "existingForms": [
+      "right",
+      "право",
+      "правый",
+      "правая",
+      "правое",
+      "правой",
+      "правом",
+      "правую",
+      "derech",
+      "droit",
+      "rechts",
+      "destra",
+      "direit",
+      "右侧",
+      "右边",
+      "右側",
+      "右",
+      "오른쪽",
+      "우측",
+      "दाईं",
+      "दायां",
+      "kanan",
+      "bên phải",
+      "أيمن",
+      "يمين",
+      "sağ",
+      "правий",
+      "права",
+      "праве",
+      "prawy",
+      "prawa",
+      "prawe"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "bilateral",
+    "category": "laterality",
+    "english": "bilateral",
+    "existingForms": [
+      "bilateral",
+      "both sides",
+      "двусторон",
+      "bilateral",
+      "bilatéral",
+      "beidseitig",
+      "bilaterale",
+      "双侧",
+      "両側",
+      "양쪽",
+      "दोनों तरफ़",
+      "kedua sisi",
+      "hai bên",
+      "كلا الجانبين",
+      "iki taraf",
+      "двосторон",
+      "kedua-dua belah",
+      "obustron"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "oral",
+    "category": "routes",
+    "english": "oral",
+    "existingForms": [
+      "orally",
+      "by mouth",
+      "per os",
+      "внутрь",
+      "пероральн",
+      "via oral",
+      "por la boca",
+      "voie orale",
+      "durch den mund",
+      "per bocca",
+      "pela boca",
+      "口服",
+      "経口",
+      "경구",
+      "मुंह से",
+      "diminum",
+      "đường uống",
+      "عن طريق الفم",
+      "ağızdan",
+      "перорально",
+      "melalui mulut",
+      "doustnie"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "intravenous",
+    "category": "routes",
+    "english": "intravenous",
+    "existingForms": [
+      "intravenously",
+      "intravenous",
+      "внутривенн",
+      "intravenos",
+      "intraveineus",
+      "endovenos",
+      "静脉",
+      "静脈",
+      "정맥",
+      "नस में",
+      "intravena",
+      "tĩnh mạch",
+      "عن طريق الوريد",
+      "damardan",
+      "внутрішньовен",
+      "dożylnie"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "intramuscular",
+    "category": "routes",
+    "english": "intramuscular",
+    "existingForms": [
+      "intramuscularly",
+      "intramuscular",
+      "внутримышечн",
+      "intramusculaire",
+      "intramuskulär",
+      "intramuscolare",
+      "肌肉注射",
+      "筋肉",
+      "근육",
+      "मांसपेशी",
+      "suntikan otot",
+      "tiêm bắp",
+      "في العضل",
+      "kas içine",
+      "внутрішньомʼязов",
+      "domięśniow"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "subcutaneous",
+    "category": "routes",
+    "english": "subcutaneous",
+    "existingForms": [
+      "subcutaneously",
+      "subcutaneous",
+      "подкожн",
+      "subcutan",
+      "sous-cutan",
+      "sottocutan",
+      "subkutan",
+      "皮下",
+      "피하",
+      "bawah kulit",
+      "تحت الجلد",
+      "deri altına",
+      "підшкірн",
+      "podskórn"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "topical",
+    "category": "routes",
+    "english": "topical",
+    "existingForms": [
+      "topically",
+      "topical",
+      "местно",
+      "наружно",
+      "topica",
+      "topique",
+      "äußerlich",
+      "外用",
+      "외용",
+      "oleskan",
+      "bôi ngoài",
+      "موضعي",
+      "haricen",
+      "зовнішньо",
+      "miejscowo"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mcg",
+    "category": "units",
+    "english": "mcg",
+    "existingForms": [
+      "мкг",
+      "mcg",
+      "ug",
+      "微克",
+      "マイクログラム"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mg",
+    "category": "units",
+    "english": "mg",
+    "existingForms": [
+      "мг",
+      "mg",
+      "毫克",
+      "ミリグラム"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "g",
+    "category": "units",
+    "english": "g",
+    "existingForms": [
+      "г",
+      "g",
+      "克"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "ml",
+    "category": "units",
+    "english": "ml",
+    "existingForms": [
+      "мл",
+      "ml",
+      "毫升",
+      "ミリリットル"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "iu",
+    "category": "units",
+    "english": "iu",
+    "existingForms": [
+      "ме",
+      "iu"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mmol_l",
+    "category": "units",
+    "english": "mmol_l",
+    "existingForms": [
+      "ммоль/л",
+      "mmol/l",
+      "ммоль на литр",
+      "mmol per liter",
+      "mmol per litre"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mg_dl",
+    "category": "units",
+    "english": "mg_dl",
+    "existingForms": [
+      "мг/дл",
+      "mg/dl"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "bpm",
+    "category": "units",
+    "english": "bpm",
+    "existingForms": [
+      "bpm",
+      "уд/мин",
+      "ударов в минуту"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "mmhg",
+    "category": "units",
+    "english": "mmhg",
+    "existingForms": [
+      "mmhg",
+      "мм рт. ст.",
+      "мм рт.ст."
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "celsius",
+    "category": "units",
+    "english": "celsius",
+    "existingForms": [
+      "celsius",
+      "градус",
+      "grados",
+      "degres",
+      "graus",
+      "度"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "pulmonary-embolism",
+    "category": "phrases",
+    "english": "pulmonary-embolism",
+    "existingForms": [
+      "тромбоэмбол",
+      "pulmonary embolism",
+      "embolia pulmonar",
+      "embolie pulmonaire",
+      "肺栓塞",
+      "肺塞栓"
+    ],
+    "ambiguous": false
+  },
+  {
+    "id": "pain",
+    "category": "symptoms",
+    "english": "pain"
+  },
+  {
+    "id": "headache",
+    "category": "symptoms",
+    "english": "headache"
+  },
+  {
+    "id": "chest-pain",
+    "category": "symptoms",
+    "english": "chest pain"
+  },
+  {
+    "id": "abdominal-pain",
+    "category": "symptoms",
+    "english": "abdominal pain"
+  },
+  {
+    "id": "back-pain",
+    "category": "symptoms",
+    "english": "back pain"
+  },
+  {
+    "id": "sore-throat",
+    "category": "symptoms",
+    "english": "sore throat"
+  },
+  {
+    "id": "fever",
+    "category": "symptoms",
+    "english": "fever"
+  },
+  {
+    "id": "chills",
+    "category": "symptoms",
+    "english": "chills"
+  },
+  {
+    "id": "cough",
+    "category": "symptoms",
+    "english": "cough"
+  },
+  {
+    "id": "dry-cough",
+    "category": "symptoms",
+    "english": "dry cough"
+  },
+  {
+    "id": "productive-cough",
+    "category": "symptoms",
+    "english": "productive cough"
+  },
+  {
+    "id": "wheezing",
+    "category": "symptoms",
+    "english": "wheezing"
+  },
+  {
+    "id": "nausea",
+    "category": "symptoms",
+    "english": "nausea"
+  },
+  {
+    "id": "vomiting",
+    "category": "symptoms",
+    "english": "vomiting"
+  },
+  {
+    "id": "diarrhea",
+    "category": "symptoms",
+    "english": "diarrhea"
+  },
+  {
+    "id": "constipation",
+    "category": "symptoms",
+    "english": "constipation"
+  },
+  {
+    "id": "dizziness",
+    "category": "symptoms",
+    "english": "dizziness"
+  },
+  {
+    "id": "fainting",
+    "category": "symptoms",
+    "english": "fainting"
+  },
+  {
+    "id": "fatigue",
+    "category": "symptoms",
+    "english": "fatigue"
+  },
+  {
+    "id": "weakness",
+    "category": "symptoms",
+    "english": "weakness"
+  },
+  {
+    "id": "numbness",
+    "category": "symptoms",
+    "english": "numbness"
+  },
+  {
+    "id": "tingling",
+    "category": "symptoms",
+    "english": "tingling"
+  },
+  {
+    "id": "seizure",
+    "category": "symptoms",
+    "english": "seizure"
+  },
+  {
+    "id": "rash",
+    "category": "symptoms",
+    "english": "rash"
+  },
+  {
+    "id": "itching",
+    "category": "symptoms",
+    "english": "itching"
+  },
+  {
+    "id": "bleeding",
+    "category": "symptoms",
+    "english": "bleeding"
+  },
+  {
+    "id": "bruising",
+    "category": "symptoms",
+    "english": "bruising"
+  },
+  {
+    "id": "loss-of-appetite",
+    "category": "symptoms",
+    "english": "loss of appetite"
+  },
+  {
+    "id": "weight-loss",
+    "category": "symptoms",
+    "english": "weight loss"
+  },
+  {
+    "id": "weight-gain",
+    "category": "symptoms",
+    "english": "weight gain"
+  },
+  {
+    "id": "difficulty-swallowing",
+    "category": "symptoms",
+    "english": "difficulty swallowing"
+  },
+  {
+    "id": "blurred-vision",
+    "category": "symptoms",
+    "english": "blurred vision"
+  },
+  {
+    "id": "hearing-loss",
+    "category": "symptoms",
+    "english": "hearing loss"
+  },
+  {
+    "id": "palpitations",
+    "category": "symptoms",
+    "english": "palpitations"
+  },
+  {
+    "id": "heartburn",
+    "category": "symptoms",
+    "english": "heartburn"
+  },
+  {
+    "id": "bloating",
+    "category": "symptoms",
+    "english": "bloating"
+  },
+  {
+    "id": "painful-urination",
+    "category": "symptoms",
+    "english": "painful urination"
+  },
+  {
+    "id": "blood-in-urine",
+    "category": "symptoms",
+    "english": "blood in urine"
+  },
+  {
+    "id": "blood-in-stool",
+    "category": "symptoms",
+    "english": "blood in stool"
+  },
+  {
+    "id": "urinary-frequency",
+    "category": "symptoms",
+    "english": "urinary frequency"
+  },
+  {
+    "id": "night-sweats",
+    "category": "symptoms",
+    "english": "night sweats"
+  },
+  {
+    "id": "insomnia",
+    "category": "symptoms",
+    "english": "insomnia"
+  },
+  {
+    "id": "confusion",
+    "category": "symptoms",
+    "english": "confusion"
+  },
+  {
+    "id": "brain",
+    "category": "anatomy",
+    "english": "brain"
+  },
+  {
+    "id": "spinal-cord",
+    "category": "anatomy",
+    "english": "spinal cord"
+  },
+  {
+    "id": "nerve",
+    "category": "anatomy",
+    "english": "nerve"
+  },
+  {
+    "id": "artery",
+    "category": "anatomy",
+    "english": "artery"
+  },
+  {
+    "id": "vein",
+    "category": "anatomy",
+    "english": "vein"
+  },
+  {
+    "id": "blood-vessel",
+    "category": "anatomy",
+    "english": "blood vessel"
+  },
+  {
+    "id": "stomach",
+    "category": "anatomy",
+    "english": "stomach"
+  },
+  {
+    "id": "intestine",
+    "category": "anatomy",
+    "english": "intestine"
+  },
+  {
+    "id": "colon",
+    "category": "anatomy",
+    "english": "colon"
+  },
+  {
+    "id": "pancreas",
+    "category": "anatomy",
+    "english": "pancreas"
+  },
+  {
+    "id": "gallbladder",
+    "category": "anatomy",
+    "english": "gallbladder"
+  },
+  {
+    "id": "spleen",
+    "category": "anatomy",
+    "english": "spleen"
+  },
+  {
+    "id": "bladder",
+    "category": "anatomy",
+    "english": "bladder"
+  },
+  {
+    "id": "urethra",
+    "category": "anatomy",
+    "english": "urethra"
+  },
+  {
+    "id": "prostate",
+    "category": "anatomy",
+    "english": "prostate"
+  },
+  {
+    "id": "uterus",
+    "category": "anatomy",
+    "english": "uterus"
+  },
+  {
+    "id": "ovary",
+    "category": "anatomy",
+    "english": "ovary"
+  },
+  {
+    "id": "thyroid-gland",
+    "category": "anatomy",
+    "english": "thyroid gland"
+  },
+  {
+    "id": "lymph-node",
+    "category": "anatomy",
+    "english": "lymph node"
+  },
+  {
+    "id": "skin",
+    "category": "anatomy",
+    "english": "skin"
+  },
+  {
+    "id": "bone",
+    "category": "anatomy",
+    "english": "bone"
+  },
+  {
+    "id": "joint",
+    "category": "anatomy",
+    "english": "joint"
+  },
+  {
+    "id": "muscle",
+    "category": "anatomy",
+    "english": "muscle"
+  },
+  {
+    "id": "tendon",
+    "category": "anatomy",
+    "english": "tendon"
+  },
+  {
+    "id": "ligament",
+    "category": "anatomy",
+    "english": "ligament"
+  },
+  {
+    "id": "neck",
+    "category": "anatomy",
+    "english": "neck"
+  },
+  {
+    "id": "throat",
+    "category": "anatomy",
+    "english": "throat"
+  },
+  {
+    "id": "chest",
+    "category": "anatomy",
+    "english": "chest"
+  },
+  {
+    "id": "abdomen",
+    "category": "anatomy",
+    "english": "abdomen"
+  },
+  {
+    "id": "pelvis",
+    "category": "anatomy",
+    "english": "pelvis"
+  },
+  {
+    "id": "hip",
+    "category": "anatomy",
+    "english": "hip"
+  },
+  {
+    "id": "ankle",
+    "category": "anatomy",
+    "english": "ankle"
+  },
+  {
+    "id": "foot",
+    "category": "anatomy",
+    "english": "foot"
+  },
+  {
+    "id": "hand",
+    "category": "anatomy",
+    "english": "hand"
+  },
+  {
+    "id": "wrist",
+    "category": "anatomy",
+    "english": "wrist"
+  },
+  {
+    "id": "elbow",
+    "category": "anatomy",
+    "english": "elbow"
+  },
+  {
+    "id": "finger",
+    "category": "anatomy",
+    "english": "finger"
+  },
+  {
+    "id": "toe",
+    "category": "anatomy",
+    "english": "toe"
+  },
+  {
+    "id": "eye",
+    "category": "anatomy",
+    "english": "eye"
+  },
+  {
+    "id": "ear",
+    "category": "anatomy",
+    "english": "ear"
+  },
+  {
+    "id": "nose",
+    "category": "anatomy",
+    "english": "nose"
+  },
+  {
+    "id": "mouth",
+    "category": "anatomy",
+    "english": "mouth"
+  },
+  {
+    "id": "tooth",
+    "category": "anatomy",
+    "english": "tooth"
+  },
+  {
+    "id": "gum",
+    "category": "anatomy",
+    "english": "gum"
+  },
+  {
+    "id": "diabetes-mellitus",
+    "category": "diagnoses",
+    "english": "diabetes mellitus"
+  },
+  {
+    "id": "type-1-diabetes",
+    "category": "diagnoses",
+    "english": "type 1 diabetes"
+  },
+  {
+    "id": "type-2-diabetes",
+    "category": "diagnoses",
+    "english": "type 2 diabetes"
+  },
+  {
+    "id": "asthma",
+    "category": "diagnoses",
+    "english": "asthma"
+  },
+  {
+    "id": "chronic-obstructive-pulmonary-disease",
+    "category": "diagnoses",
+    "english": "chronic obstructive pulmonary disease"
+  },
+  {
+    "id": "pneumonia",
+    "category": "diagnoses",
+    "english": "pneumonia"
+  },
+  {
+    "id": "bronchitis",
+    "category": "diagnoses",
+    "english": "bronchitis"
+  },
+  {
+    "id": "influenza",
+    "category": "diagnoses",
+    "english": "influenza"
+  },
+  {
+    "id": "tuberculosis",
+    "category": "diagnoses",
+    "english": "tuberculosis"
+  },
+  {
+    "id": "stroke",
+    "category": "diagnoses",
+    "english": "stroke"
+  },
+  {
+    "id": "ischemic-stroke",
+    "category": "diagnoses",
+    "english": "ischemic stroke"
+  },
+  {
+    "id": "hemorrhagic-stroke",
+    "category": "diagnoses",
+    "english": "hemorrhagic stroke"
+  },
+  {
+    "id": "heart-failure",
+    "category": "diagnoses",
+    "english": "heart failure"
+  },
+  {
+    "id": "atrial-fibrillation",
+    "category": "diagnoses",
+    "english": "atrial fibrillation"
+  },
+  {
+    "id": "deep-vein-thrombosis",
+    "category": "diagnoses",
+    "english": "deep vein thrombosis"
+  },
+  {
+    "id": "anemia",
+    "category": "diagnoses",
+    "english": "anemia"
+  },
+  {
+    "id": "iron-deficiency-anemia",
+    "category": "diagnoses",
+    "english": "iron deficiency anemia"
+  },
+  {
+    "id": "chronic-kidney-disease",
+    "category": "diagnoses",
+    "english": "chronic kidney disease"
+  },
+  {
+    "id": "acute-kidney-injury",
+    "category": "diagnoses",
+    "english": "acute kidney injury"
+  },
+  {
+    "id": "urinary-tract-infection",
+    "category": "diagnoses",
+    "english": "urinary tract infection"
+  },
+  {
+    "id": "kidney-stone",
+    "category": "diagnoses",
+    "english": "kidney stone"
+  },
+  {
+    "id": "hepatitis",
+    "category": "diagnoses",
+    "english": "hepatitis"
+  },
+  {
+    "id": "cirrhosis",
+    "category": "diagnoses",
+    "english": "cirrhosis"
+  },
+  {
+    "id": "gastritis",
+    "category": "diagnoses",
+    "english": "gastritis"
+  },
+  {
+    "id": "peptic-ulcer",
+    "category": "diagnoses",
+    "english": "peptic ulcer"
+  },
+  {
+    "id": "gastroesophageal-reflux-disease",
+    "category": "diagnoses",
+    "english": "gastroesophageal reflux disease"
+  },
+  {
+    "id": "appendicitis",
+    "category": "diagnoses",
+    "english": "appendicitis"
+  },
+  {
+    "id": "pancreatitis",
+    "category": "diagnoses",
+    "english": "pancreatitis"
+  },
+  {
+    "id": "cholecystitis",
+    "category": "diagnoses",
+    "english": "cholecystitis"
+  },
+  {
+    "id": "hypothyroidism",
+    "category": "diagnoses",
+    "english": "hypothyroidism"
+  },
+  {
+    "id": "hyperthyroidism",
+    "category": "diagnoses",
+    "english": "hyperthyroidism"
+  },
+  {
+    "id": "osteoporosis",
+    "category": "diagnoses",
+    "english": "osteoporosis"
+  },
+  {
+    "id": "osteoarthritis",
+    "category": "diagnoses",
+    "english": "osteoarthritis"
+  },
+  {
+    "id": "rheumatoid-arthritis",
+    "category": "diagnoses",
+    "english": "rheumatoid arthritis"
+  },
+  {
+    "id": "gout",
+    "category": "diagnoses",
+    "english": "gout"
+  },
+  {
+    "id": "migraine",
+    "category": "diagnoses",
+    "english": "migraine"
+  },
+  {
+    "id": "epilepsy",
+    "category": "diagnoses",
+    "english": "epilepsy"
+  },
+  {
+    "id": "depression",
+    "category": "diagnoses",
+    "english": "depression"
+  },
+  {
+    "id": "anxiety-disorder",
+    "category": "diagnoses",
+    "english": "anxiety disorder"
+  },
+  {
+    "id": "anaphylaxis",
+    "category": "diagnoses",
+    "english": "anaphylaxis"
+  },
+  {
+    "id": "sepsis",
+    "category": "diagnoses",
+    "english": "sepsis"
+  },
+  {
+    "id": "dehydration",
+    "category": "diagnoses",
+    "english": "dehydration"
+  },
+  {
+    "id": "fracture",
+    "category": "diagnoses",
+    "english": "fracture"
+  },
+  {
+    "id": "sprain",
+    "category": "diagnoses",
+    "english": "sprain"
+  },
+  {
+    "id": "burn",
+    "category": "diagnoses",
+    "english": "burn"
+  },
+  {
+    "id": "concussion",
+    "category": "diagnoses",
+    "english": "concussion"
+  },
+  {
+    "id": "physical-examination",
+    "category": "examinations",
+    "english": "physical examination"
+  },
+  {
+    "id": "blood-test",
+    "category": "examinations",
+    "english": "blood test"
+  },
+  {
+    "id": "urinalysis",
+    "category": "examinations",
+    "english": "urinalysis"
+  },
+  {
+    "id": "complete-blood-count",
+    "category": "examinations",
+    "english": "complete blood count"
+  },
+  {
+    "id": "platelet-count",
+    "category": "examinations",
+    "english": "platelet count"
+  },
+  {
+    "id": "white-blood-cell-count",
+    "category": "examinations",
+    "english": "white blood cell count"
+  },
+  {
+    "id": "creatinine",
+    "category": "examinations",
+    "english": "creatinine"
+  },
+  {
+    "id": "urea",
+    "category": "examinations",
+    "english": "urea"
+  },
+  {
+    "id": "potassium",
+    "category": "examinations",
+    "english": "potassium"
+  },
+  {
+    "id": "sodium",
+    "category": "examinations",
+    "english": "sodium"
+  },
+  {
+    "id": "calcium",
+    "category": "examinations",
+    "english": "calcium"
+  },
+  {
+    "id": "magnesium",
+    "category": "examinations",
+    "english": "magnesium"
+  },
+  {
+    "id": "bilirubin",
+    "category": "examinations",
+    "english": "bilirubin"
+  },
+  {
+    "id": "alanine-aminotransferase",
+    "category": "examinations",
+    "english": "alanine aminotransferase"
+  },
+  {
+    "id": "aspartate-aminotransferase",
+    "category": "examinations",
+    "english": "aspartate aminotransferase"
+  },
+  {
+    "id": "c-reactive-protein",
+    "category": "examinations",
+    "english": "C reactive protein"
+  },
+  {
+    "id": "erythrocyte-sedimentation-rate",
+    "category": "examinations",
+    "english": "erythrocyte sedimentation rate"
+  },
+  {
+    "id": "glycated-hemoglobin",
+    "category": "examinations",
+    "english": "glycated hemoglobin"
+  },
+  {
+    "id": "total-cholesterol",
+    "category": "examinations",
+    "english": "total cholesterol"
+  },
+  {
+    "id": "low-density-lipoprotein-cholesterol",
+    "category": "examinations",
+    "english": "low density lipoprotein cholesterol"
+  },
+  {
+    "id": "high-density-lipoprotein-cholesterol",
+    "category": "examinations",
+    "english": "high density lipoprotein cholesterol"
+  },
+  {
+    "id": "triglycerides",
+    "category": "examinations",
+    "english": "triglycerides"
+  },
+  {
+    "id": "troponin",
+    "category": "examinations",
+    "english": "troponin"
+  },
+  {
+    "id": "d-dimer",
+    "category": "examinations",
+    "english": "D dimer"
+  },
+  {
+    "id": "ferritin",
+    "category": "examinations",
+    "english": "ferritin"
+  },
+  {
+    "id": "thyroid-stimulating-hormone",
+    "category": "examinations",
+    "english": "thyroid stimulating hormone"
+  },
+  {
+    "id": "ultrasound",
+    "category": "examinations",
+    "english": "ultrasound"
+  },
+  {
+    "id": "x-ray",
+    "category": "examinations",
+    "english": "X ray"
+  },
+  {
+    "id": "echocardiography",
+    "category": "examinations",
+    "english": "echocardiography"
+  },
+  {
+    "id": "endoscopy",
+    "category": "examinations",
+    "english": "endoscopy"
+  },
+  {
+    "id": "colonoscopy",
+    "category": "examinations",
+    "english": "colonoscopy"
+  },
+  {
+    "id": "biopsy",
+    "category": "examinations",
+    "english": "biopsy"
+  },
+  {
+    "id": "blood-culture",
+    "category": "examinations",
+    "english": "blood culture"
+  },
+  {
+    "id": "urine-culture",
+    "category": "examinations",
+    "english": "urine culture"
+  },
+  {
+    "id": "spirometry",
+    "category": "examinations",
+    "english": "spirometry"
+  },
+  {
+    "id": "pulse-oximetry",
+    "category": "examinations",
+    "english": "pulse oximetry"
+  },
+  {
+    "id": "furosemide",
+    "category": "medicines",
+    "english": "furosemide"
+  },
+  {
+    "id": "spironolactone",
+    "category": "medicines",
+    "english": "spironolactone"
+  },
+  {
+    "id": "hydrochlorothiazide",
+    "category": "medicines",
+    "english": "hydrochlorothiazide"
+  },
+  {
+    "id": "valsartan",
+    "category": "medicines",
+    "english": "valsartan"
+  },
+  {
+    "id": "ramipril",
+    "category": "medicines",
+    "english": "ramipril"
+  },
+  {
+    "id": "nitroglycerin",
+    "category": "medicines",
+    "english": "nitroglycerin"
+  },
+  {
+    "id": "digoxin",
+    "category": "medicines",
+    "english": "digoxin"
+  },
+  {
+    "id": "amiodarone",
+    "category": "medicines",
+    "english": "amiodarone"
+  },
+  {
+    "id": "apixaban",
+    "category": "medicines",
+    "english": "apixaban"
+  },
+  {
+    "id": "rivaroxaban",
+    "category": "medicines",
+    "english": "rivaroxaban"
+  },
+  {
+    "id": "heparin",
+    "category": "medicines",
+    "english": "heparin"
+  },
+  {
+    "id": "enoxaparin",
+    "category": "medicines",
+    "english": "enoxaparin"
+  },
+  {
+    "id": "azithromycin",
+    "category": "medicines",
+    "english": "azithromycin"
+  },
+  {
+    "id": "clarithromycin",
+    "category": "medicines",
+    "english": "clarithromycin"
+  },
+  {
+    "id": "doxycycline",
+    "category": "medicines",
+    "english": "doxycycline"
+  },
+  {
+    "id": "ceftriaxone",
+    "category": "medicines",
+    "english": "ceftriaxone"
+  },
+  {
+    "id": "cephalexin",
+    "category": "medicines",
+    "english": "cephalexin"
+  },
+  {
+    "id": "ciprofloxacin",
+    "category": "medicines",
+    "english": "ciprofloxacin"
+  },
+  {
+    "id": "metronidazole",
+    "category": "medicines",
+    "english": "metronidazole"
+  },
+  {
+    "id": "fluconazole",
+    "category": "medicines",
+    "english": "fluconazole"
+  },
+  {
+    "id": "acyclovir",
+    "category": "medicines",
+    "english": "acyclovir"
+  },
+  {
+    "id": "oseltamivir",
+    "category": "medicines",
+    "english": "oseltamivir"
+  },
+  {
+    "id": "prednisolone",
+    "category": "medicines",
+    "english": "prednisolone"
+  },
+  {
+    "id": "dexamethasone",
+    "category": "medicines",
+    "english": "dexamethasone"
+  },
+  {
+    "id": "hydrocortisone",
+    "category": "medicines",
+    "english": "hydrocortisone"
+  },
+  {
+    "id": "budesonide",
+    "category": "medicines",
+    "english": "budesonide"
+  },
+  {
+    "id": "ipratropium",
+    "category": "medicines",
+    "english": "ipratropium"
+  },
+  {
+    "id": "levothyroxine",
+    "category": "medicines",
+    "english": "levothyroxine"
+  },
+  {
+    "id": "gliclazide",
+    "category": "medicines",
+    "english": "gliclazide"
+  },
+  {
+    "id": "empagliflozin",
+    "category": "medicines",
+    "english": "empagliflozin"
+  },
+  {
+    "id": "semaglutide",
+    "category": "medicines",
+    "english": "semaglutide"
+  },
+  {
+    "id": "ondansetron",
+    "category": "medicines",
+    "english": "ondansetron"
+  },
+  {
+    "id": "metoclopramide",
+    "category": "medicines",
+    "english": "metoclopramide"
+  },
+  {
+    "id": "pantoprazole",
+    "category": "medicines",
+    "english": "pantoprazole"
+  },
+  {
+    "id": "loperamide",
+    "category": "medicines",
+    "english": "loperamide"
+  },
+  {
+    "id": "cetirizine",
+    "category": "medicines",
+    "english": "cetirizine"
+  },
+  {
+    "id": "loratadine",
+    "category": "medicines",
+    "english": "loratadine"
+  },
+  {
+    "id": "epinephrine",
+    "category": "medicines",
+    "english": "epinephrine"
+  },
+  {
+    "id": "morphine",
+    "category": "medicines",
+    "english": "morphine"
+  },
+  {
+    "id": "tramadol",
+    "category": "medicines",
+    "english": "tramadol"
+  },
+  {
+    "id": "diclofenac",
+    "category": "medicines",
+    "english": "diclofenac"
+  },
+  {
+    "id": "naproxen",
+    "category": "medicines",
+    "english": "naproxen"
+  },
+  {
+    "id": "lidocaine",
+    "category": "medicines",
+    "english": "lidocaine"
+  },
+  {
+    "id": "sertraline",
+    "category": "medicines",
+    "english": "sertraline"
+  },
+  {
+    "id": "fluoxetine",
+    "category": "medicines",
+    "english": "fluoxetine"
+  },
+  {
+    "id": "diazepam",
+    "category": "medicines",
+    "english": "diazepam"
+  },
+  {
+    "id": "lorazepam",
+    "category": "medicines",
+    "english": "lorazepam"
+  },
+  {
+    "id": "levetiracetam",
+    "category": "medicines",
+    "english": "levetiracetam"
+  },
+  {
+    "id": "inhalation",
+    "category": "care",
+    "english": "inhalation"
+  },
+  {
+    "id": "rectally",
+    "category": "care",
+    "english": "rectally"
+  },
+  {
+    "id": "eye-drops",
+    "category": "care",
+    "english": "eye drops"
+  },
+  {
+    "id": "ear-drops",
+    "category": "care",
+    "english": "ear drops"
+  },
+  {
+    "id": "nasal-spray",
+    "category": "care",
+    "english": "nasal spray"
+  },
+  {
+    "id": "tablet",
+    "category": "care",
+    "english": "tablet"
+  },
+  {
+    "id": "capsule",
+    "category": "care",
+    "english": "capsule"
+  },
+  {
+    "id": "oral-solution",
+    "category": "care",
+    "english": "oral solution"
+  },
+  {
+    "id": "injection",
+    "category": "care",
+    "english": "injection"
+  },
+  {
+    "id": "infusion",
+    "category": "care",
+    "english": "infusion"
+  },
+  {
+    "id": "ointment",
+    "category": "care",
+    "english": "ointment"
+  },
+  {
+    "id": "cream",
+    "category": "care",
+    "english": "cream"
+  },
+  {
+    "id": "suppository",
+    "category": "care",
+    "english": "suppository"
+  },
+  {
+    "id": "dressing",
+    "category": "care",
+    "english": "dressing"
+  },
+  {
+    "id": "suture",
+    "category": "care",
+    "english": "suture"
+  },
+  {
+    "id": "vaccination",
+    "category": "care",
+    "english": "vaccination"
+  },
+  {
+    "id": "surgery",
+    "category": "care",
+    "english": "surgery"
+  },
+  {
+    "id": "local-anesthesia",
+    "category": "care",
+    "english": "local anesthesia"
+  },
+  {
+    "id": "general-anesthesia",
+    "category": "care",
+    "english": "general anesthesia"
+  },
+  {
+    "id": "oxygen-therapy",
+    "category": "care",
+    "english": "oxygen therapy"
+  },
+  {
+    "id": "blood-transfusion",
+    "category": "care",
+    "english": "blood transfusion"
+  },
+  {
+    "id": "dialysis",
+    "category": "care",
+    "english": "dialysis"
+  },
+  {
+    "id": "rehabilitation",
+    "category": "care",
+    "english": "rehabilitation"
+  },
+  {
+    "id": "follow-up-appointment",
+    "category": "care",
+    "english": "follow up appointment"
+  },
+  {
+    "id": "informed-consent",
+    "category": "care",
+    "english": "informed consent"
+  },
+  {
+    "id": "contraindication",
+    "category": "care",
+    "english": "contraindication"
+  },
+  {
+    "id": "side-effect",
+    "category": "care",
+    "english": "side effect"
+  },
+  {
+    "id": "overdose",
+    "category": "care",
+    "english": "overdose"
+  },
+  {
+    "id": "drug-interaction",
+    "category": "care",
+    "english": "drug interaction"
+  },
+  {
+    "id": "pregnancy",
+    "category": "care",
+    "english": "pregnancy"
+  },
+  {
+    "id": "breastfeeding",
+    "category": "care",
+    "english": "breastfeeding"
+  },
+  {
+    "id": "fasting",
+    "category": "care",
+    "english": "fasting"
+  },
+  {
+    "id": "before-meals",
+    "category": "care",
+    "english": "before meals"
+  },
+  {
+    "id": "after-meals",
+    "category": "care",
+    "english": "after meals"
+  },
+  {
+    "id": "once-daily",
+    "category": "care",
+    "english": "once daily"
+  },
+  {
+    "id": "every-other-day",
+    "category": "care",
+    "english": "every other day"
+  },
+  {
+    "id": "every-8-hours",
+    "category": "care",
+    "english": "every 8 hours"
+  },
+  {
+    "id": "millimole-per-liter",
+    "category": "care",
+    "english": "millimole per liter"
+  },
+  {
+    "id": "milligram-per-deciliter",
+    "category": "care",
+    "english": "milligram per deciliter"
+  },
+  {
+    "id": "beats-per-minute",
+    "category": "care",
+    "english": "beats per minute"
+  },
+  {
+    "id": "oxygen-saturation",
+    "category": "care",
+    "english": "oxygen saturation"
+  }
+]

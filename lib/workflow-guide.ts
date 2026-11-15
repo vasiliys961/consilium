@@ -1,0 +1,15 @@
+import type { CaseFile, CaseResult } from './conductor.ts';
+import type { CaseSection } from './physician-guide.ts';
+export type GuideAction={label:string;target:CaseSection;retry?:boolean};
+export interface WorkflowGuide{stage:'collect'|'ready'|'running'|'resolve'|'review'|'decide'|'followup';title:string;detail:string;actions:GuideAction[];questions:string[]}
+export function workflowGuide(input:{context:string;files:readonly CaseFile[];result?:CaseResult;busy?:boolean;changed?:boolean;decision?:boolean}):WorkflowGuide {
+ const {result}=input;
+ if(input.busy)return {stage:'running',title:'Веду разбор материалов',detail:'Проверяю входные данные, читаю доступные материалы и формирую ответ по выбранной задаче. Не запускайте повторный запрос.',actions:[],questions:[]};
+ if(!input.context.trim()&&!input.files.length)return {stage:'collect',title:'Начнём с клинической задачи',detail:'Опишите вопрос или добавьте исследование. Вопрос «что здесь» допустим, если к нему прикреплён читаемый материал.',actions:[{label:'Описать задачу',target:'context'},{label:'Добавить материалы',target:'materials'}],questions:[]};
+ if(result?.unassessed.length)return {stage:'resolve',title:'Есть непрочитанные материалы',detail:result.unassessed.map(name=>`${name}: ${result.ledger.find(row=>row.source===name)?.reason||'Разбор не выполнен'}`).join('\n'),actions:[{label:'Проверить материалы',target:'materials'},{label:'Посмотреть доступный ответ',target:'analysis'}],questions:result.draft.report?.questions??[]};
+ if(input.changed)return {stage:'ready',title:'Данные изменились после разбора',detail:'Новый вопрос, материалы или записи динамики ещё не учтены в предыдущем заключении. Повторите разбор, чтобы сопоставить их.',actions:[{label:'К новому разбору',target:'analysis'}],questions:[]};
+ if(!result)return {stage:'ready',title:'Материалы готовы к разбору',detail:'Выберите задачу: прочитать материалы, провести диагностический разбор, обсудить лечебную тактику или найти доказательства. Консилиум подключается отдельно.',actions:[{label:'Перейти к разбору',target:'analysis'}],questions:[]};
+ if(result.clinicalDraft!=='generated')return {stage:'resolve',title:'Итоговый ответ не получен',detail:result.draft.summary,actions:[{label:'Проверить входные данные',target:'materials'},{label:'Повторить разбор',target:'analysis',retry:true}],questions:[]};
+ if(!input.decision)return {stage:result.draft.report?.questions.length?'review':'decide',title:'Проверьте выводы и уточнения',detail:'Сопоставьте заключение с исходными материалами и источниками. Затем зафиксируйте собственное решение; это не автоматическое назначение.',actions:[{label:'Проверить разбор',target:'analysis'},{label:'Записать решение',target:'decision'}],questions:result.draft.report?.questions??[]};
+ return {stage:'followup',title:'Следующий шаг — наблюдение',detail:'Запишите новые результаты и ответ на выбранную тактику. Они войдут в следующий разбор. Сохраните случай перед выходом.',actions:[{label:'Добавить динамику',target:'followup'},{label:'Посмотреть решение',target:'decision'}],questions:[]};
+}

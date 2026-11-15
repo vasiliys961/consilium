@@ -1,0 +1,299 @@
+.cs-page{min-height:100vh;background:#edf3f6;color:#283e4e;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.cs-page *{box-sizing:border-box}
+.cs-top{height:67px;background:#142733;display:flex;align-items:center;justify-content:space-between;gap:20px;color:#9eb8c3;padding:0 3.5%;font-size:11px;letter-spacing:.07em}
+.cs-top a{color:#71e0c2;text-decoration:none;font-weight:800;font-size:16px;letter-spacing:-.04em}
+.cs-container{max-width:1660px;margin:auto;padding:34px 3.5% 70px}
+.cs-intro{display:flex;justify-content:space-between;align-items:center;gap:22px;margin-bottom:30px}
+.cs-intro h1{font-size:clamp(30px,3vw,43px);letter-spacing:-.055em;margin:3px 0 5px;line-height:1.1}.cs-intro h1 em{font-style:normal;color:#159d89}
+.cs-intro p{color:#7f909d;font-size:13px;margin:7px 0 0}
+.cs-kicker{font-size:10px;letter-spacing:.19em;color:#0d998c;font-weight:800}
+.cs-watermark{font-weight:700;color:#a26848;font-size:10px;background:#fff4ea;border:1px solid #efded0;padding:10px;border-radius:7px;text-align:center}
+.cs-layout{display:grid;grid-template-columns:315px minmax(0,1fr);gap:20px}
+.cs-sidebar{background:white;border:1px solid #dfe8ed;border-radius:13px;padding:20px;align-self:start}
+.cs-sidebar h2{font-size:17px;margin:0 0 5px}.cs-sidebar h3{font-size:12px;margin:20px 0 9px}.cs-sidebar>p{font-size:11px;color:#8296a4;margin:0 0 22px}
+.cs-load-actions{display:grid;gap:9px}
+.cs-picker{display:block;position:static;background:#109d8b;color:white;text-align:center;font-size:12px;font-weight:700;padding:12px;border-radius:7px;cursor:pointer}.cs-picker input{display:none}
+.cs-load-actions .cs-outline{margin-top:0}
+.cs-add-projection input{display:none}
+.cs-add-projection:has(input:disabled){opacity:.5;cursor:not-allowed}
+.cs-outline,.cs-clear{display:block;width:100%;background:white;border:1px solid #bcd7d4;color:#087d72;text-align:center;padding:11px;margin-top:9px;border-radius:7px;font-size:12px;cursor:pointer}
+.cs-clear{color:#7f909d;border-color:#e0e8eb;margin-top:20px}
+.cs-hidden{display:none}.cs-page button:disabled{opacity:.5;cursor:not-allowed}
+.cs-message{background:#eff6f5;padding:12px 13px;color:#526d77;border-radius:8px;font-size:11px;line-height:1.6;margin-top:15px;overflow-wrap:anywhere}
+.cs-series-list{display:grid;gap:6px;max-height:350px;overflow:auto}.cs-series{width:100%;border:1px solid #e2eaec;border-radius:7px;background:#f7fafb;padding:10px;text-align:left;color:#547182;font-size:11px;cursor:pointer}.cs-series.active{background:#e0f6ed;border-color:#79d5c2;color:#087d6d}
+.cs-geometry{border-top:1px solid #e7eef1;margin-top:22px}.cs-geometry p{font-size:11px;color:#6f8290;line-height:1.6;margin:6px 0}
+.cs-stage{min-width:0}.cs-stack{border-radius:12px;background:#132633;overflow:hidden;border:1px solid #304656;box-shadow:0 10px 30px #243f4911;position:relative}
+.cs-view-header{display:flex;align-items:center;gap:16px;padding:15px 20px;min-height:64px;color:white;background:#1b3442}.cs-view-header strong{white-space:nowrap}.cs-view-header span{font-size:10px;color:#a9c0cb;flex:1}.cs-view-header button{font-size:11px;background:#244654;color:#b8e9df;border:1px solid #406174;padding:7px 12px;border-radius:6px;cursor:pointer}
+.cs-image{height:min(68vh,680px);min-height:410px;width:100%;position:relative;background:#070f17;outline:none;overscroll-behavior:contain;touch-action:none}.cs-image:focus{outline:1px solid #41d4ae;outline-offset:-1px}
+.cs-loading{position:absolute;top:78px;right:15px;color:#6ae5c6;background:#1c3844;padding:6px 11px;border-radius:6px;font-size:11px;pointer-events:none}
+.cs-error{font-size:12px;background:#53272d;color:#ffd5d8;padding:12px 15px;overflow-wrap:anywhere}
+.cs-slider-row{display:flex;align-items:center;gap:13px;padding:15px 20px;color:#d5e5eb;font-size:12px;background:#172c3a}.cs-slider-row input{flex:1;accent-color:#18c4a2;min-width:90px}.cs-slider-row button{width:32px;height:32px;border:1px solid #47616b;background:#264352;color:white;border-radius:7px;cursor:pointer}
+.cs-placeholder{min-height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;background:#142a37;border:1px solid #2d4755;border-radius:12px;color:#d0e5e8;padding:40px}.cs-placeholder span{color:#30c9a6;font-size:54px}.cs-placeholder p{font-size:12px;color:#86a3b1;max-width:300px}
+.cs-bottom-note{margin-top:14px;color:#8a9daa;font-size:11px;line-height:1.65}
+@media(max-width:950px){.cs-layout{grid-template-columns:1fr}.cs-sidebar{max-width:none}.cs-intro{display:block}.cs-watermark{display:inline-block;margin-top:15px}.cs-image{height:480px}.cs-top span:last-child{display:none}}
+
+/* Integrated workstation imaging controls. This layout is also used on /viewer. */
+.cs-tools,.cs-window-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;background:#203644;border-bottom:1px solid #35515c;color:#c3e1e4}
+.cs-window-row{background:#172e3b}
+.cs-tool-group,.cs-preset-list{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.cs-tools button,.cs-window-row button{border:1px solid #466374;background:#2b4958;border-radius:6px;color:#d6eaf0;padding:6px 9px;font-size:11px;cursor:pointer;min-height:30px}
+.cs-tools button.active{background:#117e77;border-color:#34b6a1;color:#fff}
+.cs-tools button:hover:not(:disabled),.cs-window-row button:hover:not(:disabled){border-color:#58cbb4;color:#fff}
+.cs-tools button:disabled,.cs-window-row button:disabled{opacity:.5;cursor:not-allowed}
+.cs-zoom-readout{color:#cde4e6;font-size:11px;min-width:44px;text-align:center}
+.cs-window-row label{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.cs-window-row input{background:#0d2431;border:1px solid #4b6976;color:#e4eff0;outline:none;width:76px;max-width:100px;border-radius:5px;padding:6px;font-size:11px}
+.cs-window-row input:focus{border-color:#57cdb4}
+.cs-preset-list{border-left:1px solid #385362;margin-left:3px;padding-left:9px}
+.cs-hint{font-size:10px;color:#8cb2bc;background:#132633;padding:7px 13px;line-height:1.5}
+.cs-image[data-tool="pan"]{cursor:grab}.cs-image[data-tool="pan"]:active{cursor:grabbing}
+.cs-image[data-tool="window"]{cursor:crosshair}
+.cs-stack:fullscreen,.cs-stack:-webkit-full-screen{display:flex;flex-direction:column;width:100vw;height:100vh;border-radius:0;background:#10212b}
+.cs-stack:fullscreen .cs-image,.cs-stack:-webkit-full-screen .cs-image{height:auto;min-height:0;flex:1}
+.cs-stack:fullscreen .cs-view-header,.cs-stack:-webkit-full-screen .cs-view-header{min-height:48px;padding:9px 15px}
+@media(max-width:670px){.cs-tools,.cs-window-row{padding:8px}.cs-preset-list{border-left:0;padding-left:0}.cs-hint{font-size:9px}}
+/* MPR lives in the same imaging area as the conventional DICOM stack. */
+.ora-mode-actions{display:flex;align-items:center;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+.ora-mpr-toggle{background:#284b59;border:1px solid #4b7d81;color:#c7f0e8;font-size:10px;font-weight:750;border-radius:7px;padding:9px 11px;cursor:pointer;white-space:nowrap}
+.ora-mpr-toggle.active{background:#0d9788;color:white}
+.ora-mpr-toggle:disabled{opacity:.45;cursor:not-allowed}
+.ora-mpr{background:#101e28;color:#d7e9ee;padding:10px}
+.ora-mpr-status{font-size:11px;color:#a7cfd0;padding:9px 7px 12px}
+.ora-mpr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ora-mpr-plane{min-width:0;position:relative;background:#02090d;border:1px solid #385160;border-radius:6px;overflow:hidden}
+.ora-mpr-plane span{position:absolute;z-index:2;top:8px;left:8px;font-size:9px;font-weight:800;color:#71d8c1;pointer-events:none;text-shadow:0 1px 3px #000}
+.ora-mpr-plane>div{width:100%;height:225px;min-height:0;touch-action:none}
+.ora-mpr-plane:first-child{grid-column:1/-1}
+.ora-mpr-plane:first-child>div{height:290px}
+.ora-mpr-warning{color:#8faebb;line-height:1.5;font-size:10px;padding:8px 3px 1px;margin:0}
+@media(max-width:700px){.ora-mpr-grid{grid-template-columns:1fr}.ora-mpr-plane:first-child{grid-column:auto}.ora-mpr-plane>div,.ora-mpr-plane:first-child>div{height:250px}}
+/* v0.9: independent MPR slice controls and linked patient-space crosshairs. */
+.ora-mpr-status{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ora-mpr-status button{border:1px solid #426d70;border-radius:6px;background:#193c46;color:#89e7d3;padding:6px 10px;font-size:10px;cursor:pointer}
+.ora-mpr-status button:disabled{opacity:.45;cursor:not-allowed}
+.ora-mpr-plane>.ora-mpr-surface{height:225px;position:relative;cursor:crosshair;outline:none;overscroll-behavior:contain;touch-action:pan-x}
+.ora-mpr-plane:first-child>.ora-mpr-surface{height:290px}
+.ora-mpr-surface:focus-visible{outline:2px solid #5ef6ca;outline-offset:-2px}
+.ora-mpr-canvas{height:100%;width:100%}
+.ora-mpr-surface>.ora-mpr-plane-label{position:absolute;z-index:3;top:8px;left:8px;font-size:9px;font-weight:800;color:#71d8c1;pointer-events:none;text-shadow:0 1px 3px #000}
+.ora-mpr-crosshair{position:absolute;z-index:2;width:0;height:0;pointer-events:none;}
+.ora-mpr-crosshair:before,.ora-mpr-crosshair:after{content:"";display:block;position:absolute;background:rgba(105,232,211,.7);pointer-events:none}
+.ora-mpr-crosshair:before{width:1px;height:2000px;top:-1000px;left:0}
+.ora-mpr-crosshair:after{height:1px;width:2000px;left:-1000px;top:0}
+.ora-mpr-controls{display:flex;align-items:center;gap:8px;padding:9px 11px;background:#18303d;color:#b8d1d7;font-size:10px;min-height:45px}
+.ora-mpr-controls label{white-space:nowrap;min-width:66px}
+.ora-mpr-controls input{flex:1;min-width:45px;accent-color:#33bda5;cursor:pointer}
+.ora-mpr-controls button{border:1px solid #3d6270;border-radius:5px;background:#284758;color:#e5f4f5;width:28px;height:28px;cursor:pointer}
+.ora-mpr-controls button:disabled{opacity:.4;cursor:not-allowed}
+@media(max-width:700px){.ora-mpr-plane>.ora-mpr-surface,.ora-mpr-plane:first-child>.ora-mpr-surface{height:250px}}
+
+/* v1.0: show sampling limitations explicitly and prioritize the source plane. */
+.ora-mpr-quality{border:1px solid #456271;background:#173240;color:#b9d5db;border-radius:7px;padding:10px 12px;margin-bottom:10px;font-size:11px;line-height:1.5}
+.ora-mpr-quality-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ora-mpr-quality-top strong{color:#e6f4f2}.ora-mpr-quality-top span{font-variant-numeric:tabular-nums;color:#9ce2ce}
+.ora-mpr-quality p{margin:7px 0;color:#b6cbd3}.ora-mpr-quality p.ora-mpr-quality-warn{color:#ffd29f}
+.ora-mpr-interpolation{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin:10px 0 5px}
+.ora-mpr-interpolation span{color:#c9e0e5;margin-right:5px}
+.ora-mpr-interpolation button{background:#294a58;border:1px solid #587785;color:#d5e6e8;border-radius:5px;padding:5px 9px;font-size:11px;cursor:pointer}
+.ora-mpr-interpolation button.active{background:#0d887b;border-color:#42b5a2;color:white}
+.ora-mpr-interpolation button:disabled{opacity:.45;cursor:not-allowed}
+.ora-mpr-quality small{color:#92afbc;display:block;font-size:10px}
+.ora-mpr-plane:first-child:not(.ora-mpr-featured){grid-column:auto}
+.ora-mpr-plane.ora-mpr-featured{grid-column:1/-1;grid-row:1}
+.ora-mpr-plane:first-child:not(.ora-mpr-featured)>.ora-mpr-surface{height:225px}
+.ora-mpr-plane.ora-mpr-featured>.ora-mpr-surface{height:310px}
+.ora-mpr-native-label{position:static;background:#17323a;color:#87d6c8;font-size:10px;padding:6px 10px;border-bottom:1px solid #355665}
+@media(max-width:700px){.ora-mpr-plane.ora-mpr-featured{grid-column:auto}.ora-mpr-plane.ora-mpr-featured>.ora-mpr-surface{height:250px}}
+
+/* v1.1: previous `.ora-mpr-plane > div` sized ALL divs, including the
+   controls. Only the image surface should have a fixed viewing height. */
+.ora-mpr-grid{align-items:start}
+.ora-mpr-plane{display:flex;flex-direction:column;align-self:start}
+.ora-mpr-plane > .ora-mpr-controls,
+.ora-mpr-plane:first-child > .ora-mpr-controls{
+  height:auto;min-height:44px;flex:0 0 auto;touch-action:auto;
+}
+.ora-mpr-plane > .ora-mpr-native-label{height:auto;flex:none}
+.ora-mpr-plane > .ora-mpr-surface{flex:0 0 auto}
+.ora-mpr-3d-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#16313d;border:1px solid #385b61;border-radius:7px;padding:10px;margin:9px 0}
+.ora-mpr-3d-toolbar button{border:1px solid #36a898;border-radius:6px;background:#0f766f;color:white;font-size:11px;font-weight:700;padding:8px 12px;cursor:pointer}
+.ora-mpr-3d-toolbar button.active{background:#214655}
+.ora-mpr-3d-toolbar button:disabled{opacity:.45}
+.ora-mpr-3d-toolbar span{color:#9fbdc4;font-size:10px;flex:1}
+.ora-mpr-3d-warning{font-size:11px;line-height:1.55;color:#ffce98;background:#46331e;border:1px solid #85603d;border-radius:7px;padding:10px 12px}
+.ora-mpr-3d-panel{display:none;grid-column:1/-1;min-width:0;border:1px solid #41616a;background:#041015;border-radius:8px;overflow:hidden}
+.ora-mpr-3d-panel.visible{display:block}
+.ora-mpr-3d-title{display:flex;justify-content:space-between;gap:6px;align-items:center;padding:9px 12px;background:#183443;color:#e1f1f2;font-size:12px}
+.ora-mpr-3d-title span{font-size:10px;color:#93b7c0}
+.ora-mpr-3d-canvas{height:360px;max-height:65vh;width:100%;position:relative;touch-action:none;cursor:grab;background:#030c12}
+.ora-mpr-3d-canvas:active{cursor:grabbing}
+.ora-mpr-3d-actions{display:flex;gap:8px;padding:8px 10px;background:#142e3a}
+.ora-mpr-3d-actions button{padding:7px 12px;background:#274958;color:#d6f0eb;border:1px solid #406c77;border-radius:6px;font-size:11px;cursor:pointer}
+.ora-mpr-3d-actions button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:700px){.ora-mpr-3d-canvas{height:270px}}
+.ora-mpr-plane:first-child > .ora-mpr-native-label{height:auto}
+
+/* v1.2: 3D is a first-class viewing mode, visible beside 2D and MPR. */
+.ora-mode-buttons{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.ora-mode-buttons .ora-mpr-toggle{padding:7px 9px}
+.ora-mpr-3d-panel.visible{display:block;margin:9px 0 12px}
+
+/* v1.3 — volume transfer-function controls; shared 3D viewport, no extra GPU volume. */
+.ora-mpr-render-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;padding:12px 14px;background:#102b37;border-bottom:1px solid #345664}
+.ora-mpr-render-modes{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.ora-mpr-render-controls button{border:1px solid #496979;background:#2b4857;color:#d8eceb;border-radius:6px;padding:8px 10px;font-size:11px;cursor:pointer}
+.ora-mpr-render-controls button.active{background:#0b8d83;border-color:#39cfb0;color:white}
+.ora-mpr-render-controls button:disabled{opacity:.45;cursor:not-allowed}
+.ora-mpr-render-controls label{display:grid;gap:6px;color:#bfdae0;font-size:11px}
+.ora-mpr-render-controls label b{float:right;color:#8be4ca;font-variant-numeric:tabular-nums}
+.ora-mpr-render-controls input{width:100%;accent-color:#35c6a9}
+.ora-mpr-render-controls p{grid-column:1/-1;color:#8caeb8;font-size:10px;line-height:1.5;margin:0}
+.ora-mpr-3d-canvas{height:clamp(320px,52vh,580px)}
+.ora-mpr-3d-actions{flex-wrap:wrap}
+@media(max-width:650px){.ora-mpr-render-controls{grid-template-columns:1fr}.ora-mpr-3d-canvas{height:310px}}
+
+/* Expanded workspace keeps the same canvas and shared volume mounted. */
+.ora-mpr-3d-title button{border:1px solid #4c7c80;background:#224b55;color:#d8f4ec;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:11px;white-space:nowrap}
+.ora-mpr-3d-title button:disabled{opacity:.4;cursor:not-allowed}
+.ora-mpr-render-controls select{width:100%;min-width:0;background:#183c49;color:#e1f2ef;border:1px solid #476b77;border-radius:5px;padding:7px;font-size:11px}
+.ora-mpr-volume-stats{display:flex;gap:5px 16px;flex-wrap:wrap;margin:8px 0;font-variant-numeric:tabular-nums}
+.ora-mpr-volume-stats b{color:#a9e8d9}
+.ora-mpr-3d-panel.expanded.visible{position:fixed;inset:12px;z-index:1000;margin:0;display:flex;flex-direction:column;box-shadow:0 0 0 20px #06121de6,0 15px 60px #0009}
+.ora-mpr-3d-panel.expanded .ora-mpr-3d-title,.ora-mpr-3d-panel.expanded .ora-mpr-3d-actions{flex-shrink:0}
+.ora-mpr-3d-panel.expanded .ora-mpr-render-controls{grid-template-columns:repeat(3,minmax(0,1fr));max-height:38vh;overflow:auto;flex-shrink:0}
+.ora-mpr-3d-panel.expanded .ora-mpr-3d-canvas{flex:1;min-height:120px;height:auto;max-height:none}
+.ora-mpr-3d-panel.expanded .cs-error{flex-shrink:0}
+@media(max-width:650px){.ora-mpr-3d-panel.expanded.visible{inset:4px}.ora-mpr-3d-panel.expanded .ora-mpr-render-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.ora-mpr-3d-title{flex-wrap:wrap}.ora-mpr-3d-title span{flex-basis:100%;order:3}}
+
+/* Discrete label overlay: same physical plane, bounded display raster, no ID smoothing. */
+.ora-mpr-mask-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;image-rendering:pixelated}
+.ora-mask-controls{border:1px solid #3d6b64;border-radius:7px;background:#14312f;margin:10px 0;padding:12px;color:#cbe3dc;font-size:11px;line-height:1.5}
+.ora-mask-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ora-mask-heading strong{color:#ddf8eb}.ora-mask-heading span{color:#86cab0;font-size:10px}
+.ora-mask-controls p{margin:8px 0}.ora-mask-controls small{display:block;color:#9abfb2;font-size:10px;line-height:1.5}
+.ora-mask-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ora-mask-actions button{background:#236752;border:1px solid #479778;color:#eefaf5;border-radius:5px;font-size:11px;padding:7px 10px;cursor:pointer}
+.ora-mask-actions button:disabled{opacity:.4;cursor:not-allowed}
+.ora-mask-controls .ora-mask-error{color:#ffc7ac}.ora-mask-controls .ora-mask-success{color:#8ce1b6;overflow-wrap:anywhere}
+.ora-mask-settings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:10px;margin:12px 0;align-items:center}
+.ora-mask-settings label{display:grid;gap:5px;min-width:0}
+.ora-mask-settings .ora-mask-visible{display:flex;align-items:center;gap:6px}
+.ora-mask-settings select{width:100%;min-width:0;border:1px solid #416e61;border-radius:5px;padding:6px;background:#1b3e36;color:#e5f3ed;font-size:11px}
+.ora-mask-settings input{accent-color:#57d4a2}.ora-mask-settings input[type=range]{width:100%}
+.ora-mask-quantification{font-variant-numeric:tabular-nums;color:#d9f4e5;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ora-mask-quantification i{width:10px;height:10px;border-radius:2px;display:inline-block}
+@media(max-width:650px){.ora-mask-settings{grid-template-columns:1fr}}
+.ora-analysis-package{border-top:1px solid #426a60;margin-top:14px;padding-top:12px}
+.ora-analysis-package .ora-mask-actions{margin-top:10px}
+.ora-package-downloads{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0}
+.ora-package-downloads a{display:inline-block;border:1px solid #498676;background:#224f44;color:#d5f5e5;padding:7px 10px;border-radius:5px;text-decoration:none}
+.ora-package-downloads a:hover{background:#2b6654}
+.ora-mask-controls .ora-package-ready{color:#8ce1b6}
+.ora-mask-controls .ora-package-error{color:#ffc7ac}
+.ora-mask-provenance{padding:10px;border:1px solid #488675;background:#183f36;border-radius:6px;margin-top:10px;overflow-wrap:anywhere}
+.ora-mask-provenance strong{color:#a3ebc5}
+.ora-mask-provenance ul{padding-left:18px;margin:7px 0}
+.ora-mask-binding-note{color:#c8d8b7}
+.ora-analysis-package small{overflow-wrap:anywhere}
+.ora-analysis-package>summary,.ora-mask-provenance>summary{cursor:pointer;font-weight:600;color:#b9e9d4}
+.ora-analysis-package[open]>summary,.ora-mask-provenance[open]>summary{margin-bottom:9px}
+
+
+/* Same /viewer workspace: bounded NIfTI source adapter (no invented DICOM). */
+.cs-source-mode{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
+.cs-source-mode button{border:1px solid #b7d9d4;background:#fff;color:#24645f;
+  border-radius:8px;padding:12px 16px;font-weight:700;cursor:pointer}
+.cs-source-mode button.active{background:#117e77;color:#fff;border-color:#117e77}
+.cs-nifti-controls{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:18px;
+  background:#fff;border:1px solid #d7e5e7;border-radius:12px;margin-bottom:18px}
+.cs-nifti-controls label{display:grid;gap:7px;font-size:12px;font-weight:700;min-width:230px;max-width:100%}
+.cs-nifti-controls input{font-size:11px;max-width:100%}
+.cs-nifti-controls button{padding:11px 14px;border-radius:7px;border:1px solid #9ecdc5;
+  background:#137e70;color:#fff;font-size:12px;cursor:pointer}
+.cs-nifti-controls button:disabled{opacity:.45;cursor:not-allowed}
+.cs-nifti-controls p,.cs-nifti-controls small{flex-basis:100%;margin:0;color:#647b80;font-size:12px}
+.cs-nifti-controls .cs-nifti-error{color:#9e2f40;font-weight:700}
+.cs-nifti-review{border:1px solid #d9e7e8;border-radius:12px;padding:18px;background:#fff}
+.cs-nifti-review h2{font-size:20px;margin:0 0 8px}
+.cs-nifti-review h3{font-size:14px}
+.cs-nifti-review>p{font-size:12px;color:#58747e}
+.cs-nifti-sliders{display:flex;flex-wrap:wrap;gap:13px;padding:15px;background:#eff6f5;
+  border-radius:9px;margin:16px 0}
+.cs-nifti-sliders label{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px}
+.cs-nifti-sliders input[type=number]{max-width:95px;padding:7px;border:1px solid #9fb7bb;border-radius:6px}
+.cs-nifti-sliders select{padding:7px;border:1px solid #9fb7bb;border-radius:6px;max-width:190px}
+.cs-nifti-planes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.cs-nifti-plane{background:#142e3b;border-radius:9px;padding:12px;color:#ecf4f5;min-width:0}
+.cs-nifti-plane h3{font-size:12px;font-weight:700;margin:0 0 12px}
+.cs-nifti-plane label{display:grid;gap:6px;font-size:11px;color:#c4d7dc;margin-top:12px}
+.cs-nifti-plane input{width:100%;accent-color:#3dd5bc}
+.cs-nifti-image{background:#060d14;min-height:160px;display:flex;align-items:center;
+  justify-content:center;border:1px solid #34434d;overflow:hidden}
+.cs-nifti-organs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.cs-nifti-organs button{border:1px solid #bfd6d6;border-radius:8px;background:#f7faf9;
+  display:grid;gap:5px;padding:12px;text-align:left;cursor:pointer}
+.cs-nifti-organs button.active{border-color:#0b998c;background:#dff4ec}
+.cs-nifti-organs strong{font-size:13px;color:#12665f}
+.cs-nifti-organs span{font-size:11px;color:#6c8587}
+.cs-nifti-review .cs-nifti-caution{border-top:1px solid #d9e6e5;
+  padding-top:14px;margin-top:18px;color:#995a42}
+@media(max-width:1000px){.cs-nifti-planes{grid-template-columns:1fr}.cs-nifti-organs{grid-template-columns:1fr}}
+
+
+/* Real pretrained nodule results, source-hash-bound NIfTI CPU research only. */
+.cs-nodule-bound{max-width:1250px;margin:auto}.cs-nodule-controls{display:grid;gap:12px;max-width:860px;padding:19px;background:#fff;border:1px solid #dce7e4;border-radius:12px}
+.cs-nodule-controls label{display:grid;gap:6px;color:#526c61;font-size:12px}
+.cs-nodule-controls input[type=file]{font-size:12px}.cs-nodule-controls button{background:#117c68;color:#fff;border:0;border-radius:8px;padding:11px 17px;font-weight:700;cursor:pointer}
+.cs-nodule-controls p{margin:0;color:#60786b;font-size:12px}.cs-nodule-error{padding:12px 16px;color:#9c2424;background:#fff0ef;border-radius:8px}
+.cs-nodule-stats{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0;color:#315347;font-size:12px}
+.cs-nodule-view{display:grid;grid-template-columns:minmax(0,2fr) minmax(255px,1fr);gap:17px;margin:15px 0}
+.cs-nodule-image{border-radius:12px;background:#111f23;padding:16px;text-align:center;color:#bddbd0;min-width:0}
+.cs-nodule-image canvas{display:block;margin:0 auto;max-height:68vh;object-fit:contain}.cs-nodule-image small{display:block;margin-top:10px}
+.cs-nodule-list{border-radius:12px;border:1px solid #dbe7e0;background:#fff;padding:16px}
+.cs-nodule-list label{display:grid;gap:5px;margin:12px 0;color:#34584d;font-size:12px}
+.cs-nodule-candidates{max-height:310px;overflow:auto;display:grid;gap:7px}.cs-nodule-candidates button{border:1px solid #bdd9ce;background:#f5faf8;border-radius:9px;padding:10px;text-align:left;display:grid;gap:5px;color:#245348;cursor:pointer}
+.cs-nodule-candidates button span,.cs-nodule-candidates button small{font-size:11px}
+@media(max-width:780px){.cs-nodule-view{grid-template-columns:1fr}}
+
+/* Physician-first interface: one clear clinical action, technical controls secondary. */
+.cs-page .cs-geometry>summary{cursor:pointer;color:#547582;font-size:12px;font-weight:650;padding:9px 0}
+.cs-page .cs-sidebar section[aria-label="Единый анализ DICOM"]>h2{font-size:17px;margin:0 0 5px}
+.cs-page .cs-sidebar section[aria-label="Единый анализ DICOM"]>p{font-size:12px;line-height:1.45;color:#617783}
+.cs-page .cs-sidebar section[aria-label="Единый анализ DICOM"]>button:not(:disabled){background:#0c9183;color:#fff;border:1px solid #0c9183;border-radius:8px;font-weight:700;padding:13px 16px;width:100%;cursor:pointer}
+.cs-page .cs-sidebar section[aria-label="Единый анализ DICOM"]>button+button{margin-top:8px;background:#fff;color:#087d72;border-color:#bcd7d4}
+.cs-compare{display:grid;gap:12px;margin-bottom:14px}
+.cs-compare h3{margin:0;font-size:16px}
+.cs-compare-controls{display:flex;flex-wrap:wrap;gap:10px}
+.cs-compare-controls label{display:grid;gap:4px;font-size:12px;color:#34584d;min-width:min(100%,220px)}
+.cs-compare-controls select{padding:8px;border-radius:7px;border:1px solid #bcd7d4;background:#fff;color:#234452}
+.cs-compare-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cs-compare-pair figure{margin:0;background:#132633;border-radius:12px;overflow:hidden;border:1px solid #304656}
+.cs-compare-pair img{width:100%;height:min(70vh,720px);object-fit:contain;display:block;background:#070f17}
+.cs-compare-pair figcaption,.cs-compare-pair p{color:#d5e5eb;font-size:12px;padding:8px 12px;margin:0}
+.cs-analyze{display:block;margin-top:12px;background:#0c9183;color:#fff;border:1px solid #0c9183;border-radius:8px;font-weight:700;padding:12px 16px;cursor:pointer}
+@media(max-width:800px){.cs-compare-pair{grid-template-columns:1fr}}
+.cs-page .cs-clinician-consent{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.45;color:#354c58;margin:12px 0}
+.cs-page .cs-clinician-consent input{flex:0 0 auto;margin-top:3px}
+.cs-page .cs-intro{margin-bottom:17px}
+.cs-page .cs-intro h1{font-size:clamp(23px,2.5vw,31px)}
+.cs-page .cs-container>details:first-child{margin:0 0 12px;border:0}
+.cs-page .cs-container>details:first-child>summary{font-size:11px;color:#798b96}
+.cs-page .cs-sidebar .cs-geometry>summary{font-weight:600}
+.cs-page .cs-stage>.cs-geometry{background:#fff;border:1px solid #e2ebed;border-radius:10px;padding:14px;margin-top:14px}
+
+/* Radiologist-facing 2D/MPR/3D modes: single control row, no model jargon. */
+.cs-view-modes{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 10px}
+.cs-view-modes button{border:1px solid #aabdc7;border-radius:7px;background:#fff;color:#234452;padding:9px 15px;font-weight:650;cursor:pointer}
+.cs-view-modes button[aria-pressed="true"]{background:#146e69;border-color:#146e69;color:#fff}
+.cs-view-modes button:disabled{opacity:.4;cursor:not-allowed}
+
+.cs-expand-toolbar{display:flex;justify-content:flex-end;margin-bottom:10px;position:sticky;top:0;z-index:20;background:#edf3f6;padding:6px 0}
+.cs-expand-toolbar button{font:inherit;background:#0d8174;color:white;border:0;border-radius:7px;padding:10px 16px;cursor:pointer}
+.cs-page-wide .cs-container{max-width:none;padding:12px 16px 40px}
+.cs-page-wide .cs-intro{display:none}
+.cs-page-wide .cs-layout{grid-template-columns:minmax(0,1fr)}
+.cs-page-wide .cs-stage{grid-column:1;grid-row:1}
+.cs-page-wide .cs-sidebar{grid-column:1;grid-row:2;width:100%}
+.cs-page-wide .cs-image{height:calc(100dvh - 255px);min-height:320px}
+.cs-page-wide .cs-plain-image{display:block;width:100%;height:calc(100dvh - 150px)!important;object-fit:contain;background:#070f17}
+.cs-page-wide .cs-compare-pair img{height:calc(100dvh - 245px)}

@@ -1,0 +1,141 @@
+import {radiologyReportLanguage} from '../../../../lib/report-language';
+import {NextRequest,NextResponse} from "next/server";
+import {createHash,timingSafeEqual} from "node:crypto";
+import {callAiGateway} from "../../../../lib/ai-gateway";
+import {HttpBodyTooLarge} from "../../../../lib/limited-body";
+import {reviewSanitizedSamples,type SanitizedModelReview} from "../../../../lib/sanitized-cloud-review";
+import {createSyntheticTrialLimiter} from "../../../../lib/synthetic-live-research";
+import {REVIEWED_FRAME_COOKIE,reviewedFrameSessionEnabled,createReviewedFrameSession,
+  validReviewedFrameSession,reviewedFrameConnectionStatus} from "../../../../lib/reviewed-frame-session";
+
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+export const maxDuration=600; // research-only opt-in for slow paid vision/reasoning
+const HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"};
+const LOCAL_HOST=/^(?:localhost|127\.0\.0\.1)(?::[0-9]{1,5})?$/;
+const BODY_LIMIT=2_350_000;
+const imageResults=new Map<string,{expires:number;result:SanitizedModelReview}>();
+const limiter=createSyntheticTrialLimiter(30,20*60_000);
+/** Separate pixel-sized bounded reader. Global readLimitedText is intentionally
+ * capped at 64 KiB for clinical metadata and must not be weakened for images. */
+async function readPixelJson(req:NextRequest):Promise<unknown>{
+  const reader=req.body?.getReader();
+  if(!reader)throw Error("missing");
+  const parts:Uint8Array[]=[];let length=0;
+  try{
+    while(true){
+      const {value,done}=await reader.read();
+      if(done)break;
+      if(value){
+        length+=value.byteLength;
+        if(length>BODY_LIMIT)throw new HttpBodyTooLarge();
+        parts.push(value);
+      }
+    }
+  }finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
+  const bytes=new Uint8Array(length);let at=0;
+  for(const part of parts){bytes.set(part,at);at+=part.byteLength;}
+  return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+}
+const reply=(status:number,error:string)=>NextResponse.json({error},{status,headers:HEADERS});
+
+function allowedLocalBrowser(req:NextRequest,post=false):boolean {
+  const host=req.headers.get("host")??"";
+  const site=req.headers.get("sec-fetch-site");
+  return process.env.NODE_ENV==="development"&&
+    LOCAL_HOST.test(host)&&["localhost","127.0.0.1"].includes(req.nextUrl.hostname)&&
+    !req.nextUrl.search&&(site===null||site==="same-origin")&&
+    (!post||req.headers.get("origin")==="http://"+host);
+}
+function configurationReady():boolean {
+  return reviewedFrameConnectionStatus()==="ready";
+}
+function validOperator(received:string|null):boolean {
+  const expected=process.env.RADIOLOGY_LOCAL_RESEARCH_OPERATOR_TOKEN;
+  if(!expected||expected.length<24||!received||received.length>512)return false;
+  const a=Buffer.from(received,"utf8"),b=Buffer.from(expected,"utf8");
+  return a.length===b.length&&timingSafeEqual(a,b);
+}
+export async function GET(req:NextRequest){
+  if(!allowedLocalBrowser(req))return reply(404,"Local clinician pilot only");
+  const connected=reviewedFrameSessionEnabled();
+  const response=NextResponse.json({
+    schema:"opus-deidentified-openrouter-pilot-readiness/v1",
+    enabled:configurationReady(),
+    workstationConnected:connected,
+    configurationStatus:reviewedFrameConnectionStatus(),
+    provider:"openrouter",
+    models:["google/gemini-4-argon","anthropic/claude-opus-5.5"],primaryReader:"google/gemini-4-argon",secondReader:"conditional-independent-opus",
+    framesMaximum:4,sourceMustBePixelReviewed:true,
+    stillRequiresLawfulDisclosureAndOperatorApproval:true,
+    independentDeidentificationCertification:false,
+    productionPatientCloudRelease:false,
+  },{headers:HEADERS});
+  if(connected)response.cookies.set(REVIEWED_FRAME_COOKIE,createReviewedFrameSession(),{
+    httpOnly:true,sameSite:"strict",secure:false,
+    path:"/api/ai",maxAge:4*60*60,
+  });
+  return response;
+}
+export async function POST(req:NextRequest){
+  if(!allowedLocalBrowser(req,true))return reply(404,"Local clinician pilot only");
+  if(!configurationReady())return reply(503,"Deidentified OpenRouter clinician research pilot not authorized on this server");
+  if(!validOperator(req.headers.get("x-opus-local-operator-token"))&&
+     !validReviewedFrameSession(req.cookies.get(REVIEWED_FRAME_COOKIE)?.value))
+    return reply(401,"Local operator authorization failed");
+  if(!/^application\/json(?:\s*;.*)?$/i.test(req.headers.get("content-type")??""))
+    return reply(415,"JSON only");
+  const announced=Number(req.headers.get("content-length")??0);
+  if(!Number.isSafeInteger(announced)||announced<0||announced>BODY_LIMIT)
+    return reply(413,"Image sample too large");
+  let raw:unknown;
+  try{raw=await readPixelJson(req);}
+  catch(e){return reply(e instanceof HttpBodyTooLarge?413:400,"Invalid or oversized data");}
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return reply(400,"Invalid request");
+  const v=raw as Record<string,unknown>;
+  const allowed=["packet","acknowledgeClinicianLawfulDisclosure","acknowledgeProviderHealthDataTerms",
+    "acknowledgePixelIdentityReviewed","acknowledgeTwoPaidCalls"];
+  if(v.secondOpinion!==undefined&&typeof v.secondOpinion!=="boolean")return reply(400,"Invalid second opinion request");
+  const forceOpus=v.secondOpinion===true;delete v.secondOpinion;
+  const keys=Object.keys(v);
+  const specialistProvided=Object.hasOwn(v,"specialistFacts");
+  const detectorProvided=Object.hasOwn(v,"detectorEvidence");
+  const cxrProvided=Object.hasOwn(v,"cxrModelEvidence");
+  const spatialProvided=Object.hasOwn(v,"frameRelativeClnEvidence");
+  if(keys.length!==allowed.length+(specialistProvided?1:0)+(detectorProvided?1:0)+(cxrProvided?1:0)+(spatialProvided?1:0)||
+     !keys.every(k=>allowed.includes(k)||(specialistProvided&&k==="specialistFacts")||
+       (detectorProvided&&k==="detectorEvidence")||
+       (cxrProvided&&k==="cxrModelEvidence")||
+       (spatialProvided&&k==="frameRelativeClnEvidence"))||
+     !allowed.every(k=>Object.hasOwn(v,k))||
+     v.acknowledgeClinicianLawfulDisclosure!==true||
+     v.acknowledgeProviderHealthDataTerms!==true||
+     v.acknowledgePixelIdentityReviewed!==true||
+     v.acknowledgeTwoPaidCalls!==true)
+    return reply(400,"Study-level clinician, image privacy, provider, and two-call approvals required");
+  // Review packet validation happens BEFORE a paid remote call in the model
+  // executor. Failure is closed. These declarations are NOT an independent
+  // deidentification certificate or legal authority; clinical production is off.
+  for(const [id,entry]of imageResults)if(entry.expires<Date.now())imageResults.delete(id);
+  const cacheKey=createHash('sha256').update(req.cookies.get(REVIEWED_FRAME_COOKIE)?.value??req.headers.get('x-opus-local-operator-token')??'').update(req.cookies.get('concilium-ui-language')?.value??'ru').update(JSON.stringify(v)).digest('hex');
+  const checkpoint=imageResults.get(cacheKey)?.result;
+  if(forceOpus&&!checkpoint)return reply(409,"Сохранённый основной разбор истёк. Выполните новый разбор явно; Argon автоматически повторно не запускается.");
+  if(checkpoint&&(!forceOpus||checkpoint.secondOpinion?.status==='completed'))return NextResponse.json(checkpoint,{headers:HEADERS});
+  const savePrimary=(result:SanitizedModelReview)=>{if(imageResults.size>=2&&!imageResults.has(cacheKey))imageResults.delete(imageResults.keys().next().value!);imageResults.set(cacheKey,{expires:Date.now()+10*60_000,result});};
+  const release=limiter.acquire();
+  if(!release)return reply(429,"Один разбор ещё идёт либо за 20 минут уже начато 30. Подождите окончания текущего.");
+  try{
+    const result=await reviewSanitizedSamples(
+      v.packet,callAiGateway,AbortSignal.any([req.signal,AbortSignal.timeout(process.env.NODE_ENV==="development"&&
+       process.env.RADIOLOGY_PUBLIC_ORIGINAL_DICOM_EXTENDED_REVIEW==="1"?540_000:75_000)]),
+      specialistProvided?v.specialistFacts:null,
+      detectorProvided?v.detectorEvidence:null,
+      cxrProvided?v.cxrModelEvidence:null,null,
+      spatialProvided?v.frameRelativeClnEvidence:null,radiologyReportLanguage(req.cookies.get("concilium-ui-language")?.value),{forceOpus,primary:checkpoint,onPrimary:savePrimary});
+    savePrimary(result);
+    return NextResponse.json(result,{headers:HEADERS});
+  }catch{
+    // Never expose model replies, base64 images, user headers, tokens or PHI.
+    return reply(502,"Image privacy contract, source review or remote model result failed");
+  }finally{release();}
+}
