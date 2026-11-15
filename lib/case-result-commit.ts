@@ -1,6 +1,39 @@
 import { decisionDraftFrom, persistCase, type Analysis, type ClinicalCase } from './casebook.ts';
 
 /**
+ * Promote an editor-only question into this request's in-memory analysis snapshot.
+ * Only a returned server result may make the event part of durable case history.
+ * A retry must start from the persisted case, not from this temporary snapshot.
+ */
+export function stagePhysicianQuestion(
+  snapshot: ClinicalCase,
+  question: string,
+  id = crypto.randomUUID(),
+  at = new Date().toISOString(),
+): ClinicalCase {
+  const text=question.trim();
+  return text ? {...snapshot,events:[...snapshot.events,{id,at,kind:'question',text}]} : snapshot;
+}
+
+/**
+ * Persist the unsubmitted question before a potentially paid or interrupted
+ * request. Keeping it in workspaceDraft avoids recording an event for a failed
+ * call, while surviving an unexpected browser reload.
+ */
+export async function preservePendingQuestion(
+  snapshot: ClinicalCase,
+  question: string,
+  note: string,
+  decision: string,
+  save: (value: ClinicalCase) => Promise<void> = persistCase,
+): Promise<void> {
+  if(!question.trim())return;
+  await save({...snapshot,workspaceDraft:{
+    question:question.trim(),note,decision,tab:'analysis',
+  }});
+}
+
+/**
  * Turn a server-completed response into a locally durable physician-case step.
  * The UI must not clear the pending question or announce saved success until
  * this write finishes; if the vault fails, return the result for manual export.
