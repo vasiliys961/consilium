@@ -104,7 +104,9 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
   // Preserve the whole question/answer sequence across changed materials, in chronological order.
   const discussion=value.analyses.slice().reverse().map((analysis,index)=>[
     `Discussion ${index+1} — ${analysisQuestion(analysis)}`,
-    analysis.result.clinicalDraft==='generated'?analysis.result.draft.summary:'No completed clinical answer in this step.',
+    analysis.result.clinicalDraft==='generated'
+      ? analysis.result.draft.summary
+      : `Prior step INCOMPLETE — no validated clinical synthesis was received. Available provisional module observations and failure context follow; do not treat these as a completed assessment:\n${analysis.result.draft.summary.slice(0,2500) || '(no partial text preserved)'}`,
     analysis.result.draft.report?clinicalReportText(analysis.result.draft.report):'',
     analysis.result.ecgEvidence
       ? hasSourceHash(value, analysis.result.ecgEvidence.sha256)
@@ -154,7 +156,11 @@ export function exportCase(value: ClinicalCase): string {
 
 export function caseSignature(value:ClinicalCase):string{return JSON.stringify({context:value.context,question:value.question,imageProfile:value.imageProfile,files:value.files.map(f=>[f.name,f.sha256,f.imageProfile,f.masks,f.intakeNote]),library:value.library?.map(f=>[f.name,f.sha256]),currentMedications:value.currentMedications,drugLabels:value.drugLabels?.length?value.drugLabels.map(item=>item.setId):undefined,moduleReports:value.moduleReports?.map(r=>[r.id,r.fileKeys,r.text]),followUp:value.events});}
 
-export function protocolSource(value:ClinicalCase):string{const latest=value.analyses[0];return [caseContext(value),latest?(latest.inputSignature&&latest.inputSignature!==caseSignature(value)?'Предыдущий предварительный разбор; после него данные случая изменились. Проверить актуальность врачу:\n':'Предварительный разбор, проверить врачу:\n')+latest.result.draft.summary:'',latest?studyReportsText(latest.result.draft.studyReports??[]):'',latest?.result.draft.report?clinicalReportText(latest.result.draft.report):'',latest?.result.visualReadings?.map(r=>r.reading).join('\n'),latest?.result.unassessed.length?'Не оценено: '+latest.result.unassessed.join(', '):''].filter(Boolean).join('\n\n');}
+export function protocolSource(value:ClinicalCase):string{const latest=value.analyses[0];return [caseContext(value),latest?(latest.result.clinicalDraft==='unavailable'
+  ? 'Клинический ответ не завершён; ниже сохранены только предварительные данные и причина сбоя. Нельзя считать это готовым заключением:\n'
+  : latest.inputSignature&&latest.inputSignature!==caseSignature(value)
+    ? 'Предыдущий предварительный разбор; после него данные случая изменились. Проверить актуальность врачу:\n'
+    : 'Предварительный разбор, проверить врачу:\n')+latest.result.draft.summary:'',latest?studyReportsText(latest.result.draft.studyReports??[]):'',latest?.result.draft.report?clinicalReportText(latest.result.draft.report):'',latest?.result.visualReadings?.map(r=>r.reading).join('\n'),latest?.result.unassessed.length?'Не оценено: '+latest.result.unassessed.join(', '):''].filter(Boolean).join('\n\n');}
 
 export function reviseCaseEvent(value:ClinicalCase,id:string,text:string,now=new Date().toISOString()):ClinicalCase{
  if(!text.trim())throw Error('Запись не может быть пустой.');
