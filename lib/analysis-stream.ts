@@ -27,16 +27,39 @@ export async function collectChatStream(response:Response,onText:(text:string)=>
  await response.body.cancel().catch(()=>{});
  return new Response(JSON.stringify({model,choices:[{message:{content:text},finish_reason:finish??'length'}],usage}),{status:200,headers:{'content-type':'application/json'}});
 }
-export async function requestStreamedJson<T>(url:string,body:unknown,options:{signal?:AbortSignal;onProgress?:(event:AnalysisProgressEvent)=>void;onPreview?:(text:string)=>void}={}):Promise<T>{
+export async function requestStreamedJson<T>(url:string,body:unknown,options:{signal?:AbortSignal;onProgress?:(event:AnalysisProgressEvent)=>void;onPreview?:(text:string)=>void;fetch?:typeof fetch}={}):Promise<T>{
  if(url==='/api/protocol'){const value=body as Record<string,unknown>;const approved=await reviewBeforeSending({text:String(value.source??'')});body={...value,source:approved.text,privacyReview:approved};}
- const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify(body),signal:options.signal});
+ const response=await (options.fetch??fetch)(url,{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify(body),signal:options.signal});
  if(response.status===428){const value=await response.clone().json().catch(()=>null);if(value?.error==='gemini_choice_required'){window.dispatchEvent(new CustomEvent('concilium-gemini-choice-required',{detail:value.policy}));throw new Error('Выберите модель Gemini в открывшемся окне и повторите разбор.');}}
  if(!response.ok)throw new Error(`Разбор не выполнен (HTTP ${response.status}).`);
  if(!response.headers.get('content-type')?.includes('text/event-stream'))return response.json();
  if(!response.body)throw new Error('Поток ответа недоступен.');
- let result:T|undefined;
- for await(const event of sseEvents(response.body)){let value:any;try{value=JSON.parse(event.data);}catch{continue;}if(event.event==='progress')options.onProgress?.(value);if(event.event==='preview')options.onPreview?.(String(value.text??''));if(event.event==='result')result=value;if(event.event==='error')throw new Error(value.code==='deadline'?'Превышено время разбора.':'Не удалось завершить разбор. Сохраните материалы и повторите запрос.');}
- if(!result)throw new Error('Соединение закрыто до получения итогового ответа.');return result;
+ let serverFailure:string|undefined;
+ try {
+  for await(const event of sseEvents(response.body)){
+   let value:unknown;try{value=JSON.parse(event.data);}catch{continue;}
+   if(event.event==='progress'&&value&&typeof value==='object')options.onProgress?.(value as AnalysisProgressEvent);
+   if(event.event==='preview'&&value&&typeof value==='object')options.onPreview?.(String((value as {text?:unknown}).text??''));
+   if(event.event==='result'){
+    // The server emits result only after completing analysis. This is the terminal
+    // commit point: a dropped TCP connection while closing the stream must not
+    // discard a complete response or provoke a second paid inference.
+    if(!value||typeof value!=='object'||Array.isArray(value)){serverFailure='Сервис вернул неверный формат результата.';break;}
+    return value as T;
+   }
+   if(event.event==='error'){
+    serverFailure=value&&typeof value==='object'&&(value as {code?:unknown}).code==='deadline'
+      ? 'Превышено время разбора.'
+      : 'Не удалось завершить разбор. Сохраните материалы и повторите запрос.';
+    break;
+   }
+  }
+ } catch(error) {
+  if(options.signal?.aborted)throw error;
+  throw new Error('Соединение прервалось до получения завершённого результата. Предварительный текст не является заключением.');
+ }
+ if(serverFailure)throw new Error(serverFailure);
+ throw new Error('Соединение закрыто до получения итогового ответа. Предварительный текст не является заключением.');
 }
 
 export async function requestAnalysis(body:ConductInput,options:Parameters<typeof requestStreamedJson>[2]={}){const reviewed=await reviewBeforeSending(body);return requestStreamedJson<CaseResult>('/api/v1/cases',reviewed,options);}
