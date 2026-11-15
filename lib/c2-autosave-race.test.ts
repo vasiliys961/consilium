@@ -96,3 +96,26 @@ test('C2: same-millisecond stale autosave never deletes committed analysis or ex
  const found=(await readCases()).find(x=>x.id===original.id);
  assert.equal(found?.analyses[0]?.id,'same-ms');
 });
+
+test('C2: same-timestamp editor save cannot silently revert changed image content',async()=>{
+ const initial:ClinicalCase={...newCase(315),updated:t0,
+   files:[{name:'scan.png',sha256:'a'.repeat(64),image:'data:image/png;base64,AAAA'}]};
+ await persistCase(initial);
+ const replacement={...initial,files:[{name:'scan.png',sha256:'f'.repeat(64),image:'data:image/png;base64,FFFF'}]};
+ await persistCase(replacement);
+ // A date-resolution collision must favor safety, not stale same-name evidence.
+ const older={...initial,workspaceDraft:draft};
+ assert.equal(await persistCaseAutosave(older),false);
+ const current=(await readCases()).find(c=>c.id===initial.id);
+ assert.equal(current?.files[0]?.sha256,'f'.repeat(64));
+});
+
+test('C2: refreshing an editor-only draft must not discard saved physician decisions',async()=>{
+ const original:ClinicalCase={...newCase(316),updated:t0,
+   events:[{id:'decision',at:t0,kind:'decision',text:'SYNTHETIC REVIEWED PHYSICIAN DECISION'}]};
+ await persistCase(original);
+ assert.equal(await persistCaseDraft(original.id,draft,t0),true);
+ const stored=(await readCases()).find(c=>c.id===original.id);
+ assert.match(stored?.events[0]?.text??'',/REVIEWED PHYSICIAN DECISION/);
+ assert.equal(stored?.workspaceDraft?.question,'New question');
+});
