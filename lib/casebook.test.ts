@@ -160,3 +160,33 @@ test('C2: ECG with absent SHA-256 is historical, never accepted solely by filena
  assert.doesNotMatch(input,/SINUS RHYTHM|0\\.96/);
  assert.match(exportCase(value),/SINUS RHYTHM/);
 });
+
+test('C2: filename-only Radiology binding cannot silence reading of a replaced file',()=>{
+ const value=newCase(93);
+ value.files=[{name:'chest.dcm',processingModule:'radiology'}];
+ value.moduleReports=[{id:'legacy-name-key',module:'radiology',fileKeys:['chest.dcm'],
+  sources:['chest.dcm'],at:'2026-11-15T10:00:00Z',text:'OLD DIAGNOSTIC DESCRIPTION'}];
+ const current=caseAnalysisInput(value);
+ assert.equal(current.pendingModules.length,1);
+ assert.equal(current.pendingModules[0].name,'chest.dcm');
+ assert.match(current.text,/Исторический отчёт/);
+ assert.doesNotMatch(current.text,/OLD DIAGNOSTIC DESCRIPTION/);
+ assert.match(exportCase(value),/OLD DIAGNOSTIC DESCRIPTION/);
+});
+
+test('C2: partial multi-series Radiology report cannot silently cover the remaining series',()=>{
+ const a='a'.repeat(64),b='b'.repeat(64),replacement='c'.repeat(64);
+ const value=newCase(94);
+ value.files=[
+   {name:'one.dcm',sha256:a,processingModule:'radiology'},
+   {name:'two.dcm',sha256:b,processingModule:'radiology'},
+ ];
+ value.moduleReports=[{id:'two-slices',module:'radiology',fileKeys:[a,b],
+  sources:['one.dcm','two.dcm'],at:'2026-11-15T10:00:00Z',text:'JOINT STUDY REPORT'}];
+ assert.equal(caseAnalysisInput(value).pendingModules.length,0);
+ value.files[1]={...value.files[1],sha256:replacement};
+ const changed=caseAnalysisInput(value);
+ assert.equal(changed.pendingModules.length,2);
+ assert.match(changed.text,/Исторический отчёт/);
+ assert.doesNotMatch(changed.text,/JOINT STUDY REPORT/);
+});
