@@ -16,7 +16,7 @@ export default function ConciliumBridge({children,initialLanguage='ru',initialTr
  const [wide,setWideState]=useState(false);
  const [copy,setCopy]=useState(defaults),[language,setLanguage]=useState(initialLanguage),[translations,setTranslations]=useState<Record<string,string>>(initialTranslations);
  const translate=useMemo(()=>makeUiTranslator(translations),[translations]);
- const origin='http://127.0.0.1:3107';
+ const origin=process.env.NEXT_PUBLIC_CONCILIUM_PREVIEW==='1'?'http://127.0.0.1:3207':'http://127.0.0.1:3107';
  useEffect(()=>{const saved=document.cookie.split(';').map(value=>value.trim()).find(value=>value.startsWith('concilium-ui-language='))?.split('=')[1];if(saved&&/^(?:ru|en|es|fr|ar|hi|pt-BR|id|tr|zh-CN)$/.test(decodeURIComponent(saved)))setLanguage(decodeURIComponent(saved));},[]);
  useEffect(()=>{document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';},[language]);
  useEffect(()=>{let stored:string|null=null;try{stored=sessionStorage.getItem('concilium.bridge.session');}catch{}const token=conciliumSession(location.search,stored);if(window.parent===window||!/^[-a-f0-9]{36}$/.test(token))return;setSession(token);try{sessionStorage.setItem('concilium.bridge.session',token);}catch{}
