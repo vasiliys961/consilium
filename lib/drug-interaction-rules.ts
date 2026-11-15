@@ -109,7 +109,23 @@ export function localDrugCoverage(current:string,proposed=''){
 const isMetformin=(value:string)=>/^(?:metformin|glucophage|метформин|глюкофаж)(?!\p{L})/iu.test(value);
 export function checkMedicationRegimen(input:{current:string;proposed?:string;stopped?:string;alternatives?:string;context?:MedicationContext}){
  const stopped=drugEntries(input.stopped??'');
- const retained=(value:string)=>!stopped.some(s=>s.toLowerCase()===value.toLowerCase()||rules.some(r=>(r.a.test(s)&&r.a.test(value))||(r.b.test(s)&&r.b.test(value))));
+ const canonical=(value:string)=>{
+  const aliases:[string,RegExp][]=[
+   ['warfarin',/^(?:warfarin|coumadin|варфарин)(?!\p{L})/iu],
+   ['ibuprofen',/^(?:ibuprofen|ибупрофен)(?!\p{L})/iu],
+   ['naproxen',/^(?:naproxen|напроксен)(?!\p{L})/iu],
+   ['diclofenac',/^(?:diclofenac|диклофенак)(?!\p{L})/iu],
+   ['ketorolac',/^(?:ketorolac|кеторолак)(?!\p{L})/iu],
+   ['celecoxib',/^(?:celecoxib|целекоксиб)(?!\p{L})/iu],
+   ['apixaban',/^(?:apixaban|eliquis|апиксабан|эликвис)(?!\p{L})/iu],
+   ['spironolactone',/^(?:spironolactone|aldactone|спиронолактон|верошпирон)(?!\p{L})/iu],
+   ['sildenafil',/^(?:sildenafil|viagra|силденафил|виагра)(?!\p{L})/iu],
+   ['simvastatin',/^(?:simvastatin|zocor|симвастатин|зокор)(?!\p{L})/iu],
+   ['metformin',/^(?:metformin|glucophage|метформин|глюкофаж)(?!\p{L})/iu],
+  ];
+  return aliases.find(([,pattern])=>pattern.test(value))?.[0]??value.trim().toLowerCase().replace(/\s+\d.*$/,'');
+ };
+ const retained=(value:string)=>!stopped.some(s=>canonical(s)===canonical(value));
  const current=drugEntries(input.current).filter(retained).join('\n');
  const proposed=drugEntries(input.proposed??'').filter(retained).join('\n');
  const alerts=knownDrugInteractions(current,proposed);
