@@ -21,7 +21,7 @@ test('two clinical routes choose one appropriate model: Flash formats completed 
    const payload=JSON.parse(String(init?.body));
    assert.equal(payload.model,expected);
    assert.equal(payload.messages.length,2);
-   assert.equal(payload.max_tokens,mode==='from-analysis'?3800:7000);
+   assert.equal(payload.max_tokens,mode==='from-analysis'?5400:7000);
    const prompt=payload.messages[0].content;
    assert.match(prompt,mode==='from-analysis'?/FORMATTING ONLY/:/INDEPENDENT PROTOCOL/);
    assert.match(prompt,/Never invent normal findings/);
@@ -51,4 +51,54 @@ test('invalid Flash JSON does not automatically charge a second formatting attem
  }});
  assert.equal(result,null);
  assert.equal(calls,1);
+});
+
+test('one clinical result offers narrative conclusion, formal encounter and compact SOAP without repeat Sol reasoning',async()=>{
+ const {MODELS}=await import('../../lib/cost.ts');
+ for(const presentation of ['narrative','formal','soap'] as const){
+  const headings=protocolHeadings('encounter',presentation);
+  const sections=headings.map(id=>({id,title:id,text:'Synthetic, physician review required.'}));
+  let callCount=0;
+  const result=await generateProtocol({kind:'encounter',source:'Synthetic 68-year-old, NT-proBNP 4200, working HF, unsigned conditional diuretic plan.',locale:'ru',mode:'from-analysis',sourceAnalysisId:'analysis-1',presentation},{
+   env:{OPENROUTER_API_KEY:'test'},reviewed:true,fetch:async(_url,init)=>{
+    callCount++;const body=JSON.parse(String(init?.body));
+    assert.equal(body.model,MODELS.flash);
+    assert.equal(body.max_tokens,5400);
+    assert.match(body.messages[0].content,/FORMATTING ONLY/);
+    assert.match(body.messages[0].content,/Do not claim the patient consented/);
+    assert.match(body.messages[0].content,presentation==='narrative'?/NARRATIVE EXPERT CONCLUSION/:presentation==='soap'?/CLINICAL SOAP NOTE/:/FORMAL ENCOUNTER PROTOCOL/);
+    return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections})}}],usage:{prompt_tokens:45,completion_tokens:90}});
+   }
+  });
+  assert.ok(result);
+  assert.equal(callCount,1);
+  assert.equal(result.document.presentation,presentation);
+  assert.equal(result.document.generationMode,'from-analysis');
+  assert.deepEqual(result.document.sections.map(s=>s.id),headings);
+ }
+ assert.ok(!protocolHeadings('encounter','formal').includes('Consent'));
+ assert.ok(protocolHeadings('encounter','formal').includes('Physician decision'));
+ assert.deepEqual(protocolHeadings('encounter','soap'),['Subjective','Objective','Assessment','Plan']);
+});
+test('saved independent Sol note is reformatted by one Flash call, not by Sol a second time',async()=>{
+ const {MODELS}=await import('../../lib/cost.ts');
+ const sections=protocolHeadings('encounter','soap').map(id=>({id,title:id,text:'Synthetic draft.'}));
+ let calls=0;
+ const result=await generateProtocol({kind:'encounter',source:'Prior Sol assessment: provisional CHF. No accepted physician orders.',locale:'en',mode:'from-protocol',sourceProtocolId:'sol-note-1',presentation:'soap'},{
+  env:{OPENROUTER_API_KEY:'test'},reviewed:true,fetch:async(_url,init)=>{
+   calls++;const request=JSON.parse(String(init?.body));assert.equal(request.model,MODELS.flash);
+   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({sections})}}]});
+  }
+ });
+ assert.ok(result);
+ assert.equal(calls,1);
+ assert.equal(result.document.sourceProtocolId,'sol-note-1');
+ assert.equal(result.document.generationMode,'from-protocol');
+});
+test('raw original is never routed to a paid protocol generator',async()=>{
+ let calls=0;
+ const result=await generateProtocol({kind:'encounter',source:'Synthetic',locale:'ru',presentation:'original-analysis',mode:'from-analysis',sourceAnalysisId:'analysis-1'},{
+  env:{OPENROUTER_API_KEY:'test'},fetch:async()=>{calls++;return Response.json({choices:[]});}
+ });
+ assert.equal(result,null);assert.equal(calls,0);
 });
