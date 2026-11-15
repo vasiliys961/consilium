@@ -38,6 +38,11 @@ export default function ProtocolModule(){
  const usingSavedSol=mode==='standalone'&&presentation!=='original-analysis'&&Boolean(independent)&&(independent?.locale!==locale||(independent?.presentation??'formal')!==presentation);
  const model=presentation==='original-analysis'?'Без модели':mode==='from-analysis'||usingSavedSol?'Gemini Flash':'GPT-6.1 Sol';
  const ui=(ru:string,en:string)=>language==='ru'?ru:en;
+ function originalFor(value:ClinicalCase|undefined,language:WorkspaceLanguage){
+  if(!value)return null;
+  const currentId=completedProtocolSourceId(value.analyses);
+  return savedStructuredProtocol(value.protocols,'encounter',language,'from-analysis',currentId,'original-analysis')??originalClinicalDocument(value,language);
+ }
 
  useEffect(()=>{
   const params=new URLSearchParams(location.search);
@@ -60,7 +65,7 @@ export default function ProtocolModule(){
    const initialPresentation:ProtocolPresentation=ready?'original-analysis':'formal';
    setPresentation(initialPresentation);
    setSource(ready?completedClinicalEvidence(value)??'':caseContext(value));
-   setDocument(ready?originalClinicalDocument(value,preferred):savedStructuredProtocol(value.protocols,'encounter',preferred,initialMode,ready,initialPresentation)??null);
+   setDocument(ready?originalFor(value,preferred):savedStructuredProtocol(value.protocols,'encounter',preferred,initialMode,ready,initialPresentation)??null);
   }).catch(()=>setNotice('Не удалось прочитать сохранённые клинические случаи.'));
  },[]);
 
@@ -81,7 +86,7 @@ export default function ProtocolModule(){
   const nextPresentation:ProtocolPresentation=ready?'original-analysis':'formal';
   setId(nextId);setMode(nextMode);setPresentation(nextPresentation);
   setSource(value?(ready?completedClinicalEvidence(value)??'':caseContext(value)):'');
-  resetResult(value&&ready?originalClinicalDocument(value,locale):savedStructuredProtocol(value?.protocols,kind,locale,nextMode,ready,nextPresentation)??null);
+  resetResult(value&&ready?originalFor(value,locale):savedStructuredProtocol(value?.protocols,kind,locale,nextMode,ready,nextPresentation)??null);
   const url=new URL(location.href);
   if(nextId)url.searchParams.set('case',nextId);else url.searchParams.delete('case');
   history.replaceState(history.state,'',url.pathname+url.search);
@@ -92,25 +97,25 @@ export default function ProtocolModule(){
   const nextPresentation:ProtocolPresentation=next==='from-analysis'?'original-analysis':'formal';
   setPresentation(nextPresentation);
   if(current)setSource(next==='from-analysis'?completedClinicalEvidence(current)??'':caseContext(current));
-  resetResult(current&&next==='from-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,next,completedId,nextPresentation)??null);
+  resetResult(current&&next==='from-analysis'?originalFor(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,next,completedId,nextPresentation)??null);
  }
  function changeKind(next:ProtocolKind){
   if(!discardAllowed())return;
   const nextPresentation:ProtocolPresentation=next==='encounter'?presentation:'formal';
   setKind(next);setPresentation(nextPresentation);
-  resetResult(current&&nextPresentation==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
+  resetResult(current&&nextPresentation==='original-analysis'?originalFor(current,locale):savedStructuredProtocol(current?.protocols,next,locale,mode,completedId,nextPresentation)??null);
  }
  function changeLocale(next:WorkspaceLanguage){
   if(!discardAllowed())return;
   setLocale(next);
-  resetResult(current&&presentation==='original-analysis'?originalClinicalDocument(current,next):savedStructuredProtocol(current?.protocols,kind,next,mode,completedId,presentation,independent?.id)??null);
+  resetResult(current&&presentation==='original-analysis'?originalFor(current,next):savedStructuredProtocol(current?.protocols,kind,next,mode,completedId,presentation,independent?.id)??null);
   const url=new URL(location.href);url.searchParams.set('locale',next);
   history.replaceState(history.state,'',url.pathname+url.search);
  }
  function changePresentation(next:ProtocolPresentation){
   if((next==='original-analysis'&&!canFormat)||(kind!=='encounter'&&next!=='formal')||!discardAllowed())return;
   setPresentation(next);
-  resetResult(current&&next==='original-analysis'?originalClinicalDocument(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,mode,completedId,next,independent?.id)??null);
+  resetResult(current&&next==='original-analysis'?originalFor(current,locale):savedStructuredProtocol(current?.protocols,kind,locale,mode,completedId,next,independent?.id)??null);
  }
  async function generate(forceStrong=false){
   if(busy||presentation==='original-analysis'||!source.trim()||(mode==='from-analysis'&&!completedId))return;
