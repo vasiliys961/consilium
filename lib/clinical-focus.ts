@@ -22,7 +22,7 @@ const RULES: readonly Rule[] = [
   },
   {
     domain: 'pulmonology',
-    text: /одыш|гипоксем|сатурац|дыхательн|лёгочн|легочн|тромбоэмбол|\bтэл[аы]\b|пневмон|хобл|астм|кашл|spo.?2|dyspn|hypox|pulmon|respirat|lung|pneumon|embolism|copd|asthma/iu,
+    text: /одыш|гипоксем|сатурац|дыхательн|лёгочн|легочн|тромбоэмбол|\bтэл[аы]\b|пневмон|хобл|астм|каш[елий]|кашл|spo.?2|dyspn|hypox|pulmon|respirat|lung|pneumon|embolism|copd|asthma/iu,
   },
   {
     domain: 'nephrology',
