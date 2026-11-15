@@ -23,6 +23,7 @@ import { interpretSpeech } from "../packages/translator/speech.ts";
 import { writeSpecialistReadings } from "../packages/specialists/read.ts";
 import { comprehendFrames, statementsOf } from "../packages/vision/comprehend.ts";
 import { assessTracing, networkObservation, networkStatements } from "../packages/ecg/founder.ts";
+import { ecgModuleEvidence } from './module-evidence.ts';
 import { isEcgSheet, sheetCaution } from "../packages/ecg/inspect.ts";
 import { bytesFromBase64 } from "../packages/ecg/open.ts";
 import { inspectPhoto } from "../packages/radiology/tiff.ts";
@@ -538,6 +539,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     id,
     draft,
     voices,
+    ...(tracing ? {ecgEvidence:ecgModuleEvidence(tracing,ledger.find(entry=>entry.source===tracing.source)?.sha256)} : {}),
     readings: specialist.readings,
     interpretation,
     citations,
