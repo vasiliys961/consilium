@@ -143,8 +143,34 @@ export function decisionDraftFrom(analysis:Analysis):string{
  ].filter(Boolean).join('\n\n');
 }
 export async function readCases(includeDeleted=false): Promise<ClinicalCase[]> {return (await readVaultCases()).filter(value=>includeDeleted||!value.deletedAt).sort((a,b)=>b.updated.localeCompare(a.updated));}
-const writes=new Map<string,Promise<void>>();
-export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{const previous=writes.get(value.id)??Promise.resolve();const next=previous.catch(()=>{}).then(()=>writeVaultCase(value,remove));writes.set(value.id,next);try{await next;}finally{if(writes.get(value.id)===next)writes.delete(value.id);}}
+// All local writes to one case share a queue: the latest clinical result must
+// not be overwritten by an earlier autosave of an outdated React snapshot.
+const writes=new Map<string,Promise<unknown>>();
+async function serialCaseWrite<T>(id:string,writer:()=>Promise<T>):Promise<T>{
+ const previous=writes.get(id)??Promise.resolve();
+ const next=previous.catch(()=>{}).then(writer);
+ writes.set(id,next);
+ try{return await next;}finally{if(writes.get(id)===next)writes.delete(id);}
+}
+export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{
+ return serialCaseWrite(value.id,()=>writeVaultCase(value,remove));
+}
+/** Patch ONLY the editor, never analyses, files, or physician decisions.
+ * expectedUpdated rejects an old snapshot after a new clinical result or attachment.
+ */
+export async function persistCaseDraft(
+ id:string,
+ draft:NonNullable<ClinicalCase['workspaceDraft']>,
+ expectedUpdated?:string,
+):Promise<boolean>{
+ return serialCaseWrite(id,async()=>{
+  const current=(await readVaultCases()).find(record=>record.id===id);
+  if(!current||current.deletedAt)return false;
+  if(expectedUpdated!==undefined&&current.updated!==expectedUpdated)return false;
+  await writeVaultCase({...current,workspaceDraft:draft});
+  return true;
+ });
+}
 export function exportCase(value: ClinicalCase): string {
   const editor=value.workspaceDraft;
   const unfinished=[
