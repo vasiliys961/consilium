@@ -21,6 +21,12 @@ export function nativeProtocolText(document:ProtocolDocument|undefined):string{
  return document.sections.map(section=>section.title+'\n'+section.text).join('\n\n');
 }
 
-export function protocolForEdition(documents:readonly ProtocolDocument[]|undefined,edition:ProtocolEdition):ProtocolDocument|undefined{return documents?.find(doc=>doc.edition===(edition==='ru'?'ru':'global')||(!doc.edition&&edition==='ru'&&doc.locale==='ru'));}
+export function protocolForEdition(documents:readonly ProtocolDocument[]|undefined,edition:ProtocolEdition,locale?:string):ProtocolDocument|undefined{
+ return documents?.find(doc=>{
+  if(edition==='ru')return doc.locale==='ru'&&(doc.edition==='ru'||!doc.edition);
+  if(doc.edition==='ru'||doc.locale==='ru')return false;
+  return (doc.edition==='global'||!doc.edition)&&(!locale||doc.locale===locale);
+ });
+}
 
 export function shouldSwitchProtocolLanguage(next:string,currentLanguage:string,edition:ProtocolEdition,documentLanguage:string):boolean{return next!==currentLanguage||(next==='ru'?'ru':'en')!==edition||next!==documentLanguage;}
