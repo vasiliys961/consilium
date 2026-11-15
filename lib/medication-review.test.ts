@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {medicationNames,nameSuggestion,discoverMedicationLabels,medicationReview,readMedicationReport,MEDICATION_REVIEW_MODEL} from './medication-review.ts';
+import {medicationNames,nameSuggestion,discoverMedicationLabels,medicationReview,readMedicationReport,MEDICATION_REVIEW_MODEL,quickMedicationReview,readQuickMedicationReport} from './medication-review.ts';
 import {normalizeDrugQuery} from './drug-labels.ts';
 const setId='11111111-1111-4111-8111-111111111111';
 function label(name='CLOPIDOGREL'){return {set_id:setId,openfda:{product_type:['HUMAN PRESCRIPTION DRUG'],generic_name:[name],route:['ORAL']},drug_interactions:['Source interaction section.'],pregnancy:['Pregnancy source information available.']};}
@@ -51,4 +51,47 @@ test('C3: label review uses a single economical model and only short label excer
   return Response.json({choices:[{message:{content:JSON.stringify(response)}}]});
  });
  assert.equal(calls,1);
+});
+
+
+test('C3: arbitrary multilingual medication list bypasses four-label gate, uses one Flash request',async()=>{
+ const medicines=['метформин','клопидогрель','бисопролол','Ramipril','atorvastatina','omeprazol','acido acetilsalicilico','levothyroxine'];
+ const note=JSON.stringify({current:medicines,proposed:['moxifloxacina'],alternatives:['bisoprolol','carvedilol'],clinicalContext:'synthetic; eGFR unknown'});
+ let calls=0;
+ const output={summary:'Preliminary review; verification required.',interactions:[{drugs:['bisoprolol','ramipril'],severity:'monitor',mechanism:'Blood-pressure lowering may be additive.',action:'Check clinical indication and blood pressure.',monitoring:'BP, pulse'}],questions:['What is the blood pressure?'],limits:['No independent label lookup.']};
+ const value=await quickMedicationReview({text:note,locale:'es'},{OPENROUTER_API_KEY:'test'},async(_url,init)=>{
+  calls++;
+  const sent=JSON.parse(String(init?.body));
+  assert.equal(sent.model,MEDICATION_REVIEW_MODEL);
+  assert.equal(sent.max_tokens,1450);
+  assert.equal(sent.messages.length,2);
+  assert.equal(sent.messages[1].content,note);
+  assert.match(sent.messages[0].content,/Review ANY medicine names/);
+  assert.match(sent.messages[0].content,/Spanish/);
+  return Response.json({choices:[{message:{content:JSON.stringify(output)}}],usage:{prompt_tokens:1200,completion_tokens:250}});
+ });
+ assert.equal(calls,1);
+ assert.equal(value.evidence,'not_source_verified');
+ assert.equal(value.report.interactions.length,1);
+ assert.equal(value.model,MEDICATION_REVIEW_MODEL);
+ assert.ok(value.estimatedUsd!==null&&value.estimatedUsd>0);
+});
+test('C3: other inexpensive model can be selected without new clinical orchestration',async()=>{
+ const report={summary:'No dangerous pairs identified by model, not verified.',interactions:[],questions:[],limits:['Unverified.']};
+ let sentModel='';
+ await quickMedicationReview({text:'Synthetic: unusual-brand-name drug, metformin, bisoprolol'},{OPENROUTER_API_KEY:'test',MEDICATION_CHECK_MODEL:'anthropic/claude-haiku-4.5'},async(_url,init)=>{
+  sentModel=JSON.parse(String(init?.body)).model;
+  return Response.json({choices:[{message:{content:JSON.stringify(report)}}]});
+ });
+ assert.equal(sentModel,'anthropic/claude-haiku-4.5');
+});
+test('C3: invalid or source-fabricated output does not cause a paid automatic retry',async()=>{
+ const output={summary:'',interactions:[],questions:[],limits:[]};
+ let calls=0;
+ await assert.rejects(()=>quickMedicationReview({text:'Synthetic: 2 unknown drugs'},{OPENROUTER_API_KEY:'test'},async()=>{
+  calls++;return Response.json({choices:[{message:{content:JSON.stringify(output)}}]});
+ }),/review_failed/);
+ assert.equal(calls,1);
+ assert.equal(readQuickMedicationReport(JSON.stringify(output)),null);
+ assert.equal(readQuickMedicationReport(JSON.stringify({summary:'Preliminary',interactions:[{drugs:['A','B'],severity:'safe',mechanism:'Safe',action:'No monitoring',monitoring:'None'}],questions:[],limits:[]})),null);
 });
