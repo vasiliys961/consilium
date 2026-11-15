@@ -1,0 +1,44 @@
+name: Consilium ChatGPT development checks
+
+on:
+  pull_request:
+    branches:
+      - chatgpt-dev
+    paths-ignore:
+      - '**/*.md'
+  push:
+    branches:
+      - chatgpt-dev
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chatgpt-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Run tests
+        run: npm test
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Build application
+        run: npm run build
