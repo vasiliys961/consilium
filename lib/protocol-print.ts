@@ -1,6 +1,8 @@
 import type {ClinicalCase} from './casebook.ts';
 import type {Locale} from './locale.ts';
 import {clinicalReportText} from './clinical-report.ts';
+import {studyReportsText} from './study-report.ts';
+import {ecgEvidenceText} from './module-evidence.ts';
 import type {ProtocolDocument} from '../packages/protocol/document.ts';
 
 /** Print and formatting read ONLY the latest completed analysis, not historic protocols or stale model replies. */
@@ -17,6 +19,9 @@ export function completedClinicalEvidence(value:ClinicalCase):string|null{
   value.question?.trim()?'Вопрос врача: '+value.question.trim():'',
   'ЗАВЕРШЁННЫЙ КЛИНИЧЕСКИЙ РАЗБОР — ПРЕДВАРИТЕЛЬНО',
   result.draft.summary,
+  result.draft.studyReports?.length?'ЗАКЛЮЧЕНИЯ ИССЛЕДОВАНИЙ:\n'+studyReportsText(result.draft.studyReports):'',
+  result.ecgEvidence?'ЭКГ — извлечённые результаты:\n'+ecgEvidenceText(result.ecgEvidence):'',
+  result.visualReadings?.length?'ДОСТУПНЫЕ ОПИСАНИЯ ИЗОБРАЖЕНИЙ (модельные, предварительные):\n'+result.visualReadings.map(reading=>reading.reading).join('\n'):'',
   result.draft.report?'СТРУКТУРИРОВАННОЕ ОБОСНОВАНИЕ, ОБСЛЕДОВАНИЯ И ТАКТИКА\n'+clinicalReportText(result.draft.report):'Лечебные рекомендации в структурированном клиническом отчёте отсутствуют. Не восполнять автоматически.',
   ...physicianDecisions.map(item=>'ЗАПИСЬ РЕШЕНИЯ ВРАЧА, БЕЗ ЭЛЕКТРОННОЙ ПОДПИСИ ('+item.at+'):\n'+item.text),
   value.decisionDraft?.text?'НЕУТВЕРЖДЁННЫЙ ПРОЕКТ РЕШЕНИЯ ВРАЧА:\n'+value.decisionDraft.text:'',
@@ -32,6 +37,7 @@ export function originalClinicalDocument(value:ClinicalCase,displayLocale:Locale
   {id:'case',title:'Клинический случай',text:[value.title,value.context].filter(Boolean).join('\n\n')||'Нет дополнительных сведений'},
   {id:'original',title:'Исходное клиническое заключение (без изменений)',text:analysis.result.draft.summary},
   ...(analysis.result.draft.report?[{id:'structured',title:'Клиническое обоснование, обследования и предложенная тактика',text:clinicalReportText(analysis.result.draft.report)}]:[]),
+  ...(analysis.result.draft.studyReports?.length?[{id:'studies',title:'Результаты исследований (предварительно)',text:studyReportsText(analysis.result.draft.studyReports)}]:[]),
   ...(analysis.result.unassessed.length?[{id:'unassessed',title:'Что не было оценено',text:analysis.result.unassessed.join('\n')}]:[])
  ];
  return {id:crypto.randomUUID(),created:new Date().toISOString(),locale:displayLocale,kind:'encounter',generationMode:'from-analysis',presentation:'original-analysis',sourceAnalysisId:analysis.id,sourceSnapshot:source,sections,edited:false};
