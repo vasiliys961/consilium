@@ -970,7 +970,7 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
             : {}),
           ...(spoken ? { speech: spoken } : {}),
         },{onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});if(!body.draft||!body.gateway)throw new Error('Сервис не вернул завершённый результат.');}
-    catch(error){setCaseError(true);setCaseErrorMessage(error instanceof Error?error.message:'Разбор не выполнен.');setAnalyzing(false);return;}
+    catch(error){setPreview('');setCaseError(true);setCaseErrorMessage(error instanceof Error?error.message:'Разбор не выполнен.');setAnalyzing(false);return;}
     setCaseError(false);
     setResult(body);
     setHistory(current => [body, ...current].slice(0, 8));setRevision(0);
