@@ -86,6 +86,7 @@ export default function PrescriptionDrafts(){
    <button type="button" onClick={()=>window.print()}>{tr('Печать черновика / PDF','Print draft / PDF')}</button>
    <button type="button" onClick={()=>void downloadDocx(tr('Черновик рецепта','Prescription draft'),printable,language).catch(()=>setNotice('DOCX error'))}>DOCX</button>
    <button type="button" disabled={!caseId} onClick={()=>void save()}>{tr('Сохранить черновик в случай','Save draft in case')}</button>
+   <button type="button" onClick={()=>{if(navigator.share)void navigator.share({title:tr('Рецептурный черновик','Prescription draft'),text:printable}).catch(()=>{});else void navigator.clipboard.writeText(printable).then(()=>setNotice(tr('Скопировано для отправки','Copied for sharing'))).catch(()=>setNotice(tr('Не удалось скопировать','Copy failed')));}}>{tr('Поделиться черновиком','Share draft')}</button>
    <Link href={caseId?'/drug-checker?case='+encodeURIComponent(caseId):'/drug-checker'}>{tr('Проверить взаимодействия','Check interactions')}</Link>
   </div>
   {notice&&<p role="status">{notice}</p>}
