@@ -49,3 +49,16 @@ test('default Cursor viewer waits for new events and does not replay old errors 
   });
  }finally{child.kill('SIGTERM');await stopped;rmSync(directory,{recursive:true,force:true});}
 });
+
+test('C2: local ECG and council coordinator failures remain readable without exposing exception details',()=>{
+ const failedModule=terminalEvent('safe-run','module.failed',{module:'ECGFounder',status:'not_assessed',durationMs:12,text:'PRIVATE_ECG_TEXT',reason:'PRIVATE_STACK'});
+ const moduleText=formatTerminalEvent(failedModule);
+ assert.match(moduleText,/ECGFounder: технический сбой/);
+ assert.match(moduleText,/остальные этапы разбора продолжаются/);
+ assert.doesNotMatch(JSON.stringify(failedModule)+moduleText,/PRIVATE_ECG_TEXT|PRIVATE_STACK/);
+ const failedStage=terminalEvent('safe-run','stage.failed',{stage:'consilium',reason:'PRIVATE_COORDINATOR_STACK'});
+ const stageText=formatTerminalEvent(failedStage);
+ assert.match(stageText,/Консилиум: этап не завершён/);
+ assert.match(stageText,/доступные результаты других этапов сохранены/);
+ assert.doesNotMatch(JSON.stringify(failedStage)+stageText,/PRIVATE_COORDINATOR_STACK/);
+});
