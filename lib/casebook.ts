@@ -50,15 +50,23 @@ function eventLabel(kind: Event['kind']) {
 }
 
 /** Provenance must follow the actual attached bytes, not the filename or a prior analysis. */
+const SHA256 = /^[0-9a-f]{64}$/i;
+function sourceHash(hash: string | null | undefined): string | null {
+  return hash && SHA256.test(hash) ? hash.toLowerCase() : null;
+}
 function hasSourceHash(value: ClinicalCase, hash: string | null | undefined): boolean {
-  return Boolean(hash && value.files.some(file => file.sha256?.toLowerCase() === hash.toLowerCase()));
+  const expected = sourceHash(hash);
+  return Boolean(expected && value.files.some(file => sourceHash(file.sha256) === expected));
+}
+function radiologyReportIsCurrent(value: ClinicalCase, report: RadiologyModuleReport): boolean {
+  // No filename-only or partially matched multi-file reports may suppress a reread.
+  return report.fileKeys.length > 0 && report.fileKeys.every(key => Boolean(sourceHash(key) && hasSourceHash(value, key)));
 }
 function radiologyContext(value: ClinicalCase): string[] {
-  const keys = new Set(value.files.map(materialKey));
   return (value.moduleReports ?? []).map(report => {
     // Legacy unbound reports remain visible with their existing explicit warning.
     if (!report.fileKeys.length) return radiologyEvidenceText(report);
-    if (report.fileKeys.every(key => keys.has(key))) return radiologyEvidenceText(report);
+    if (radiologyReportIsCurrent(value, report)) return radiologyEvidenceText(report);
     const sources = report.sources.length ? report.sources.join(', ') : 'неизвестные источники';
     return `Opus Radiology · ${sources} · ${report.at}\nИсторический отчёт: исходные файлы больше не совпадают с прикреплёнными к текущему случаю. Прежнее описание сохранено в истории и экспорте, но не является заключением по новым файлам. Требуется повторный разбор изменённого исследования.`;
   });
@@ -76,7 +84,7 @@ export function analysisQuestion(analysis: Analysis): string {
 }
 const imageKey = (file:CaseFile, profile:ClinicalCase['imageProfile']) => JSON.stringify(['medical-image-routing-v1',profile??'auto',file.name,file.sha256,file.imageProfile,file.masks]);
 export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
-  const moduleHandled=(file:CaseFile)=>(value.moduleReports??[]).some(report=>report.fileKeys.includes(materialKey(file)));
+  const moduleHandled=(file:CaseFile)=>(value.moduleReports??[]).some(report=>radiologyReportIsCurrent(value, report) && Boolean(sourceHash(file.sha256) && report.fileKeys.some(key=>sourceHash(key)===sourceHash(file.sha256))));
   const images = value.files.filter(file => file.image && !file.text && !file.frames?.length&&!moduleHandled(file)&&materialRoute(file)!=='radiology');
   const key = JSON.stringify(['medical-image-routing-v1',value.imageProfile ?? 'auto', images.map(file => [file.name, file.sha256, file.imageProfile, file.masks])]);
   const materialsKey = JSON.stringify([value.imageProfile ?? 'auto', ...[value.files,value.library??[]].map(files=>files.map(file=>[file.name,file.sha256,file.imageProfile,file.masks,file.intakeNote]))]);
@@ -110,7 +118,7 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
     text:[caseContext(value),visualContext&&`CACHED PRIOR IMAGE INTERPRETATIONS — these unchanged images were read in an earlier step and deliberately are not uploaded again. The current processing ledger covers only NEW uploads; absence from it does not mean these earlier readings were lost or failed. They remain provisional model interpretations, not verified measurements. Reassess their clinical meaning against new data, mention actual contradictions once, and do not repeat their full descriptions.\n${visualContext}\n${studyReportsText(value.analyses.flatMap(analysis=>analysis.result.draft.studyReports??[]).filter((report,index,all)=>[...cached.values()].some(reading=>reading.source===report.source)&&all.findIndex(other=>JSON.stringify(other)===JSON.stringify(report))===index))}`,
       ...images.filter(file=>file.intakeNote).map(file=>`Current physician-supplied image measurements:\n${file.intakeNote}`),
       discussion&&`PRIOR DISCUSSION — unsigned model proposals, not new patient facts. Continue from these questions, answers and disagreements; do not repeat unchanged sections.\n${discussion}`].filter(Boolean).join('\n\n'),
-    pendingModules:value.files.filter(file=>materialRoute(file)==='radiology'&&!(value.moduleReports??[]).some(report=>report.fileKeys.includes(materialKey(file)))),files:sent,materialsKey,reusedSources:[...cached.values()].map(reading=>reading.source),
+    pendingModules:value.files.filter(file=>materialRoute(file)==='radiology'&&!moduleHandled(file)),files:sent,materialsKey,reusedSources:[...cached.values()].map(reading=>reading.source),
     reusedStudyReports:value.analyses.flatMap(analysis=>analysis.result.draft.studyReports??[]).filter((report,index,all)=>[...cached.values()].some(reading=>reading.source===report.source)&&all.findIndex(other=>JSON.stringify(other)===JSON.stringify(report))===index),
     visualEvidence:(readings:CaseResult['visualReadings']):VisualEvidence|undefined=>{
       const items=[...cached].map(([file,reading])=>({fileKey:imageKey(file,value.imageProfile),reading}));
