@@ -119,7 +119,9 @@ export async function createLocalVault(password:string){
  const records=await Promise.all(snapshot.records.map(async value=>encryptCase(key,await readCase(value))));
  await commit(snapshot,meta,records,key);
  session={key,check:meta.check.data};
- void navigator.storage?.persist?.().catch(()=>false);
+ // Browser-only storage persistence. The vault can also be tested in Node
+ // without a navigator object; keys and records remain browser-local.
+ if(typeof navigator!=='undefined')void navigator.storage?.persist?.().catch(()=>false);
 }
 
 export async function openLocalVault(password:string){

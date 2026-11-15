@@ -14,8 +14,11 @@ import {GeneticExtraction} from './genetic-extraction';
 import {ImageProfileSelect} from './image-profile';
 import {AnalysisProgress} from './analysis-progress';
 import {requestAnalysis,type AnalysisProgressEvent} from '@/lib/analysis-stream';
+import {commitClinicalAnalysis,stagePhysicianQuestion,preservePendingQuestion} from '@/lib/case-result-commit';
 import {ProductGuide,ReferenceInstructions} from './product-guide';
 import { CASE_SECTIONS, type CaseSection } from "@/lib/physician-guide";
+import { runOptionsKey, duplicateCompletedRun, repeatedRunWarning } from '@/lib/repeat-analysis';
+import { radiologyEvidenceText } from '@/lib/module-evidence';
 import { CaseNavigation, CaseSectionControls } from './case-navigation';
 import helpStyles from "./physician-help.module.css";
 import {downloadDocx} from '@/lib/download-docx';
@@ -30,7 +33,7 @@ import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
-import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, decisionDraftFrom, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
+import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
 import { prepareFile } from '@/lib/case-intake';
 import type { CaseTask } from '@/lib/case-plan';
 import type { CaseResult, CaseFile } from '@/lib/conductor';
@@ -195,30 +198,50 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         if (!snapshot || !canAnalyze || analysisRequest.current)
             return;
         if(caseAnalysisInput(snapshot).pendingModules.length){await save(snapshot);router.push(moduleHref('radiology',snapshot.id));return;}
-        if(snapshot===current&&caseQuestion.trim()){snapshot={...snapshot,events:[...snapshot.events,{id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:caseQuestion.trim()}]};setCaseQuestion('');}
+        const pendingQuestion = snapshot===current ? caseQuestion.trim() : '';
+        if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
         setBusy(true);setProgress([]);setPreview('');goToTab('analysis');
         setNotice('');
         const input = caseAnalysisInput(snapshot, rereadImages||imageSecondOpinion);
         try {
+            if(pendingQuestion&&current){
+                await preservePendingQuestion(current,pendingQuestion,eventDrafts.note,eventDrafts.decision);
+            }
             const libraryQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question||caseContext(snapshot).slice(0,1000);
             const automaticEvidence=libraryOptions.enabled&&libraryOptions.automatic?await retrieveLibraryEvidence(libraryQuestion,{context:caseContext(snapshot).slice(0,3500),documentId:libraryOptions.documentId||undefined,signal:request.signal}):null;
             const libraryFiles=automaticEvidence?.files??(libraryOptions.enabled&&selectedLibrary.question===libraryQuestion?selectedLibrary.files:[]);
+            const requestOptionsKey=runOptionsKey({task:requestedTask,kind,consilium:withCouncil,secondOpinion:imageSecondOpinion,rereadImages,externalSearch,answerLocale,sourceLocale:language,retrievedSources:libraryFiles});
+            if(duplicateCompletedRun(snapshot.analyses[0],caseSignature(snapshot),requestOptionsKey)
+                && !window.confirm(repeatedRunWarning(snapshot.analyses[0],language))){
+              setNotice('Повторный запрос отменён. Предыдущее заключение сохранено.');
+              return;
+            }
             const value = await requestAnalysis({ imageProfile:snapshot.imageProfile,caseId: snapshot.id, text: input.text, files: input.files, referenceFiles: [...(snapshot.library??[]),...libraryFiles], drugLabels:snapshot.drugLabels, externalSearch, locale: answerLocale, sourceLocale: language, consilium:withCouncil,secondOpinion:imageSecondOpinion, ...(requestedTask !== 'auto' ? { task:requestedTask } : {}), retain: false },{signal:request.signal,onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});
             if (!value.draft || !value.gateway)
                 throw new Error('Сервис вернул неполный результат.');
             const newestQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question;
             const title=kind==='summary'?'Резюме разбора':newestQuestion||'Разбор материалов и клинических данных';
-            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
-            const next:ClinicalCase={...snapshot,updated:entry.at,analyses:[entry,...snapshot.analyses],...(kind==='summary'&&value.clinicalDraft==='generated'?{decisionDraft:{analysisId:entry.id,at:entry.at,text:decisionDraftFrom(entry)}}:{})};
+            const entry:Analysis={id:crypto.randomUUID(),at:new Date().toISOString(),question:title,kind,clinicalContext:snapshot.context,newFacts:snapshot.events.filter(event=>event.kind==='note'&&(!snapshot.analyses[0]||event.at>snapshot.analyses[0].at)).map(event=>event.text).join('\n\n'),context:input.text,inputSignature:caseSignature(snapshot),requestOptionsKey,materialsKey:input.materialsKey,visualEvidence:input.visualEvidence(value.visualReadings),reusedSources:input.reusedSources,result:value};
+            const {value:next,stored}=await commitClinicalAnalysis(snapshot,entry,{
+                question:pendingQuestion?'':caseQuestion,
+                note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis',
+            });
             setCurrent(next);
-                setDirty(true);
+            if(pendingQuestion)setCaseQuestion('');
+            if(stored)setCases(old=>[next,...old.filter(item=>item.id!==next.id)]);
+            setDirty(!stored);
             setRereadImages(false);
-            setNotice(value.clinicalDraft === 'generated' ? t("Черновик готов. Проверьте источники и ограничения перед решением.") : value.draft.summary);
+            setNotice(!stored
+                ? 'Ответ получен, но не сохранён в браузере. Экспортируйте случай сейчас; не закрывайте страницу.'
+                : value.clinicalDraft === 'generated' ? t("Черновик готов. Проверьте источники и ограничения перед решением.") : value.draft.summary);
         }
         catch (e) {
-            setNotice(request.signal.aborted ? 'Разбор остановлен.' : e instanceof Error ? e.message : t("Нет соединения с сервисом."));
+            // Previews are unverified partial tokens and never become a case result.
+            // The doctor question remains in the editor (and was preserved locally).
+            setPreview('');
+            setNotice(request.signal.aborted ? 'Разбор остановлен. Вопрос сохранён для повторного запуска.' : e instanceof Error ? e.message : t("Нет соединения с сервисом."));
         }
         finally {
             analysisRequest.current = undefined;
@@ -309,7 +332,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
    {section === 'cases' && current && <>
     <button className={styles.back} disabled={busy} onClick={() => changeCase(null)}>{t("← Все случаи")}</button>
     <div className={styles.heading}><div><p className={styles.eyebrow}>{t("СЛУЧАЙ ·")}{current.id.slice(0, 8)} {dirty ? t("· СОХРАНЯЕМ") : ''}</p><h1>{caseTitle(current,t('Новый клинический случай'))}</h1><p>{t("Создан")} {date(current.created)} · {current.status === 'active' ? t("В работе") : t("Завершён")}</p></div><div className={styles.actions}><button disabled={busy} onClick={() => download(exportCase(current), `case-${current.id.slice(0, 8)}.md`, 'text/markdown')}>{t("↓ Экспорт")}</button><button disabled={busy} onClick={()=>void downloadDocx(current.title||t("Протокол осмотра"),exportCase(current),answerLocale).catch(()=>setNotice(t("Не удалось создать DOCX")))}>{t("Бланк DOCX")}</button><Link className={styles.primary} href={`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`} onClick={event=>{if(dirty||!cases.some(item=>item.id===current.id)){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`);});}}}>{t("Протокол осмотра")}</Link><Link href={`/radiology?case=${encodeURIComponent(current.id)}`} onClick={event=>{if(dirty){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/radiology?case=${encodeURIComponent(current.id)}`);});}}}>{t("Opus Radiology")}</Link><button className={styles.primary} disabled={busy || uploading} onClick={() => void save()}>{t("Сохранить случай")}</button></div></div>
-    <CaseConnections/>{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{report.text}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
+    <CaseConnections/>{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{radiologyEvidenceText(report)}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
     <button type="button" disabled={busy||saving} onClick={()=>void moveToTrash(current)}>{t('🗑 В корзину')}</button>
     <details className={privacyStyles.localPatient}><summary>{t('Данные пациента · только локально')}</summary><p>{t('Эти поля сохраняются вместе со случаем только в этом браузере. Используйте их для связи кода случая с пациентом. Они не включаются в запросы моделям.')}</p>{(['name','birthDate','identifiers','dates'] as const).map((field,index)=><label key={field}>{t(['ФИО пациента','Дата рождения','Контакты и идентификаторы','Точные даты исследований'][index])}<input disabled={busy} type={field==='birthDate'?'date':'text'} value={current.privatePatient?.[field]??''} onChange={e=>update({privatePatient:{name:'',birthDate:'',identifiers:'',dates:'',...current.privatePatient,[field]:e.target.value}})}/></label>)}</details>
     <PhoneImport disabled={busy||uploading||current.status==='closed'} locale={language} onFile={async (file) => { const transfer = new DataTransfer(); transfer.items.add(file); await addFiles(transfer.files); }}/>
