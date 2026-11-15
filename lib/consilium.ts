@@ -120,8 +120,9 @@ function packet(input: ConsiliumInput, prior: ConsiliumVoice[]): string {
     .filter(Boolean))]
     .join("\n");
   const earlier = prior
-    .filter((voice) => voice.text)
-    .map((voice) => `${voice.id}: ${voice.text}`)
+    .map((voice) => voice.status === "done" && voice.text
+      ? `${voice.id}: ${voice.text}`
+      : `${voice.id}: NOT ASSESSED — no opinion returned. Do not infer agreement or a clinical finding from this missing role.`)
     .join("\n");
   return [
     `Write in ${languageName(input.locale)}.`,
@@ -191,16 +192,26 @@ export async function runConsilium(
   const allowed = sourceKeys(input.citations);
   const role = (id: ConsiliumRole["id"]) => roles.find((item) => item.id === id)!;
   const context = packet(input, []);
+  // Preserve each completed opinion even if another provider throws unexpectedly.
+  // A missing opinion is not a negative finding and must never erase the draft.
+  const safelyAsk = async (item: ConsiliumRole, prompt: string): Promise<ConsiliumVoice> => {
+    try {
+      return await ask(env, item, prompt, allowed, fetchImpl);
+    } catch (error) {
+      return {
+        ...quiet(item),
+        failure: error instanceof Error && /abort|timeout/i.test(error.name) ? 'deadline' : 'provider_error',
+      };
+    }
+  };
   const opinions = await Promise.all(roles.filter(item => item.id !== 'checklist').map(item =>
-    ask(env, item, context, allowed, fetchImpl),
+    safelyAsk(item, context),
   ));
-  const checklist = await ask(
-    env,
-    role("checklist"),
-    packet(input, opinions),
-    allowed,
-    fetchImpl,
-  );
+  // The fifth model cannot reconcile votes that do not exist. Save an explicit
+  // unavailable state instead of paying for an invented consensus.
+  const checklist = opinions.some(voice => voice.status === 'done')
+    ? await safelyAsk(role("checklist"), packet(input, opinions))
+    : quiet(role("checklist"));
   const spoken = new Map([...opinions, checklist].map((voice) => [voice.id, voice]));
   return roles.map((item) => spoken.get(item.id) ?? quiet(item));
 }
