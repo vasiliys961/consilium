@@ -6,6 +6,7 @@ import { complete, type ModelFailure } from "./gateway.ts";
 import type { Citation } from "./literature.ts";
 import { languageName, type Locale } from "./locale.ts";
 import type { ClinicalReport } from './clinical-report.ts';
+import { clinicalFocusText } from './clinical-focus.ts';
 
 export interface ConsiliumRole {
   id: "hypothesis" | "testChooser" | "challenger" | "stewardship" | "checklist";
@@ -22,15 +23,9 @@ export const CONSILIUM_ROLES: ConsiliumRole[] = [
   { id: "checklist", model: MODELS.opus, critic: false },
 ];
 
+/** Clinical focus areas for existing roles; these are NOT separate paid specialist agents. */
 export function consiliumFocus(note: string, modalities: string[]) {
-  return [
-    'internal medicine',
-    (modalities.includes('ecg') || /ишеми|аритми|инфаркт|сердечн|cardiac|arrhythm|myocard/i.test(note)) && 'cardiology',
-    (modalities.some(item=>['dicom','radiology','ultrasound','ct','mri'].includes(item))) && 'radiology and imaging',
-    (modalities.includes('genetics')) && 'clinical genetics',
-    (/креатинин|почечн|нефрит|creatinine|nephrit|kidney|renal/i.test(note)) && 'nephrology',
-    (/препарат|лекарств|мг|medications|dose|polypharmacy/i.test(note)) && 'clinical pharmacology',
-  ].filter(Boolean).join(', ');
+  return clinicalFocusText(note, modalities);
 }
 
 export interface ConsiliumVoice {
@@ -55,7 +50,7 @@ const ROLE_TASK: Record<ConsiliumRole["id"], string> = {
   stewardship:
     "Review the proposed management for avoidable harm. Check documented medications, allergies, comorbidities and organ function, and state what is missing before choosing an option. Do not add diagnoses or invent contraindications.",
   checklist:
-    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Distinguish unsupported options and absent votes. The draft stays unsigned.",
+    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Name each supported and disputed position by role id (hypothesis, testChooser, challenger, stewardship), not as invented specialist votes. Never say all opinions agree when any explicitly disagree. State which unresolved issue changes the next clinical action. Distinguish unsupported options and absent votes. The draft stays unsigned.",
 };
 
 function quiet(role: ConsiliumRole): ConsiliumVoice {
@@ -118,13 +113,16 @@ function treatmentContext(report?: ClinicalReport): string {
 }
 
 function packet(input: ConsiliumInput, prior: ConsiliumVoice[]): string {
-  const sources = input.citations
+  // Exact duplicate reference excerpts waste tokens in all five role prompts.
+  // Keep every distinct source statement unchanged; deduplicate only identical lines.
+  const sources = [...new Set(input.citations
     .map((citation) => `${citation.passageId ?? (citation.pmid ? `pmid:${citation.pmid}` : citation.url ?? "no-source-key")} | ${citation.title} | ${citation.paragraph ? "Full-text excerpt" : citation.excerpt ? "Excerpt" : citation.abstract ? "Abstract" : "Bibliographic record"} | ${citation.excerpt ?? citation.abstract ?? "title only, not verified supporting evidence"}`)
-    .filter(Boolean)
+    .filter(Boolean))]
     .join("\n");
   const earlier = prior
-    .filter((voice) => voice.text)
-    .map((voice) => `${voice.id}: ${voice.text}`)
+    .map((voice) => voice.status === "done" && voice.text
+      ? `${voice.id}: ${voice.text}`
+      : `${voice.id}: NOT ASSESSED — no opinion returned. Do not infer agreement or a clinical finding from this missing role.`)
     .join("\n");
   return [
     `Write in ${languageName(input.locale)}.`,
@@ -194,16 +192,26 @@ export async function runConsilium(
   const allowed = sourceKeys(input.citations);
   const role = (id: ConsiliumRole["id"]) => roles.find((item) => item.id === id)!;
   const context = packet(input, []);
+  // Preserve each completed opinion even if another provider throws unexpectedly.
+  // A missing opinion is not a negative finding and must never erase the draft.
+  const safelyAsk = async (item: ConsiliumRole, prompt: string): Promise<ConsiliumVoice> => {
+    try {
+      return await ask(env, item, prompt, allowed, fetchImpl);
+    } catch (error) {
+      return {
+        ...quiet(item),
+        failure: error instanceof Error && /abort|timeout/i.test(error.name) ? 'deadline' : 'provider_error',
+      };
+    }
+  };
   const opinions = await Promise.all(roles.filter(item => item.id !== 'checklist').map(item =>
-    ask(env, item, context, allowed, fetchImpl),
+    safelyAsk(item, context),
   ));
-  const checklist = await ask(
-    env,
-    role("checklist"),
-    packet(input, opinions),
-    allowed,
-    fetchImpl,
-  );
+  // The fifth model cannot reconcile votes that do not exist. Save an explicit
+  // unavailable state instead of paying for an invented consensus.
+  const checklist = opinions.some(voice => voice.status === 'done')
+    ? await safelyAsk(role("checklist"), packet(input, opinions))
+    : quiet(role("checklist"));
   const spoken = new Map([...opinions, checklist].map((voice) => [voice.id, voice]));
   return roles.map((item) => spoken.get(item.id) ?? quiet(item));
 }
