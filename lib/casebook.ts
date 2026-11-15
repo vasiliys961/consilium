@@ -48,12 +48,27 @@ export function caseTitle(value: ClinicalCase, fallback: string) {
 function eventLabel(kind: Event['kind']) {
   return kind === 'decision' ? 'Решение врача' : kind === 'question' ? 'Предыдущий вопрос врача' : 'Динамика';
 }
+
+/** Provenance must follow the actual attached bytes, not the filename or a prior analysis. */
+function hasSourceHash(value: ClinicalCase, hash: string | null | undefined): boolean {
+  return Boolean(hash && value.files.some(file => file.sha256?.toLowerCase() === hash.toLowerCase()));
+}
+function radiologyContext(value: ClinicalCase): string[] {
+  const keys = new Set(value.files.map(materialKey));
+  return (value.moduleReports ?? []).map(report => {
+    // Legacy unbound reports remain visible with their existing explicit warning.
+    if (!report.fileKeys.length) return radiologyEvidenceText(report);
+    if (report.fileKeys.every(key => keys.has(key))) return radiologyEvidenceText(report);
+    const sources = report.sources.length ? report.sources.join(', ') : 'неизвестные источники';
+    return `Opus Radiology · ${sources} · ${report.at}\nИсторический отчёт: исходные файлы больше не совпадают с прикреплёнными к текущему случаю. Прежнее описание сохранено в истории и экспорте, но не является заключением по новым файлам. Требуется повторный разбор изменённого исследования.`;
+  });
+}
 export function caseContext(value: ClinicalCase): string {
   const recent = value.events.slice().reverse().find(event => event.kind === 'question');
   const question = recent?.text ?? value.question;
   const medications = value.currentMedications?.split(/\r?\n/).map(line => line.trim()).filter(Boolean).join('\n');
   return [question && `Вопрос врача: ${question}`, medications && `${CURRENT_MEDICATIONS_HEADING}\n${medications}`, value.context, recent && value.question ? `Первоначальный вопрос: ${value.question}` : '',
-    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...(value.moduleReports??[]).map(radiologyEvidenceText)].filter(Boolean).join('\n\n');
+    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...radiologyContext(value)].filter(Boolean).join('\n\n');
 }
 
 export function analysisQuestion(analysis: Analysis): string {
@@ -83,7 +98,11 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
     `Discussion ${index+1} — ${analysisQuestion(analysis)}`,
     analysis.result.clinicalDraft==='generated'?analysis.result.draft.summary:'No completed clinical answer in this step.',
     analysis.result.draft.report?clinicalReportText(analysis.result.draft.report):'',
-    analysis.result.ecgEvidence ? 'ECGFounder — ранее сохранённое техническое измерение, в текущем проходе не повторено:\n'+ecgEvidenceText(analysis.result.ecgEvidence) : '',
+    analysis.result.ecgEvidence
+      ? hasSourceHash(value, analysis.result.ecgEvidence.sha256)
+        ? 'ECGFounder — ранее сохранённое техническое измерение по неизменённому файлу, в текущем проходе не повторено:\n'+ecgEvidenceText(analysis.result.ecgEvidence)
+        : `ECGFounder · ${analysis.result.ecgEvidence.source} — исторический результат, не подтверждённый текущим SHA-256. Прежние классы и измерения НЕ относятся к новому файлу; при необходимости выполните повторный анализ. Полные результаты остались в истории случая.`
+      : '',
     ...analysis.result.voices.filter(voice=>voice.status==='done').map(voice=>`${voice.id}: ${voice.text}`),
   ].filter(Boolean).join('\n')).join('\n\n');
   const sent=value.files.filter(file=>!cached.has(file)&&!moduleHandled(file)&&materialRoute(file)!=='radiology').map(file=>({...file,...(file.sha256&&!file.clientId?{clientId:`${file.sha256.slice(0,8)}-${file.sha256.slice(8,12)}-${file.sha256.slice(12,16)}-${file.sha256.slice(16,20)}-${file.sha256.slice(20,32)}`}:{})}));
