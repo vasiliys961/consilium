@@ -155,6 +155,27 @@ async function serialCaseWrite<T>(id:string,writer:()=>Promise<T>):Promise<T>{
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{
  return serialCaseWrite(value.id,()=>writeVaultCase(value,remove));
 }
+/** Autosave snapshots can complete after newer analysis/attachment writes.
+ * Never allow an older snapshot to overwrite newer physician work.
+ * This preserves all current in-memory fields, unlike an editor-only patch.
+ */
+export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
+ return serialCaseWrite(value.id,async()=>{
+  const latest=(await readVaultCases()).find(record=>record.id===value.id);
+  if(!latest||latest.deletedAt)return false;
+  if(latest.updated>value.updated)return false;
+  // Date.now() can collide in a single millisecond. A newer analysis/event/file
+  // must still win if timestamps are identical.
+  if(latest.updated===value.updated&&(
+    latest.analyses.length>value.analyses.length||
+    latest.events.length>value.events.length||
+    latest.files.length>value.files.length||
+    (latest.moduleReports?.length??0)>(value.moduleReports?.length??0)
+  ))return false;
+  await writeVaultCase(value);
+  return true;
+ });
+}
 /** Patch ONLY the editor, never analyses, files, or physician decisions.
  * expectedUpdated rejects an old snapshot after a new clinical result or attachment.
  */
