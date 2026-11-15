@@ -60,5 +60,7 @@ test('C2: local ECG and council coordinator failures remain readable without exp
  const stageText=formatTerminalEvent(failedStage);
  assert.match(stageText,/Консилиум: этап не завершён/);
  assert.match(stageText,/доступные результаты других этапов сохранены/);
+ const noVotes=formatTerminalEvent(terminalEvent('safe-run','stage.completed',{stage:'consilium',status:'not_assessed'}));
+ assert.match(noVotes,/Консилиум: нет полученных мнений/);
  assert.doesNotMatch(JSON.stringify(failedStage)+stageText,/PRIVATE_COORDINATOR_STACK/);
 });
