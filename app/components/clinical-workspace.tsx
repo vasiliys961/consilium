@@ -33,7 +33,7 @@ import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
-import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, decisionDraftFrom, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
+import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
 import { prepareFile } from '@/lib/case-intake';
 import type { CaseTask } from '@/lib/case-plan';
 import type { CaseResult, CaseFile } from '@/lib/conductor';
