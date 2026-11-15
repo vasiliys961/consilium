@@ -200,11 +200,12 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     }
     const payloadTooLarge = current && JSON.stringify([...current.files.filter(file=>materialRoute(file)!=='radiology'),...(current.library??[])]).length > 12000000;
     const canAnalyze = Boolean(current && !current.deletedAt && current.status==='active' && configured && !busy && !uploading && !payloadTooLarge);
-    async function analyze(snapshot = current, requestedTask = task, withCouncil = consilium, kind:AnalysisKind = 'analysis') {
+    async function analyze(snapshot = current, requestedTask = task, withCouncil = consilium, kind:AnalysisKind = 'analysis', explicitQuestion?:string) {
         if (!snapshot || !canAnalyze || analysisRequest.current)
             return;
         if(caseAnalysisInput(snapshot).pendingModules.length){await save(snapshot);router.push(moduleHref('radiology',snapshot.id));return;}
-        const pendingQuestion = snapshot===current ? caseQuestion.trim() : '';
+        const originalSnapshot=snapshot;
+        const pendingQuestion=(explicitQuestion??(snapshot===current?caseQuestion:'')).trim();
         if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
@@ -212,15 +213,22 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         setNotice('');
         const input = caseAnalysisInput(snapshot, rereadImages||imageSecondOpinion);
         try {
-            if(pendingQuestion&&current){
-                await preservePendingQuestion(current,pendingQuestion,eventDrafts.note,eventDrafts.decision);
+            if(pendingQuestion){
+                // Record the pending request in the editable draft. The staged
+                // question event stays in memory until a complete response arrives.
+                await preservePendingQuestion(originalSnapshot,pendingQuestion,eventDrafts.note,eventDrafts.decision);
             }
             const libraryQuestion=snapshot.events.slice().reverse().find(event=>event.kind==='question')?.text||snapshot.question||caseContext(snapshot).slice(0,1000);
             const automaticEvidence=libraryOptions.enabled&&libraryOptions.automatic?await retrieveLibraryEvidence(libraryQuestion,{context:caseContext(snapshot).slice(0,3500),documentId:libraryOptions.documentId||undefined,signal:request.signal}):null;
             const libraryFiles=automaticEvidence?.files??(libraryOptions.enabled&&selectedLibrary.question===libraryQuestion?selectedLibrary.files:[]);
             const requestOptionsKey=runOptionsKey({task:requestedTask,kind,consilium:withCouncil,secondOpinion:imageSecondOpinion,rereadImages,externalSearch,answerLocale,sourceLocale:language,retrievedSources:libraryFiles});
-            if(duplicateCompletedRun(snapshot.analyses[0],caseSignature(snapshot),requestOptionsKey)
-                && !window.confirm(repeatedRunWarning(snapshot.analyses[0],language))){
+            const latest=originalSnapshot.analyses[0];
+            // Repeating the same completed question must warn before any paid
+            // request, even when the UI stages a new question event for that run.
+            const sameQuestion=Boolean(pendingQuestion && latest?.question===pendingQuestion && kind!=='summary');
+            const comparableSignature=sameQuestion?caseSignature(originalSnapshot):caseSignature(snapshot);
+            if(duplicateCompletedRun(latest,comparableSignature,requestOptionsKey)
+                && !window.confirm(repeatedRunWarning(latest,language))){
               setNotice('Повторный запрос отменён. Предыдущее заключение сохранено.');
               return;
             }
@@ -235,7 +243,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
                 note:eventDrafts.note,decision:eventDrafts.decision,tab:'analysis',
             });
             setCurrent(next);
-            if(pendingQuestion)setCaseQuestion('');
+            if(pendingQuestion)setCaseQuestion(value=>value.trim()===pendingQuestion?'':value);
             if(stored)setCases(old=>[next,...old.filter(item=>item.id!==next.id)]);
             setDirty(!stored);
             setRereadImages(false);
@@ -269,28 +277,41 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         if (!current || !eventText.trim())
             return;
         if(editingCurrent&&editingEvent){const next=reviseCaseEvent(current,editingEvent,eventText);void storeTransition(next,'Правка сохранена. Предыдущий текст доступен в истории правок.').then(saved=>{if(saved){setEditingEvent(undefined);setEventDrafts(value=>({...value,[eventKind]:''}));}});return;}
-        const events: Event[] = [...current.events, { id: crypto.randomUUID(), at: new Date().toISOString(), kind:eventKind, text: eventText.trim() }];
-        update({ events });
+        const at=new Date().toISOString();
+        const events: Event[] = [...current.events, { id: crypto.randomUUID(), at, kind:eventKind, text: eventText.trim() }];
+        const snapshot:ClinicalCase={...current,events,updated:at};
+        setCurrent(snapshot);
+        setDirty(true);
         setEventDrafts(value => ({...value,[eventKind]:''}));
         if (andAnalyze) {
-          if(eventKind==='note')events.push({id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:caseQuestion.trim()||'Динамика: что изменилось с учётом новых данных и как это влияет на дальнейшую тактику?'});
-          void analyze({...current, events},task,consilium,'analysis');
+          const requestQuestion=caseQuestion.trim()||
+            (eventKind==='note'
+              ? 'Динамика: что изменилось с учётом новых данных и как это влияет на дальнейшую тактику?'
+              : 'Оцените последствия нового решения врача для дальнейшего ведения.');
+          setCaseQuestion(requestQuestion);
+          // The observation/decision is a real physician event, but the extra
+          // AI question is NOT committed until a completed response arrives.
+          void analyze(snapshot,task,consilium,'analysis',requestQuestion);
         }
     }
     function reviewMedications(active:string,proposed:string){if(!current||!canAnalyze)return;
       const question=['Проверьте лекарственные взаимодействия и риски только для перечисленных препаратов. Отдельно оцените подтверждённые сочетания, недостающие данные и источники; не считайте отсутствие найденного правила доказательством совместимости.',`Текущий список, сообщённый врачом:\n${active||'(не указан)'}`,`Предполагаемое назначение, ещё не принято:\n${proposed||'(не указано)'}`].join('\n\n');
-      const snapshot={...current,currentMedications:active,events:[...current.events,{id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question' as const,text:question}]};
-      void analyze(snapshot,'management',false,'question');
+      const snapshot:ClinicalCase={...current,currentMedications:active,updated:new Date().toISOString()};
+      setCurrent(snapshot);
+      setDirty(true);
+      setCaseQuestion(question);
+      void analyze(snapshot,'management',false,'question',question);
     }
     function askCase(kind: 'question' | 'management' | 'council' | 'summary') {
         if (!current || !canAnalyze) return;
         const defaults={management:'Какие варианты лечебной тактики подходят к этому случаю и что проверить перед назначением?',council:'Консилиум: разберите нерешённые вопросы, разногласия и следующий шаг.',summary:'Резюме всей дискуссии: кратко сопоставьте все этапы, новые данные и разногласия. Укажите выводы, следующий шаг, условия изменения тактики и оставшиеся вопросы. Подготовьте проект решения для врача, не выдавая его за принятое решение.',question:''};
         const question=kind==='summary'?[defaults.summary,caseQuestion.trim()].filter(Boolean).join('\n'):caseQuestion.trim()||defaults[kind];
         if (!question) return;
-        const events: Event[] = [...current.events, {id:crypto.randomUUID(),at:new Date().toISOString(),kind:'question',text:question}];
-        update({events});
-        setCaseQuestion('');
-        void analyze({...current,events}, kind === 'management' || kind === 'summary' ? 'management' : 'auto', kind === 'council' || consilium,kind);
+        // Never clear the clinician's question or record a completed event
+        // merely because a button was pressed. The request can still fail.
+        setCaseQuestion(question);
+        void analyze(current,kind === 'management' || kind === 'summary' ? 'management' : 'auto',
+          kind === 'council' || consilium,kind,question);
     }
     const changeCase = (value: ClinicalCase | null) => {
         if(home && value){router.push(`/workspace?case=${encodeURIComponent(value.id)}`);return;}
