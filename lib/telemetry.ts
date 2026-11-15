@@ -42,7 +42,7 @@ export function formatTerminalEvent(event:RunEvent):string{
   case 'run.planned':return `${prefix} Задача: ${event.task} · консилиум: ${event.consilium?'да':'нет'}`;
   case 'consult.stage':
   case 'stage.started':return `${prefix} ${stages[String(event.stage)]??event.stage}`;
-  case 'stage.completed':return `${prefix} ${stages[String(event.stage)]??event.stage}: завершено${event.readFiles!==undefined?` · прочитано: ${event.readFiles}, не оценено: ${event.unassessedFiles}`:''}${event.passages!==undefined?` · фрагментов: ${event.passages}, источников: ${event.citations}, внешний поиск: ${event.externalSearch?'да':'нет'}`:''}`;
+  case 'stage.completed':return `${prefix} ${stages[String(event.stage)]??event.stage}: ${event.status==='not_assessed'?'нет полученных мнений':'завершено'}${event.readFiles!==undefined?` · прочитано: ${event.readFiles}, не оценено: ${event.unassessedFiles}`:''}${event.passages!==undefined?` · фрагментов: ${event.passages}, источников: ${event.citations}, внешний поиск: ${event.externalSearch?'да':'нет'}`:''}`;
   case 'module.started':return `${prefix} Проверка цифровой записи · ${event.module} · локально`;
   case 'module.completed':return `${prefix} ${event.module}: ${event.status==='read'?'отработал':'запись не оценена'} · локально${duration}${cost}`;
   case 'module.failed':return `${prefix} ${event.module??'Модуль'}: технический сбой, данные не оценены; остальные этапы разбора продолжаются${duration}`;
