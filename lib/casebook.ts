@@ -8,7 +8,7 @@ import { ecgEvidenceText, radiologyEvidenceText, type RadiologyModuleReport } fr
 export type Event = { id: string; at: string; kind: 'note' | 'decision' | 'question'; text: string; editedAt?:string; revisions?:Array<{at:string;text:string}> };
 type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualReadings']>; items?: Array<{fileKey:string; reading:NonNullable<CaseResult['visualReadings']>[number]}> };
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
-export type Analysis = { question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
+export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
 export type ClinicalCase = {
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
   workspaceDraft?:{question:string;note:string;decision:string;tab:string};
