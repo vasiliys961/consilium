@@ -1,4 +1,4 @@
-import { decisionDraftFrom, persistCase, type Analysis, type ClinicalCase } from './casebook.ts';
+import { decisionDraftFrom, persistCase, persistCaseDraft, type Analysis, type ClinicalCase } from './casebook.ts';
 
 /**
  * Promote an editor-only question into this request's in-memory analysis snapshot.
@@ -25,7 +25,10 @@ export async function preservePendingQuestion(
   question: string,
   note: string,
   decision: string,
-  save: (value: ClinicalCase) => Promise<void> = persistCase,
+  save: (value: ClinicalCase) => Promise<void> = async value=>{
+    const applied=await persistCaseDraft(value.id,value.workspaceDraft!,snapshot.updated);
+    if(!applied)throw new Error('Случай изменился во время подготовки вопроса. Обновите случай перед отправкой.');
+  },
 ): Promise<void> {
   if(!question.trim())return;
   await save({...snapshot,workspaceDraft:{
