@@ -45,6 +45,8 @@ export function formatTerminalEvent(event:RunEvent):string{
   case 'stage.completed':return `${prefix} ${stages[String(event.stage)]??event.stage}: завершено${event.readFiles!==undefined?` · прочитано: ${event.readFiles}, не оценено: ${event.unassessedFiles}`:''}${event.passages!==undefined?` · фрагментов: ${event.passages}, источников: ${event.citations}, внешний поиск: ${event.externalSearch?'да':'нет'}`:''}`;
   case 'module.started':return `${prefix} Проверка цифровой записи · ${event.module} · локально`;
   case 'module.completed':return `${prefix} ${event.module}: ${event.status==='read'?'отработал':'запись не оценена'} · локально${duration}${cost}`;
+  case 'module.failed':return `${prefix} ${event.module??'Модуль'}: технический сбой, данные не оценены; остальные этапы разбора продолжаются${duration}`;
+  case 'stage.failed':return `${prefix} ${stages[String(event.stage)]??event.stage}: этап не завершён; доступные результаты других этапов сохранены`;
   case 'model.started':return `${prefix} → Модель: ${event.model} (${event.provider})`;
   case 'model.responded':return `${prefix} ← ${event.model} · HTTP ${event.httpStatus} · завершение: ${event.finishReason??'не указано'} · токены: ${event.inputTokens} → ${event.outputTokens}${duration}${cost}`;
   case 'model.rejected':return `${prefix} Ответ ${event.model} отклонён · ${event.reason==='truncated'?'достигнут лимит ответа':'ответ не соответствует формату разбора'}`;
