@@ -23,6 +23,8 @@ import { CaseNavigation, CaseSectionControls } from './case-navigation';
 import helpStyles from "./physician-help.module.css";
 import {downloadDocx} from '@/lib/download-docx';
 import { LanguageSwitcher } from './language-switcher';
+import {ProtocolLanguageOffer} from './protocol-language-offer';
+import {protocolLanguageHref} from '@/lib/protocol-language-flow';
 import { WORKSPACE_LANGUAGES, type WorkspaceLanguage } from "@/lib/workspace-i18n";
 import { useWorkspaceLanguage } from "@/app/components/workspace-language";
 import { LOCALES, type Locale, parseLocale } from "@/lib/locale";
@@ -76,6 +78,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const [tab, setTab] = useState<CaseSection>('context');
     const [search, setSearch] = useState('');
     const [notice, setNotice] = useState('');
+    const [protocolOffer,setProtocolOffer]=useState<{caseId:string;analysisId:string}|null>(null);
     const [busy, setBusy] = useState(false);
     const [progress,setProgress]=useState<AnalysisProgressEvent[]>([]);const [preview,setPreview]=useState('');
     const [caseQuestion, setCaseQuestion] = useState('');
@@ -160,7 +163,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const create = async () => {
         if(home){router.push('/workspace?new=1');return;}
         const value=await openNewCase(cases);setCurrent(value);setCases(await readCases(true));window.history.replaceState(window.history.state,'',`/workspace?case=${encodeURIComponent(value.id)}`);
-        setTab('context');
+        setTab('context');setProtocolOffer(null);
         setSection('cases');
         setNotice('');
         setDirty(false);
@@ -221,7 +224,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
-        setBusy(true);setProgress([]);setPreview('');goToTab('analysis');
+        setProtocolOffer(null);setBusy(true);setProgress([]);setPreview('');goToTab('analysis');
         setNotice('');
         const input = caseAnalysisInput(snapshot, rereadImages||imageSecondOpinion);
         try {
@@ -258,6 +261,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             if(pendingQuestion)setCaseQuestion(value=>value.trim()===pendingQuestion?'':value);
             if(stored)setCases(old=>[next,...old.filter(item=>item.id!==next.id)]);
             setDirty(!stored);
+            if(stored&&value.clinicalDraft==='generated')setProtocolOffer({caseId:next.id,analysisId:entry.id});
             setRereadImages(false);
             setNotice(!stored
                 ? 'Ответ получен, но не сохранён в браузере. Экспортируйте случай сейчас; не закрывайте страницу.'
@@ -331,7 +335,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             return;
         if (unsaved && !window.confirm(t('Есть несохранённые изменения. Перейти без сохранения?')))
             return;
-        setCurrent(value);
+        setCurrent(value);setProtocolOffer(null);
         setDirty(false);
         setTab('context');
         setEventDrafts(EMPTY_EVENT_DRAFTS);setEditingEvent(undefined);
@@ -371,7 +375,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
    {section === 'cases' && current && <>
     <button className={styles.back} disabled={busy} onClick={() => changeCase(null)}>{t("← Все случаи")}</button>
     <div className={styles.heading}><div><p className={styles.eyebrow}>{t("СЛУЧАЙ ·")}{current.id.slice(0, 8)} {dirty ? t("· СОХРАНЯЕМ") : ''}</p><h1>{caseTitle(current,t('Новый клинический случай'))}</h1><p>{t("Создан")} {date(current.created)} · {current.status === 'active' ? t("В работе") : t("Завершён")}</p></div><div className={styles.actions}><button disabled={busy} onClick={() => download(exportCase(current), `case-${current.id.slice(0, 8)}.md`, 'text/markdown')}>{t("↓ Экспорт")}</button><button disabled={busy} onClick={()=>void downloadDocx(current.title||t("Протокол осмотра"),exportCase(current),answerLocale).catch(()=>setNotice(t("Не удалось создать DOCX")))}>{t("Бланк DOCX")}</button><Link className={styles.primary} href={`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`} onClick={event=>{if(dirty||!cases.some(item=>item.id===current.id)){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`);});}}}>{t("Протокол осмотра")}</Link><Link href={`/radiology?case=${encodeURIComponent(current.id)}`} onClick={event=>{if(dirty){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/radiology?case=${encodeURIComponent(current.id)}`);});}}}>{t("Opus Radiology")}</Link><button className={styles.primary} disabled={busy || uploading} onClick={() => void save()}>{t("Сохранить случай")}</button></div></div>
-    <CaseConnections/>{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{radiologyEvidenceText(report)}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
+    <CaseConnections/>{protocolOffer?.caseId===current.id&&current.analyses[0]?.id===protocolOffer.analysisId&&<ProtocolLanguageOffer disabled={busy||saving} onDismiss={()=>setProtocolOffer(null)} onChoose={languages=>{void (async()=>{try{if(unsaved&&!(await save()))return;await flushDraft();router.push(protocolLanguageHref(current.id,languages));setProtocolOffer(null);}catch{setNotice('Не удалось сохранить переход к протоколу. Случай остаётся открытым.');}})();}}/>}{(current.moduleReports??[]).map(report=><details key={report.id}><summary>{t('Результат профильного модуля')} · {report.sources.join(', ')}</summary><p style={{whiteSpace:'pre-wrap'}}>{radiologyEvidenceText(report)}</p></details>)}{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
     <button type="button" disabled={busy||saving} onClick={()=>void moveToTrash(current)}>{t('🗑 В корзину')}</button>
     <details className={privacyStyles.localPatient}><summary>{t('Данные пациента · только локально')}</summary><p>{t('Эти поля сохраняются вместе со случаем только в этом браузере. Используйте их для связи кода случая с пациентом. Они не включаются в запросы моделям.')}</p>{(['name','birthDate','identifiers','dates'] as const).map((field,index)=><label key={field}>{t(['ФИО пациента','Дата рождения','Контакты и идентификаторы','Точные даты исследований'][index])}<input disabled={busy} type={field==='birthDate'?'date':'text'} value={current.privatePatient?.[field]??''} onChange={e=>update({privatePatient:{name:'',birthDate:'',identifiers:'',dates:'',...current.privatePatient,[field]:e.target.value}})}/></label>)}</details>
     <PhoneImport disabled={busy||uploading||current.status==='closed'} locale={language} onFile={async (file) => { const transfer = new DataTransfer(); transfer.items.add(file); await addFiles(transfer.files); }}/>
