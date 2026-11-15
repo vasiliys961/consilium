@@ -7,7 +7,7 @@ import {terminalEvent,writeTerminalEvent,type RunEvent} from "./telemetry.ts";
 import { attachEquipment } from "../packages/attachments/attach.ts";
 import { consiliumFocus, runConsilium } from "./consilium.ts";
 import { conduct, gatewayOf, type CaseResult, type CaseFile, type ConductInput } from "./conductor.ts";
-import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep } from "./cost.ts";
+import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep, type CostCallStage } from "./cost.ts";
 import { guardGeneratedClinicalText } from "./clinical-integrity.ts";
 import { imageDataUrl, settleAction, writeLightDraft } from "./draft.ts";
 import { GENETIC_CONSULTATION_INSTRUCTION } from '../packages/genomics/clinical-context.ts';
@@ -118,11 +118,11 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   emit("run.started",{files:body.files?.length??0,referenceFiles:body.referenceFiles?.length??0,requestedTask:body.task??"auto"});
   const transport = deps.fetch ?? fetch;
   const modelCalls: NonNullable<CaseResult["cost"]["calls"]> = [];
-  const fetchImpl: typeof fetch = async (input,init) => {
+  const fetchImpl = async (input: Parameters<typeof fetch>[0],init?:RequestInit,stage?:CostCallStage):Promise<Response> => {
     const started=Date.now();const isModel=String(input).includes("/chat/completions");
     const request=isModel?JSON.parse(String(init?.body??"{}")):{};
     const provider=String(input).includes("polza.ai")?"polza":"openrouter";
-    if(isModel){emit("model.started",{model:request.model,provider});if(deps.streaming)deps.onPreview?.("");}
+    if(isModel){emit("model.started",{model:request.model,provider,stage:stage??"unclassified"});if(deps.streaming)deps.onPreview?.("");}
     let response:Response;
     try{response=await transport(input,{...init,...(isModel?{body:JSON.stringify({...request,usage:{include:true},...(deps.streaming?{stream:true,stream_options:{include_usage:true}}:{})})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
       if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value);}});}}
@@ -133,13 +133,14 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       const usageAvailable=typeof data?.usage?.prompt_tokens==="number"&&typeof data?.usage?.completion_tokens==="number";
       const inputTokens=Number(data?.usage?.prompt_tokens)||0,outputTokens=Number(data?.usage?.completion_tokens)||0;
       const charged=chargeForCall(String(data?.model??request.model??"unknown"),data?.usage);
-      emit("model.responded",{model:request.model,provider,httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens),...(charged.source==="openrouter"?{billedUsd:charged.usd}:{})});
-      modelCalls.push({model:String(data?.model??request.model??"unknown"),inputTokens,outputTokens,durationMs:Date.now()-started,
+      emit("model.responded",{model:request.model,provider,stage:stage??"unclassified",httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens),...(charged.source==="openrouter"?{billedUsd:charged.usd}:{})});
+      modelCalls.push({model:String(data?.model??request.model??"unknown"),stage,inputTokens,outputTokens,durationMs:Date.now()-started,
         status:!response.ok||data?.error||data?.choices?.[0]?.finish_reason==='error'?"failed":data?.choices?.[0]?.finish_reason==="length"?"truncated":"received",
         usageAvailable,usd:charged.usd,billingSource:charged.source});
     }
     return response;
   };
+  const stageFetch = (stage:CostCallStage):typeof fetch => (input,init) => fetchImpl(input,init,stage);
   const sheetFiles = await withVcf(await withDocuments(await withSpreadsheets(await prepareServerFiles(normalizeFiles((body.files ?? []).map(file=>({...file,...(!file.imageProfile&&body.imageProfile?{imageProfile:body.imageProfile}:{})})))))));
   for(const file of sheetFiles??[]){if(file.image&&!file.plane){const raster=decodeDataUrl(file.image);if(raster)file.plane=samplePlane(raster);}}
   emit("stage.completed",{stage:"intake",files:sheetFiles?.length??0});
@@ -160,7 +161,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   const speechAudio=body.speech?.audio ?? audioFile?.audio;
   const heard = typedSpeech.trim() || !speechAudio
     ? null
-    : await hearClip(env, speechAudio!,fetchImpl).catch(() => null);
+    : await hearClip(env, speechAudio!,stageFetch("speech")).catch(() => null);
   const cleanedSpeech = (heard?automaticRedactText:redactText)(speechSource(typedSpeech, heard?.text ?? null));
   let redactions = cleanedNote.removed + cleanedSpeech.removed;
   const note = [cleanedNote.text.trim(), cleanedSpeech.text.trim() ? `Visit transcript: ${cleanedSpeech.text.trim()}` : ""].filter(Boolean).join("\n\n");
@@ -188,7 +189,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     result.ledger.map(async (entry) => {
       const file = prepared.find((item) => item.name === entry.source);
       if (entry.modality !== "genetics" || !entry.genetics || !file?.text) return entry;
-      if(entry.genetics.review)return {...entry,genetics:await enrichGenomicReview(entry.genetics,result.locale==="ru"?"ru":"en",fetchImpl,body.externalSearch!==false)};
+      if(entry.genetics.review)return {...entry,genetics:await enrichGenomicReview(entry.genetics,result.locale==="ru"?"ru":"en",stageFetch("genetics"),body.externalSearch!==false)};
       const genetics = await applyFrequency(entry.genetics, file.text, result.locale === "ru" ? "ru" : "en");
       return { ...entry, genetics: await applyClinvar(genetics, file.text, result.locale === "ru" ? "ru" : "en") };
     }),
@@ -235,7 +236,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     entries: ledger,
     files,
     caution: pixelCaution || null,secondOpinion:body.secondOpinion===true,
-  }, fetchImpl).catch(() => ({ readings: [], inputTokens: 0, outputTokens: 0, durationMs: 0, model: null,reviewUsage:[],primaryUsage:[] }));
+  }, stageFetch("imaging")).catch(() => ({ readings: [], inputTokens: 0, outputTokens: 0, durationMs: 0, model: null,reviewUsage:[],primaryUsage:[] }));
   let frameUsage = specialist.model
     ? { model: specialist.model, inputTokens: specialist.inputTokens, outputTokens: specialist.outputTokens, durationMs: specialist.durationMs }
     : null;
@@ -262,7 +263,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     .filter(Boolean)
     .join(" ");
   const frame = pictured.length
-    ? await comprehendFrames(env, { note, frames: pictured, locale: result.locale, caution: eyeCaution,secondOpinion:body.secondOpinion===true,evidenceContext:tracing?networkObservation(tracing):undefined }, fetchImpl).catch(() => null)
+    ? await comprehendFrames(env, { note, frames: pictured, locale: result.locale, caution: eyeCaution,secondOpinion:body.secondOpinion===true,evidenceContext:tracing?networkObservation(tracing):undefined }, stageFetch("imaging")).catch(() => null)
     : null;
   if (frame?.model) {
     frameUsage = {
@@ -314,14 +315,14 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   emit('stage.started',{stage:'sources'});
   const [gathered, medicationReview] = await Promise.all([
     subject ? gatherCitations(subject, {
-      fetch: fetchImpl, now: new Date(), locale: result.locale, clinical: plan.task === 'management' || plan.task === 'evidence',
-      translate: query => translateForSearch(env, query, fetchImpl, result.locale),
+      fetch: stageFetch("evidence"), now: new Date(), locale: result.locale, clinical: plan.task === 'management' || plan.task === 'evidence',
+      translate: query => translateForSearch(env, query, stageFetch("evidence"), result.locale),
       ...(sourceLocale ? {
         sourceLocale,
-        planTopics: (query: string) => planSearchTopics(env, query, sourceLocale, fetchImpl),
+        planTopics: (query: string) => planSearchTopics(env, query, sourceLocale, stageFetch("evidence")),
       } : {}),
     }).catch(() => ({citations: [], usage: null})) : {citations: [], usage: null},
-    body.drugLabels?.length ? reviewDrugLabels(body.drugLabels, body.externalSearch !== false, fetchImpl, deps.signal) : undefined,
+    body.drugLabels?.length ? reviewDrugLabels(body.drugLabels, body.externalSearch !== false, stageFetch("evidence"), deps.signal) : undefined,
   ]);
   const medicationCitations = drugLabelCitations(medicationReview?.labels ?? [], new Date().toISOString().slice(0,10));
   const geneticCitations:import('./literature.ts').Citation[]=ledger.flatMap(entry=>(entry.genetics?.review?.variants??[]).flatMap(variant=>{
@@ -362,7 +363,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       caution: [eyeCaution, failedFiles ? `Files not assessed (never describe as normal):\n${failedFiles}` : "",
         medicationReview?.unavailable.length ? 'One or more selected medication labels could not be retrieved. Do not imply those labels were checked.' : '',
       ].filter(Boolean).join("\n"),
-    }, fetchImpl).catch(() => null);
+    }, stageFetch("synthesis")).catch(() => null);
     if (written) {
       if (plan.task === 'management' && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
@@ -467,7 +468,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
         locale: result.locale,
         audience: body.speech?.audience,
         target: body.speech?.target,
-      }, fetchImpl).catch(() => null)
+      }, stageFetch("speech")).catch(() => null)
     : null;
   if (interpretation?.model) {
     const interpreter: CostStep = {
@@ -491,7 +492,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     const limit = AbortSignal.timeout(Math.max(1, Math.min(95000, (body.deadlineMs ?? 300000) - (Date.now() - startedAt) - 4000)));
     const councilFetch: typeof fetch = (url, init) => {
       limit.throwIfAborted();
-      return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])});
+      return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])}, "consilium");
     };
     const spoken = await runConsilium(env, {
       note,
