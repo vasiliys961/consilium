@@ -31,6 +31,7 @@ import { workflowGuide } from "@/lib/workflow-guide";
 import { WorkflowGuideView } from "@/app/components/workflow-guide";
 import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
+import type {MedicationContext} from '@/lib/drug-interaction-rules';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
 import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, persistCaseAutosave, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
@@ -305,8 +306,8 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
           void analyze(snapshot,task,consilium,'analysis',requestQuestion);
         }
     }
-    function reviewMedications(active:string,proposed:string){if(!current||!canAnalyze)return;
-      const question=['Проверьте лекарственные взаимодействия и риски только для перечисленных препаратов. Отдельно оцените подтверждённые сочетания, недостающие данные и источники; не считайте отсутствие найденного правила доказательством совместимости.',`Текущий список, сообщённый врачом:\n${active||'(не указан)'}`,`Предполагаемое назначение, ещё не принято:\n${proposed||'(не указано)'}`].join('\n\n');
+    function reviewMedications(active:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext}){if(!current||!canAnalyze)return;
+      const question=['Проверьте лекарственные взаимодействия и риски только для перечисленных препаратов. Отдельно оцените подтверждённые сочетания, недостающие данные и источники; не считайте отсутствие найденного правила доказательством совместимости.',`Текущий список, сообщённый врачом:\n${active||'(не указан)'}`,`Предполагаемое назначение, ещё не принято:\n${proposed||'(не указано)'}`,`Отменяются до назначения (НЕ считать текущим совместным приёмом):\n${details.stopped||'(нет)'}`,`Альтернативы, взаимоисключающие схемы (НЕ объединять):\n${details.alternatives||'(нет)'}`,`Данные для лекарственной безопасности: СКФ ${details.context.egfr??'неизвестна'} мл/мин/1,73 м²; калий ${details.context.potassium??'неизвестен'} ммоль/л; декомпенсированный цирроз ${details.context.decompensatedCirrhosis===true?'подтверждён':'не подтверждён'}; тяжёлая печёночная недостаточность ${details.context.severeHepaticImpairment===true?'подтверждена':'не подтверждена'}.`].join('\n\n');
       const snapshot:ClinicalCase={...current,currentMedications:active,updated:new Date().toISOString()};
       setCurrent(snapshot);
       setDirty(true);
