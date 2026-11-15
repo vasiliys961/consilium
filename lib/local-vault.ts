@@ -136,6 +136,19 @@ export async function readVaultCases():Promise<ClinicalCase[]>{
  return Promise.all(records.map(value=>readCase(value,active)));
 }
 
+/** Decrypt one requested case, not the entire vault on each editor autosave. */
+export async function readVaultCaseById(id:string):Promise<ClinicalCase|undefined>{
+ const db=await vaultDatabase();
+ try{
+  const tx=db.transaction(['cases','settings']);
+  const [meta,record]=await Promise.all([
+   readRequest<VaultMeta|undefined>(tx.objectStore('settings').get('vault')),
+   readRequest<StoredCase|undefined>(tx.objectStore('cases').get(id)),
+  ]);
+  return record?readCase(record,meta?unlockedKey(meta):undefined):undefined;
+ }finally{db.close();}
+}
+
 export async function writeVaultCase(value:ClinicalCase,remove=false){
  const meta=await readMeta();
  const active=meta?unlockedKey(meta):undefined;
