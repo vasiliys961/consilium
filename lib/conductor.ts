@@ -12,6 +12,7 @@ import { readLoop } from "../packages/sono/loop.ts";
 import { readClip, type ClipFinding, type ClipNote } from "../packages/sono/clip.ts";
 import { creditsFor, planCost, totalUsd, type CostStep } from "./cost.ts";
 import type { ConsiliumVoice } from "./consilium.ts";
+import type { EcgModuleEvidence } from "./module-evidence.ts";
 import type { SpecialistReading } from "../packages/specialists/read.ts";
 import type { Interpretation } from "../packages/translator/speech.ts";
 import type { VisitNote } from "../packages/protocol/note.ts";
@@ -120,6 +121,8 @@ export interface LedgerEntry {
 }
 
 export interface CaseResult {
+  /** Actual ECGFounder inference artifact, separate from LLM interpretation. */
+  ecgEvidence?: EcgModuleEvidence;
   medicationReview?: DrugLabelReview;
   validationWarnings?: string[];
   retrieval?: {localDocuments:number;passages:number;externalSearch:boolean};
