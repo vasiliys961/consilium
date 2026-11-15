@@ -54,6 +54,6 @@ test('a repeat warning distinguishes provider billing from estimated costs and n
 test('fingerprints store option metadata, not clinical text or source contents',()=>{
  const key=runOptionsKey(settings);
  assert.match(key,/guide.pdf/);
- assert.match(key,/'c'/.repeat(64).slice(0,4)); // stable source hash marker
+ assert.match(key,/c{64}/); // stable source hash marker
  assert.doesNotMatch(key,/patient|orthopnea|Clinical patient secret/i);
 });
