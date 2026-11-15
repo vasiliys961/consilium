@@ -1,6 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import { networkInterfaces } from 'node:os';
-const RELAY_PORT=3108;
+import {localPorts} from '../../lib/local-ports.ts';
+const RELAY_PORT=localPorts().phone;
 const state=globalThis as typeof globalThis & {__conciliumRelay?:{server:Server;origin:string}};
 function privateAddress(){
  const all=networkInterfaces();const ordered=Object.entries(all).sort(([a],[b])=>Number(!a.startsWith('en'))-Number(!b.startsWith('en')));

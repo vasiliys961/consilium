@@ -7,6 +7,7 @@ import {redactText} from '@/packages/intake/redact';
 import {useEffect,useRef,useState} from 'react';
 import {readCases,persistCase,caseContext,caseTitle,openNewCase,type ClinicalCase} from '@/lib/casebook';
 import {radiologyReportMessage} from '@/lib/radiology-bridge';
+import {localOrigin} from '@/lib/local-ports';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
 import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {LOCALES,parseLocale,type Locale} from '@/lib/locale';
@@ -22,7 +23,7 @@ export default function RadiologyModule({initialCaseId='',incomingFiles=EMPTY_FI
  const [analyzing,setAnalyzing]=useState(false);
  const [preview,setPreview]=useState('');
  const [originalsBlocked,setOriginalsBlocked]=useState(false);
- const current=cases.find(c=>c.id===selected),source='http://127.0.0.1:3110';
+ const current=cases.find(c=>c.id===selected),source=localOrigin('radiology');
  useEffect(()=>{setSession(crypto.randomUUID());readCases().then(values=>{setCases(values);const id=initialCaseId||new URLSearchParams(location.search).get('case');if(id&&values.some(c=>c.id===id))setSelected(id);});},[initialCaseId]);
  useEffect(()=>{let active=true;const check=async()=>{try{const value=await fetch('/api/integrations').then(r=>r.json());if(active){setReady(Boolean(value.radiology.running));if(value.radiology.running)setStarting(false);}}catch{}};void check();const timer=setInterval(check,2000);return()=>{active=false;clearInterval(timer);};},[]);
  async function deliverMaterials(){

@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 type Link={session:string;origin:string};
-const allowed=['http://127.0.0.1:3107','http://localhost:3107'];
+const allowed=process.env.NEXT_PUBLIC_CONCILIUM_PREVIEW==='1'?['http://127.0.0.1:3207','http://localhost:3207']:['http://127.0.0.1:3107','http://localhost:3107'];
 export default function ConciliumProtocolBridge({rawText,protocol,busy,onImport,onProtocolImport}:{rawText:string;protocol:string;busy:boolean;onImport:(text:string)=>void;onProtocolImport:(text:string)=>void}){
  const [link,setLink]=useState<Link|null>(null),[incoming,setIncoming]=useState(''),[notice,setNotice]=useState('');
  const documentId=useRef(''),latest=useRef({rawText,protocol,busy,onImport,onProtocolImport});latest.current={rawText,protocol,busy,onImport,onProtocolImport};

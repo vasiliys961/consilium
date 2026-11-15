@@ -56,6 +56,18 @@ export function priceUsd(model: string, inputTokens: number, outputTokens: numbe
   return Math.round(usd * 1_000_000) / 1_000_000;
 }
 
+/** OpenRouter's usage.cost is the billed amount for THIS call; token rates are only a fallback. */
+export function chargeForCall(model:string, usage:unknown): {usd:number;source:'openrouter'|'estimate'} {
+ const record=usage && typeof usage==='object' ? usage as Record<string,unknown> : {};
+ const billed=record.cost;
+ if(typeof billed==='number' && Number.isFinite(billed) && billed>=0) {
+  return {usd:Math.round(billed*1_000_000)/1_000_000,source:'openrouter'};
+ }
+ const input=typeof record.prompt_tokens==='number'?record.prompt_tokens:0;
+ const output=typeof record.completion_tokens==='number'?record.completion_tokens:0;
+ return {usd:priceUsd(model,input,output),source:'estimate'};
+}
+
 function planned(id: CostStepId, model: string): CostStep {
   return { id, model, status: "planned", inputTokens: 0, outputTokens: 0, durationMs: 0, usd: 0 };
 }

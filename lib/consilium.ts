@@ -55,7 +55,7 @@ const ROLE_TASK: Record<ConsiliumRole["id"], string> = {
   stewardship:
     "Review the proposed management for avoidable harm. Check documented medications, allergies, comorbidities and organ function, and state what is missing before choosing an option. Do not add diagnoses or invent contraindications.",
   checklist:
-    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Distinguish unsupported options and absent votes. The draft stays unsigned.",
+    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Name each supported and disputed position by role id (hypothesis, testChooser, challenger, stewardship), not as invented specialist votes. Never say all opinions agree when any explicitly disagree. State which unresolved issue changes the next clinical action. Distinguish unsupported options and absent votes. The draft stays unsigned.",
 };
 
 function quiet(role: ConsiliumRole): ConsiliumVoice {
