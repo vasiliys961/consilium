@@ -26,8 +26,20 @@ export function guardUnsupportedRestDyspnea(text:string, observedRecord:string):
  const denied = /(?:нет|без|отрицает|отсутствует)\s+одышк(?:и|а|у)?\s+в\s+покое|(?:no|denies|without)\s+dyspn(?:ea|oea)\s+at\s+rest/iu;
  if(positive.test(observedRecord) && !denied.test(observedRecord))return {text,changed:false};
  let changed=false;
- const ru=text.replace(REST_RU,()=>{changed=true;return 'одышка (наличие в покое не уточнено)';});
- const en=ru.replace(REST_EN,()=>{changed=true;return 'dyspnea (at rest not documented)';});
+ // A prospective danger sign or a question is not an assertion about this patient.
+ const prospective = /(?:при\s+(?:появлени[ии]|возникновени[ии]|развити[ии]|ухудшени[ии])|если|в\s+случае|следить\s+за|уточнить|есть\s+ли|исключить|оценить\s+наличие|if|when|whether|rule\s+out|watch\s+for|monitor\s+for|risk\s+of)\b/iu;
+ const shouldKeep=(offset:number,source:string)=>{
+  const clause=source.slice(Math.max(0,offset-100),offset).split(/[.!?;:\n]/).pop()??'';
+  return prospective.test(clause);
+ };
+ const ru=text.replace(REST_RU,(match,offset:number,source:string)=>{
+  if(shouldKeep(offset,source))return match;
+  changed=true;return 'одышка (наличие в покое не уточнено)';
+ });
+ const en=ru.replace(REST_EN,(match,offset:number,source:string)=>{
+  if(shouldKeep(offset,source))return match;
+  changed=true;return 'dyspnea (at rest not documented)';
+ });
  return {text:en,changed};
 }
 
