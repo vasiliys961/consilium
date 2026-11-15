@@ -46,6 +46,6 @@ test('a saved Sol source must be a genuine standalone protocol, never an interme
 });
 test('full clinical reasoning includes conditional treatment options; interpretation remains separate',()=>{
  assert.match(REPORT_INSTRUCTION,/For a full clinical task, include clinically appropriate provisional management options/);
- assert.match(REPORT_INSTRUCTION,/not imply that a physician accepted any proposal/);
+ assert.match(REPORT_INSTRUCTION,/or imply that a physician accepted any proposal/);
  assert.doesNotMatch(REPORT_INSTRUCTION,/for clinical tasks management must be empty/);
 });
