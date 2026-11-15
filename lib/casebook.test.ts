@@ -70,3 +70,21 @@ test('a new physician question and findings continue the case, while replaced im
  assert.doesNotMatch(caseAnalysisInput(value).text,/CACHED PRIOR IMAGE INTERPRETATIONS|Provisional tracing report/);
  assert.equal(caseAnalysisInput(value).files.length,1);
 });
+
+test('Radiology draft and ECGFounder measurements survive case export and enter follow-up with explicit provenance',()=>{
+ const value=newCase(42);
+ value.context='Synthetic cardiopulmonary case';
+ value.moduleReports=[{id:'r1',module:'radiology',fileKeys:[],sources:[],at:'2026-11-15T10:00:00Z',text:'Limited review of one frame'}];
+ const ecg={module:'ecgfounder' as const,method:'digital-ecg-waveform' as const,source:'trace.csv',sha256:'f'.repeat(64),status:'read' as const,threshold:0.5,cleared:[{label:'SINUS RHYTHM',score:0.82}],top:{label:'SINUS RHYTHM',score:0.82},reason:null,measurements:{method:'digital',description:'Synthetic',lines:[{name:'RR',value:'810 ms'}],note:'Review calibration'}};
+ value.analyses=[{id:'a1',at:value.created,context:value.context,result:{...conduct({text:value.context}),clinicalDraft:'generated',ecgEvidence:ecg,draft:{status:'unsigned',summary:'Preliminary interpretation',statements:[]}}}];
+ const context=caseAnalysisInput(value).text;
+ assert.match(context,/ECGFounder/);
+ assert.match(context,/810 ms/);
+ assert.match(context,/не калиброванные вероятности/);
+ assert.match(context,/Полнота просмотра DICOM-серий/);
+ assert.match(context,/привязки к исходному файлу нет/);
+ const saved=exportCase(value);
+ assert.match(saved,/810 ms/);
+ assert.match(saved,/Limited review of one frame/);
+ assert.match(saved,/неподписанный черновик/);
+});
