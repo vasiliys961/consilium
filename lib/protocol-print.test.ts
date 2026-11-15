@@ -13,7 +13,7 @@ const caseFixture={
    investigations:[{test:'ЭКГ',rationale:'исключить ишемию',priority:'срочно'}],
    management:[{option:'Обсудить петлевой диуретик после оценки объёма и СКФ',conditions:['подтверждён застой'],safetyChecks:['калий, креатинин'],monitoring:['диурез']}],
    questions:[],limitations:['Аускультация не предоставлена'],followUp:['Повторная оценка']}
- },studyReports:[],statements:[]},unassessed:[]}}]
+ ,studyReports:[],statements:[]},unassessed:[]}}]
 } as unknown as ClinicalCase;
 
 test('original printable clinical note is deterministic and preserves diagnoses and conditional therapy without invented findings',()=>{
