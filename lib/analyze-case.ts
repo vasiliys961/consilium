@@ -509,6 +509,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       limit.throwIfAborted();
       return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])}, "consilium");
     };
+    let coordinatorFailed = false;
     const spoken = await (deps.runCouncil??runConsilium)(env, {
       note,
       locale: result.locale,
@@ -518,6 +519,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       record: observation || null,
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
     }, councilFetch).catch(() => {
+      coordinatorFailed = true;
       emit('stage.failed',{stage:'consilium'});
       return unavailableConsilium('provider_error');
     });
@@ -529,7 +531,10 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       }
     }
     voices = guarded;
-    emit('stage.completed',{stage:'consilium'});
+    if(!coordinatorFailed)emit('stage.completed',{
+      stage:'consilium',
+      status: spoken.some(voice=>voice.status==='done')?'done':'not_assessed',
+    });
   }
 
   const id = body.caseId?.trim() || crypto.randomUUID();
