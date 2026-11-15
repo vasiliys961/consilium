@@ -1,4 +1,4 @@
-import { decisionDraftFrom, persistCase, persistCaseDraft, type Analysis, type ClinicalCase } from './casebook.ts';
+import { decisionDraftFrom, persistCase, persistCaseAutosave, type Analysis, type ClinicalCase } from './casebook.ts';
 
 /**
  * Promote an editor-only question into this request's in-memory analysis snapshot.
@@ -26,7 +26,9 @@ export async function preservePendingQuestion(
   note: string,
   decision: string,
   save: (value: ClinicalCase) => Promise<void> = async value=>{
-    const applied=await persistCaseDraft(value.id,value.workspaceDraft!,snapshot.updated);
+    // In addition to the question, keep any unsaved changes to case context,
+    // images and physician observations before the network request begins.
+    const applied=await persistCaseAutosave(value);
     if(!applied)throw new Error('Случай изменился во время подготовки вопроса. Обновите случай перед отправкой.');
   },
 ): Promise<void> {
