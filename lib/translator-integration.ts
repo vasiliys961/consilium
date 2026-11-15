@@ -1,5 +1,5 @@
 import{openRouterRuntime}from'./provider-runtime.ts';
-import {localOrigin,localPorts} from './local-ports.ts';
+import {isPreviewInstance,localOrigin,localPorts} from './local-ports.ts';
 import {spawn,type ChildProcess} from 'node:child_process';
 import {existsSync,readFileSync} from 'node:fs';
 import {homedir} from 'node:os';
@@ -26,7 +26,7 @@ export function startTranslator(){
   if(child&&!child.killed&&child.exitCode===null)return true;
   let sourceEnv:Record<string,string|undefined>={};
   const source=process.env.TRANSLATOR_SOURCE_HOME||resolve(homedir(),'Desktop/medical-translator');
-  try{sourceEnv=parseEnv(readFileSync(resolve(source,'.env.local'),'utf8'));}catch{}
+  if(!isPreviewInstance())try{sourceEnv=parseEnv(readFileSync(resolve(source,'.env.local'),'utf8'));}catch{}
   if(sourceEnv.TRANSLATOR_ACCESS_USERS) {
     // Match Next dotenv expansion for escaped dollar signs in bcrypt hashes.
     sourceEnv.TRANSLATOR_ACCESS_USERS=sourceEnv.TRANSLATOR_ACCESS_USERS.replace(/\\\$/g,'$');
