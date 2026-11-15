@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {medicationNames,nameSuggestion,discoverMedicationLabels,medicationReview,readMedicationReport} from './medication-review.ts';
+import {medicationNames,nameSuggestion,discoverMedicationLabels,medicationReview,readMedicationReport,MEDICATION_REVIEW_MODEL} from './medication-review.ts';
 import {normalizeDrugQuery} from './drug-labels.ts';
 const setId='11111111-1111-4111-8111-111111111111';
 function label(name='CLOPIDOGREL'){return {set_id:setId,openfda:{product_type:['HUMAN PRESCRIPTION DRUG'],generic_name:[name],route:['ORAL']},drug_interactions:['Source interaction section.'],pregnancy:['Pregnancy source information available.']};}
@@ -26,4 +26,29 @@ test('verified label excerpts produce a compact source-linked review without the
  });assert.equal(paid,1);assert.equal(result.report.questions.length,1);assert.equal(result.citations[0].url?.includes(setId),true);
  const sources=new Map([['spl:'+setId,'Pregnancy source information available.']]);
  assert.equal(readMedicationReport(JSON.stringify({...output,risks:[{...output.risks[0],quote:'Made-up quotation from nowhere.'}]}),sources),null);
+});
+
+test('C3: three common drugs resolve in Russian/Ukrainian/English without a paid normalizer',()=>{
+ assert.deepEqual(medicationNames('метформин клопидогрель бисопролол'),['метформин','клопидогрель','бисопролол']);
+ assert.deepEqual(medicationNames('метформін клопідогрель бісопролол'),['метформін','клопідогрель','бісопролол']);
+ for(const [source,expected] of [['метформин','metformin'],['метформін','metformin'],['сиофор','metformin'],['клопідогрель','clopidogrel'],['бисопролол','bisoprolol'],['бісопролол','bisoprolol'],['Конкор','bisoprolol']]){
+  assert.equal(normalizeDrugQuery(source),expected,source);
+ }
+});
+test('C3: label review uses a single economical model and only short label excerpts',async()=>{
+ assert.match(MEDICATION_REVIEW_MODEL,/flash/i);
+ let calls=0;
+ const extendedLabel={...label(),drug_interactions:['Relevant warning. '+'A'.repeat(20000)],warnings_and_cautions:['Relevant warning. '+'B'.repeat(20000)]};
+ const response={pair:{status:'unassessed',text:'No pair established.',sources:[]},risks:[],questions:[],limits:['Partial excerpts.']};
+ await medicationReview({text:'Synthetic case',drugLabels:[{setId,title:'Synthetic'}]},{OPENROUTER_API_KEY:'test'},async(url,init)=>{
+  if(String(url).includes('api.fda.gov'))return Response.json({results:[extendedLabel]});
+  calls++;
+  const sent=JSON.parse(String(init?.body));
+  assert.equal(sent.model,MEDICATION_REVIEW_MODEL);
+  assert.equal(sent.max_tokens,900);
+  const material=JSON.parse(sent.messages[1].content);
+  assert.ok(material.sources[0].text.length<=4500);
+  return Response.json({choices:[{message:{content:JSON.stringify(response)}}]});
+ });
+ assert.equal(calls,1);
 });
