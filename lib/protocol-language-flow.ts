@@ -15,7 +15,7 @@ export function protocolLanguageHref(caseId:string,selected:readonly string[]):s
  if(!languages.length)throw Error('select_protocol_language');
  const query=new URLSearchParams({case:caseId,locale:languages[0]});
  if(languages.length>1)query.set('locales',languages.join(','));
- return '/protocol/case?'+query.toString();
+ return '/protocol/structured?'+query.toString();
 }
 
 export function protocolLanguagePlan(search:URLSearchParams):WorkspaceLanguage[]{
