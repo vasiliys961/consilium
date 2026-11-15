@@ -4,14 +4,15 @@ import{materialRoute,materialKey}from'./material-routing.ts';
 import {CURRENT_MEDICATIONS_HEADING} from './drug-interaction-rules.ts';
 import {studyReportsText} from './study-report.ts';
 import type { CaseFile, CaseResult } from './conductor';
+import { ecgEvidenceText, radiologyEvidenceText, type RadiologyModuleReport } from './module-evidence.ts';
 export type Event = { id: string; at: string; kind: 'note' | 'decision' | 'question'; text: string; editedAt?:string; revisions?:Array<{at:string;text:string}> };
 type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualReadings']>; items?: Array<{fileKey:string; reading:NonNullable<CaseResult['visualReadings']>[number]}> };
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
-export type Analysis = { question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
+export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
 export type ClinicalCase = {
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
   workspaceDraft?:{question:string;note:string;decision:string;tab:string};
-  moduleReports?:Array<{id:string;module:'radiology';fileKeys:string[];sources:string[];text:string;at:string}>;
+  moduleReports?:RadiologyModuleReport[];
   deletedAt?:string;
   closedAt?:string;
   decisionDraft?:{analysisId:string;text:string;at:string};
@@ -47,12 +48,35 @@ export function caseTitle(value: ClinicalCase, fallback: string) {
 function eventLabel(kind: Event['kind']) {
   return kind === 'decision' ? 'Решение врача' : kind === 'question' ? 'Предыдущий вопрос врача' : 'Динамика';
 }
+
+/** Provenance must follow the actual attached bytes, not the filename or a prior analysis. */
+const SHA256 = /^[0-9a-f]{64}$/i;
+function sourceHash(hash: string | null | undefined): string | null {
+  return hash && SHA256.test(hash) ? hash.toLowerCase() : null;
+}
+function hasSourceHash(value: ClinicalCase, hash: string | null | undefined): boolean {
+  const expected = sourceHash(hash);
+  return Boolean(expected && value.files.some(file => sourceHash(file.sha256) === expected));
+}
+function radiologyReportIsCurrent(value: ClinicalCase, report: RadiologyModuleReport): boolean {
+  // No filename-only or partially matched multi-file reports may suppress a reread.
+  return report.fileKeys.length > 0 && report.fileKeys.every(key => Boolean(sourceHash(key) && hasSourceHash(value, key)));
+}
+function radiologyContext(value: ClinicalCase): string[] {
+  return (value.moduleReports ?? []).map(report => {
+    // Legacy unbound reports remain visible with their existing explicit warning.
+    if (!report.fileKeys.length) return radiologyEvidenceText(report);
+    if (radiologyReportIsCurrent(value, report)) return radiologyEvidenceText(report);
+    const sources = report.sources.length ? report.sources.join(', ') : 'неизвестные источники';
+    return `Opus Radiology · ${sources} · ${report.at}\nИсторический отчёт: исходные файлы больше не совпадают с прикреплёнными к текущему случаю. Прежнее описание сохранено в истории и экспорте, но не является заключением по новым файлам. Требуется повторный разбор изменённого исследования.`;
+  });
+}
 export function caseContext(value: ClinicalCase): string {
   const recent = value.events.slice().reverse().find(event => event.kind === 'question');
   const question = recent?.text ?? value.question;
   const medications = value.currentMedications?.split(/\r?\n/).map(line => line.trim()).filter(Boolean).join('\n');
   return [question && `Вопрос врача: ${question}`, medications && `${CURRENT_MEDICATIONS_HEADING}\n${medications}`, value.context, recent && value.question ? `Первоначальный вопрос: ${value.question}` : '',
-    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...(value.moduleReports??[]).map(report=>`Профильный модуль ${report.module} · ${report.sources.join(', ')} · ${report.at}\n${report.text}`)].filter(Boolean).join('\n\n');
+    ...value.events.filter(event => event.id !== recent?.id).map(event => `${event.at} — ${eventLabel(event.kind)}: ${event.text}`),...radiologyContext(value)].filter(Boolean).join('\n\n');
 }
 
 export function analysisQuestion(analysis: Analysis): string {
@@ -60,7 +84,7 @@ export function analysisQuestion(analysis: Analysis): string {
 }
 const imageKey = (file:CaseFile, profile:ClinicalCase['imageProfile']) => JSON.stringify(['medical-image-routing-v1',profile??'auto',file.name,file.sha256,file.imageProfile,file.masks]);
 export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
-  const moduleHandled=(file:CaseFile)=>(value.moduleReports??[]).some(report=>report.fileKeys.includes(materialKey(file)));
+  const moduleHandled=(file:CaseFile)=>(value.moduleReports??[]).some(report=>radiologyReportIsCurrent(value, report) && Boolean(sourceHash(file.sha256) && report.fileKeys.some(key=>sourceHash(key)===sourceHash(file.sha256))));
   const images = value.files.filter(file => file.image && !file.text && !file.frames?.length&&!moduleHandled(file)&&materialRoute(file)!=='radiology');
   const key = JSON.stringify(['medical-image-routing-v1',value.imageProfile ?? 'auto', images.map(file => [file.name, file.sha256, file.imageProfile, file.masks])]);
   const materialsKey = JSON.stringify([value.imageProfile ?? 'auto', ...[value.files,value.library??[]].map(files=>files.map(file=>[file.name,file.sha256,file.imageProfile,file.masks,file.intakeNote]))]);
@@ -82,6 +106,11 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
     `Discussion ${index+1} — ${analysisQuestion(analysis)}`,
     analysis.result.clinicalDraft==='generated'?analysis.result.draft.summary:'No completed clinical answer in this step.',
     analysis.result.draft.report?clinicalReportText(analysis.result.draft.report):'',
+    analysis.result.ecgEvidence
+      ? hasSourceHash(value, analysis.result.ecgEvidence.sha256)
+        ? 'ECGFounder — ранее сохранённое техническое измерение по неизменённому файлу, в текущем проходе не повторено:\n'+ecgEvidenceText(analysis.result.ecgEvidence)
+        : `ECGFounder · ${analysis.result.ecgEvidence.source} — исторический результат, не подтверждённый текущим SHA-256. Прежние классы и измерения НЕ относятся к новому файлу; при необходимости выполните повторный анализ. Полные результаты остались в истории случая.`
+      : '',
     ...analysis.result.voices.filter(voice=>voice.status==='done').map(voice=>`${voice.id}: ${voice.text}`),
   ].filter(Boolean).join('\n')).join('\n\n');
   const sent=value.files.filter(file=>!cached.has(file)&&!moduleHandled(file)&&materialRoute(file)!=='radiology').map(file=>({...file,...(file.sha256&&!file.clientId?{clientId:`${file.sha256.slice(0,8)}-${file.sha256.slice(8,12)}-${file.sha256.slice(12,16)}-${file.sha256.slice(16,20)}-${file.sha256.slice(20,32)}`}:{})}));
@@ -89,7 +118,7 @@ export function caseAnalysisInput(value: ClinicalCase, rereadImages = false) {
     text:[caseContext(value),visualContext&&`CACHED PRIOR IMAGE INTERPRETATIONS — these unchanged images were read in an earlier step and deliberately are not uploaded again. The current processing ledger covers only NEW uploads; absence from it does not mean these earlier readings were lost or failed. They remain provisional model interpretations, not verified measurements. Reassess their clinical meaning against new data, mention actual contradictions once, and do not repeat their full descriptions.\n${visualContext}\n${studyReportsText(value.analyses.flatMap(analysis=>analysis.result.draft.studyReports??[]).filter((report,index,all)=>[...cached.values()].some(reading=>reading.source===report.source)&&all.findIndex(other=>JSON.stringify(other)===JSON.stringify(report))===index))}`,
       ...images.filter(file=>file.intakeNote).map(file=>`Current physician-supplied image measurements:\n${file.intakeNote}`),
       discussion&&`PRIOR DISCUSSION — unsigned model proposals, not new patient facts. Continue from these questions, answers and disagreements; do not repeat unchanged sections.\n${discussion}`].filter(Boolean).join('\n\n'),
-    pendingModules:value.files.filter(file=>materialRoute(file)==='radiology'&&!(value.moduleReports??[]).some(report=>report.fileKeys.includes(materialKey(file)))),files:sent,materialsKey,reusedSources:[...cached.values()].map(reading=>reading.source),
+    pendingModules:value.files.filter(file=>materialRoute(file)==='radiology'&&!moduleHandled(file)),files:sent,materialsKey,reusedSources:[...cached.values()].map(reading=>reading.source),
     reusedStudyReports:value.analyses.flatMap(analysis=>analysis.result.draft.studyReports??[]).filter((report,index,all)=>[...cached.values()].some(reading=>reading.source===report.source)&&all.findIndex(other=>JSON.stringify(other)===JSON.stringify(report))===index),
     visualEvidence:(readings:CaseResult['visualReadings']):VisualEvidence|undefined=>{
       const items=[...cached].map(([file,reading])=>({fileKey:imageKey(file,value.imageProfile),reading}));
@@ -113,10 +142,10 @@ const writes=new Map<string,Promise<void>>();
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{const previous=writes.get(value.id)??Promise.resolve();const next=previous.catch(()=>{}).then(()=>writeVaultCase(value,remove));writes.set(value.id,next);try{await next;}finally{if(writes.get(value.id)===next)writes.delete(value.id);}}
 export function exportCase(value: ClinicalCase): string {
   return [ `# ${caseTitle(value,'Клинический случай')}`, `ID: ${value.id}`, `Статус: ${value.status}`, value.context,
-    `Вопрос: ${value.question}`, '\n## Профильные исследования',...(value.moduleReports??[]).map(report=>`${report.sources.join(', ')}\n${report.text}`),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
+    `Вопрос: ${value.question}`, '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
-    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
+    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
 }
 
