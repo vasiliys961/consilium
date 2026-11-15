@@ -119,7 +119,9 @@ export async function createLocalVault(password:string){
  const records=await Promise.all(snapshot.records.map(async value=>encryptCase(key,await readCase(value))));
  await commit(snapshot,meta,records,key);
  session={key,check:meta.check.data};
- void navigator.storage?.persist?.().catch(()=>false);
+ // Browser-only storage persistence. The vault can also be tested in Node
+ // without a navigator object; keys and records remain browser-local.
+ if(typeof navigator!=='undefined')void navigator.storage?.persist?.().catch(()=>false);
 }
 
 export async function openLocalVault(password:string){
@@ -132,6 +134,19 @@ export async function readVaultCases():Promise<ClinicalCase[]>{
  const {meta,records}=await readSnapshot();
  const active=meta?unlockedKey(meta):undefined;
  return Promise.all(records.map(value=>readCase(value,active)));
+}
+
+/** Decrypt one requested case, not the entire vault on each editor autosave. */
+export async function readVaultCaseById(id:string):Promise<ClinicalCase|undefined>{
+ const db=await vaultDatabase();
+ try{
+  const tx=db.transaction(['cases','settings']);
+  const [meta,record]=await Promise.all([
+   readRequest<VaultMeta|undefined>(tx.objectStore('settings').get('vault')),
+   readRequest<StoredCase|undefined>(tx.objectStore('cases').get(id)),
+  ]);
+  return record?readCase(record,meta?unlockedKey(meta):undefined):undefined;
+ }finally{db.close();}
 }
 
 export async function writeVaultCase(value:ClinicalCase,remove=false){
