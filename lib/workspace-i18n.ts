@@ -69,3 +69,21 @@ Object.assign(english,libraryEnglish);
 Object.assign(english,{'На весь экран · панель вниз':'Full screen · panel below','Свернуть изображение · Esc':'Restore image · Esc'});
 
 Object.assign(english,addedModuleEnglish);
+
+
+// Post-analysis protocol handoff. Other UI locales fall back to these English strings.
+Object.assign(english,{
+ 'Разбор завершён. Оформить протокол?':'Analysis complete. Prepare a protocol?',
+ 'Клинический разбор уже сохранён. Выбор языка откроет существующий модуль протокола с данными случая — повторного консилиума не будет.':'The clinical analysis is saved. Choose a language to open the existing protocol module with this case; the clinical analysis will not run again.',
+ 'Выбор языка протокола':'Protocol language',
+ 'Русский':'Russian',
+ 'Другие языки / несколько версий':'Other languages / multiple versions',
+ 'Выберите языки отдельных версий протокола':'Select languages for separate protocol versions',
+ 'Формирование текста в модуле может потребовать отдельного модельного запроса. Переключение языка само по себе платный анализ не запускает; клинические выводы не переводятся незаметно.':'Creating a protocol in the separate module may incur a model charge. Switching languages does not trigger paid analysis or silently translate clinical findings.',
+ 'Перейти к оформлению протокола':'Open protocol module',
+ 'Пока продолжить работу со случаем':'Keep working on this case',
+ 'Языковые версии протокола':'Protocol language versions',
+ 'Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.':'The saved clinical analysis is not repeated. Create and save a separate protocol in each language; text generation in the module may incur a charge.',
+ 'Сохранён':'Saved',
+ 'Не создан':'Not created'
+});

@@ -36,10 +36,12 @@ const SET_ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 const NDC = /^\d{4,5}-\d{3,4}$/;
 const ALIASES: Readonly<Record<string,string>> = {
   апиксабан:'apixaban', эликвис:'eliquis', варфарин:'warfarin',
-  метформин:'metformin', метопролол:'metoprolol', омепразол:'omeprazole',
+  метформин:'metformin', метформін:'metformin', сиофор:'metformin', глюкофаж:'metformin',
+  бисопролол:'bisoprolol', бісопролол:'bisoprolol', конкор:'bisoprolol', bisoprolol:'bisoprolol',
+  метопролол:'metoprolol', омепразол:'omeprazole',
   ибупрофен:'ibuprofen', амлодипин:'amlodipine', аторвастатин:'atorvastatin',
   амоксициллин:'amoxicillin', ривароксабан:'rivaroxaban', ксарелто:'xarelto',
-  клопидогрел:'clopidogrel', клопидогрель:'clopidogrel', моксифлоксацин:'moxifloxacin', авелокс:'avelox', дигоксин:'digoxin', парацетамол:'acetaminophen',
+  клопидогрел:'clopidogrel', клопидогрель:'clopidogrel', клопідогрел:'clopidogrel', клопідогрель:'clopidogrel', моксифлоксацин:'moxifloxacin', авелокс:'avelox', дигоксин:'digoxin', парацетамол:'acetaminophen',
 };
 
 export function normalizeDrugQuery(value: string): string | null {
