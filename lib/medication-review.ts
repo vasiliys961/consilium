@@ -1,7 +1,7 @@
 import {normalizeDrugQuery,searchDrugLabels,reviewDrugLabels,drugLabelCitations,MAX_DRUG_LABELS,type DrugLabelSelection} from './drug-labels.ts';
 import {drugEntries} from './drug-interaction-rules.ts';
 import {complete} from './gateway.ts';
-import {MODELS} from './cost.ts';
+import {MODELS,priceUsd} from './cost.ts';
 /** One economical text-only review after the free on-device screening. */
 export const MEDICATION_REVIEW_MODEL=MODELS.flash;
 import {languageName,parseLocale} from './locale.ts';
@@ -63,4 +63,69 @@ export async function medicationReview(input:ConductInput,env:Record<string,stri
  {role:'user',content:JSON.stringify({note:input.text,sources:citations.map(citation=>({key:citation.passageId,title:citation.title,text:citation.excerpt?.slice(0,4400)+'\n[Selected label excerpt: consult the complete linked label]'}))})}]},fetchImpl);
  if(!result)throw Error('review_failed');const report=readMedicationReport(result.text,sources);if(!report)throw Error('review_failed');
  return {report,citations,model:result.model,inputTokens:result.inputTokens,outputTokens:result.outputTokens};
+}
+
+
+/** One optional model call, without mandatory label discovery or a drug-name whitelist.
+ * These results are PRELIMINARY: no live DDI database or label has been checked.
+ */
+export type QuickMedicationInteraction={
+ drugs:string[];
+ severity:'contraindicated'|'high'|'monitor'|'uncertain';
+ mechanism:string;
+ action:string;
+ monitoring:string;
+};
+export type QuickMedicationReport={
+ summary:string;
+ interactions:QuickMedicationInteraction[];
+ questions:string[];
+ limits:string[];
+};
+export function readQuickMedicationReport(raw:string):QuickMedicationReport|null{
+ try{
+  const value=JSON.parse(raw.trim());
+  const short=(x:unknown,n:number)=>typeof x==='string'&&x.trim().length>0&&x.length<=n;
+  if(!value||!short(value.summary,800)||!Array.isArray(value.interactions)||value.interactions.length>15||!Array.isArray(value.questions)||value.questions.length>5||!Array.isArray(value.limits)||value.limits.length>5)return null;
+  if(value.interactions.some((x:QuickMedicationInteraction)=>!x||!Array.isArray(x.drugs)||x.drugs.length<1||x.drugs.length>4||x.drugs.some(y=>!short(y,110))||!['contraindicated','high','monitor','uncertain'].includes(x.severity)||!short(x.mechanism,500)||!short(x.action,500)||!short(x.monitoring,400)))return null;
+  if([...value.questions,...value.limits].some(x=>!short(x,400)))return null;
+  return value as QuickMedicationReport;
+ }catch{return null;}
+}
+export async function quickMedicationReview(
+ input:ConductInput,
+ env:Record<string,string|undefined>,
+ fetchImpl:typeof fetch=fetch,
+ signal?:AbortSignal,
+){
+ const note=(input.text??'').trim();
+ if(!note||note.length>12000)throw Error('invalid_medication_list');
+ const model=env.MEDICATION_CHECK_MODEL?.trim()||MEDICATION_REVIEW_MODEL;
+ const result=await complete(env,{
+  model,maxTokens:1450,timeoutMs:45000,retryInvalidResponse:false,signal,
+  validate:raw=>readQuickMedicationReport(raw)!==null,
+  messages:[
+   {role:'system',content:[
+    'You are a clinical medication safety screening assistant for a physician.',
+    'Review ANY medicine names and combinations in the provided input, regardless of language, transliteration, brand or generic spelling. Do not restrict review to a preprogrammed set of drug names or to four products.',
+    'Treat current medicines, proposed additions, discontinued drugs and mutually exclusive alternatives as separate groups. Never assert co-administration across discontinued drugs or alternatives.',
+    'Identify clinically important drug-drug interactions, contraindications, relevant kidney/liver function, bleeding, QT, potassium, blood pressure, bradycardia, monitoring and important missing patient information ONLY WHERE APPLICABLE.',
+    'Distinguish likely risks from uncertain possibilities. Do not invent publications, citations, official-source verification, laboratory values, routes or patient conditions. This request does NOT perform a live interaction-database or product-label lookup.',
+    'Never say a combination is safe or has no interactions just because you did not identify a significant risk. If none stands out, explicitly say this is an incomplete model-based screening, NOT exclusion of interactions.',
+    'Prioritize actionable high-risk pairs; avoid listing low-value theoretical warnings. Separate drug-drug interaction from individual-drug contraindications. No unsupported changes to doses.',
+    'Keep response concise, physician-facing. Ask only questions that would change a clinical decision.',
+    'Return JSON only: {"summary":"string","interactions":[{"drugs":["drug A","drug B"],"severity":"contraindicated|high|monitor|uncertain","mechanism":"string","action":"string","monitoring":"string"}],"questions":["string"],"limits":["string"]}. 0 to 15 prioritized findings, max 5 questions and limits.',
+    'Write in '+languageName(parseLocale(input.locale))+'.'
+   ].join(' ')},
+   {role:'user',content:note}
+  ],
+ },fetchImpl);
+ if(!result)throw Error('review_failed');
+ const report=readQuickMedicationReport(result.text);
+ if(!report)throw Error('review_failed');
+ return {
+  report,model:result.model,inputTokens:result.inputTokens,outputTokens:result.outputTokens,
+  estimatedUsd:result.inputTokens||result.outputTokens?priceUsd(result.model,result.inputTokens,result.outputTokens):null,
+  evidence:'not_source_verified' as const,
+ };
 }
