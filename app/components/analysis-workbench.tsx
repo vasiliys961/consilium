@@ -1470,12 +1470,14 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
             ) : null}
             <details><summary>{t("Обработка и стоимость")}</summary><p>
               {result.cost.usageComplete===false&&t('Не все модели передали данные о токенах; расчётная стоимость неполная.')}
+              {result.cost.billingComplete===true ? t('По начислениям OpenRouter, полученным в ответах моделей. ') : t('Расчётная сумма: не все ответы содержали фактическое начисление OpenRouter. Проверьте OpenRouter Activity. ')}
               {copy.cost}: ${money(result.cost.totalUsd)}
               {" · "}
               {money(result.cost.credits)}
               {" "}
               {copy.credits}
             </p>
+            <p>{t("Разбивка по этапам рассчитана по тарифам и может отличаться от фактической суммы выше.")}</p>
             <ul className="tape">
               {result.cost.steps.map((step,index) => (
                 <li key={step.id+":"+step.model+":"+index}>

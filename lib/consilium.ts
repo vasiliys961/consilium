@@ -6,6 +6,7 @@ import { complete, type ModelFailure } from "./gateway.ts";
 import type { Citation } from "./literature.ts";
 import { languageName, type Locale } from "./locale.ts";
 import type { ClinicalReport } from './clinical-report.ts';
+import { clinicalFocusText } from './clinical-focus.ts';
 
 export interface ConsiliumRole {
   id: "hypothesis" | "testChooser" | "challenger" | "stewardship" | "checklist";
@@ -22,15 +23,9 @@ export const CONSILIUM_ROLES: ConsiliumRole[] = [
   { id: "checklist", model: MODELS.opus, critic: false },
 ];
 
+/** Clinical focus areas for existing roles; these are NOT separate paid specialist agents. */
 export function consiliumFocus(note: string, modalities: string[]) {
-  return [
-    'internal medicine',
-    (modalities.includes('ecg') || /ишеми|аритми|инфаркт|сердечн|cardiac|arrhythm|myocard/i.test(note)) && 'cardiology',
-    (modalities.some(item=>['dicom','radiology','ultrasound','ct','mri'].includes(item))) && 'radiology and imaging',
-    (modalities.includes('genetics')) && 'clinical genetics',
-    (/креатинин|почечн|нефрит|creatinine|nephrit|kidney|renal/i.test(note)) && 'nephrology',
-    (/препарат|лекарств|мг|medications|dose|polypharmacy/i.test(note)) && 'clinical pharmacology',
-  ].filter(Boolean).join(', ');
+  return clinicalFocusText(note, modalities);
 }
 
 export interface ConsiliumVoice {
@@ -55,7 +50,7 @@ const ROLE_TASK: Record<ConsiliumRole["id"], string> = {
   stewardship:
     "Review the proposed management for avoidable harm. Check documented medications, allergies, comorbidities and organ function, and state what is missing before choosing an option. Do not add diagnoses or invent contraindications.",
   checklist:
-    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Distinguish unsupported options and absent votes. The draft stays unsigned.",
+    "Synthesize the four independent opinions for the physician. Resolve material disagreements against the supplied evidence. State the supported next step, a safety check, what would change the decision and any urgent escalation trigger. Name each supported and disputed position by role id (hypothesis, testChooser, challenger, stewardship), not as invented specialist votes. Never say all opinions agree when any explicitly disagree. State which unresolved issue changes the next clinical action. Distinguish unsupported options and absent votes. The draft stays unsigned.",
 };
 
 function quiet(role: ConsiliumRole): ConsiliumVoice {

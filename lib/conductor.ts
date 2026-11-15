@@ -135,7 +135,7 @@ export interface CaseResult {
   ledger: LedgerEntry[];
   unassessed: string[];
   citations: Citation[];
-  cost: { usageComplete?:boolean;totalUsd: number; credits: number; steps: CostStep[]; calls?: Array<{model:string;inputTokens:number;outputTokens:number;durationMs:number;status:"received"|"truncated"|"failed";usageAvailable?:boolean;usd:number}> };
+  cost: { usageComplete?:boolean; billingComplete?:boolean; totalUsd: number; credits: number; steps: CostStep[]; calls?: Array<{model:string;inputTokens:number;outputTokens:number;durationMs:number;status:"received"|"truncated"|"failed";usageAvailable?:boolean;usd:number;billingSource?:'openrouter'|'estimate'}> };
   gateway: { provider: GatewayProvider; called: boolean };
   attachment: string | null;
   retained: boolean;

@@ -5,6 +5,7 @@ import {registerVaultFlush} from '@/lib/local-vault';
 import {useEffect,useRef,useState} from 'react';
 import {caseTitle,readCases,persistCase,protocolSource,type ClinicalCase} from '@/lib/casebook';
 import {protocolDocumentMessage,nativeProtocolText,protocolForEdition,shouldSwitchProtocolLanguage,type ProtocolEdition} from '@/lib/protocol-bridge';
+import {localOrigin} from '@/lib/local-ports';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
 import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 type Status={installed:boolean;running:boolean;origin:string};
@@ -15,7 +16,7 @@ export default function OriginalProtocolModule(){
  const [documentLanguage,setDocumentLanguage]=useState<WorkspaceLanguage>('en');
  const sessionDrafts=useRef<Record<string,{source:string;text:string;state?:Record<string,string>}>>({});
  const [initialLanguage,setInitialLanguage]=useState<WorkspaceLanguage>('en');
- const current=cases.find(c=>c.id===selected),source=current?protocolSource(current):'',savedDocument=protocolForEdition(current?.protocols,edition),scratch=current?.protocolScratch?.[edition],savedProtocol=scratch?.text??nativeProtocolText(savedDocument),active=status?.[edition],origin=active?.origin??`http://127.0.0.1:${edition==='ru'?3111:3112}`;
+ const current=cases.find(c=>c.id===selected),source=current?protocolSource(current):'',savedDocument=protocolForEdition(current?.protocols,edition),scratch=current?.protocolScratch?.[edition],savedProtocol=scratch?.text??nativeProtocolText(savedDocument),active=status?.[edition],origin=active?.origin??localOrigin(edition==='ru'?'protocolRu':'protocolEn');
  useEffect(()=>{
   setSession(crypto.randomUUID());
   const params=new URLSearchParams(location.search);
