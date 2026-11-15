@@ -33,7 +33,7 @@ import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
-import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
+import { openNewCase, caseTitle, caseAnalysisInput, caseContext, caseSignature, readCases, persistCase, persistCaseAutosave, exportCase, finishClinicalCase, reviseCaseEvent, decisionDocument, type AnalysisKind, type Analysis, type ClinicalCase, type Event } from '@/lib/casebook';
 import { prepareFile } from '@/lib/case-intake';
 import type { CaseTask } from '@/lib/case-plan';
 import type { CaseResult, CaseFile } from '@/lib/conductor';
@@ -136,11 +136,17 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const draftSnapshot=current?{...current,workspaceDraft:{question:caseQuestion,note:eventDrafts.note,decision:eventDrafts.decision,tab}}:null;
     const latestDraft=useRef(draftSnapshot);latestDraft.current=draftSnapshot;
     const flushed=useRef<string>('');
-    const flushDraft=async()=>{const value=latestDraft.current;if(value){await persistCase(value);flushed.current=JSON.stringify([value.id,value.updated,value.workspaceDraft]);}};
+    const flushDraft=async()=>{const value=latestDraft.current;if(value){const applied=await persistCaseAutosave(value);if(applied)flushed.current=JSON.stringify([value.id,value.updated,value.workspaceDraft]);}};
     useEffect(()=>registerVaultFlush(flushDraft),[]);
     useEffect(()=>()=>{void flushDraft().catch(()=>{});},[]);
     useEffect(()=>{if(!current||busy||uploading)return;const record=draftSnapshot!,signature=JSON.stringify([record.id,record.updated,record.workspaceDraft]);if(flushed.current===signature)return;
-      const timer=setTimeout(()=>{void persistCase(record).then(()=>{flushed.current=signature;if(latestDraft.current?.id===record.id){setCases(values=>[record,...values.filter(x=>x.id!==record.id)]);setDirty(false);}}).catch(()=>setNotice('Автосохранение не удалось. Сохраните или экспортируйте случай перед переходом.'));},250);
+      const timer=setTimeout(()=>{void persistCaseAutosave(record).then(async applied=>{
+        if(!applied)return; // A newer analysis/attachment already superseded this snapshot.
+        if(latestDraft.current?.id!==record.id||JSON.stringify([latestDraft.current.id,latestDraft.current.updated,latestDraft.current.workspaceDraft])!==signature)return;
+        const saved=await readCases(true);
+        if(latestDraft.current?.id!==record.id||JSON.stringify([latestDraft.current.id,latestDraft.current.updated,latestDraft.current.workspaceDraft])!==signature)return;
+        flushed.current=signature;setCases(saved);setDirty(false);
+      }).catch(()=>setNotice('Автосохранение не удалось. Сохраните или экспортируйте случай перед переходом.'));},250);
       return()=>clearTimeout(timer);
     },[current,caseQuestion,eventDrafts,tab,busy,uploading]);
     useEffect(()=>{const refresh=()=>{const id=latestDraft.current?.id;if(id)void readCases(true).then(values=>{const fresh=values.find(x=>x.id===id);if(fresh){setCases(values);setCurrent(fresh);}});};window.addEventListener('concilium-case-updated',refresh);return()=>window.removeEventListener('concilium-case-updated',refresh);},[]);
