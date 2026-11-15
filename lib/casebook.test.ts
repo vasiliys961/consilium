@@ -74,6 +74,7 @@ test('a new physician question and findings continue the case, while replaced im
 test('Radiology draft and ECGFounder measurements survive case export and enter follow-up with explicit provenance',()=>{
  const value=newCase(42);
  value.context='Synthetic cardiopulmonary case';
+ value.files=[{name:'trace.csv',sha256:'f'.repeat(64),text:'synthetic digital sample'}];
  value.moduleReports=[{id:'r1',module:'radiology',fileKeys:[],sources:[],at:'2026-11-15T10:00:00Z',text:'Limited review of one frame'}];
  const ecg={module:'ecgfounder' as const,method:'digital-ecg-waveform' as const,source:'trace.csv',sha256:'f'.repeat(64),status:'read' as const,threshold:0.5,cleared:[{label:'SINUS RHYTHM',score:0.82}],top:{label:'SINUS RHYTHM',score:0.82},reason:null,measurements:{method:'digital',description:'Synthetic',lines:[{name:'RR',value:'810 ms'}],note:'Review calibration'}};
  value.analyses=[{id:'a1',at:value.created,context:value.context,result:{...conduct({text:value.context}),clinicalDraft:'generated',ecgEvidence:ecg,draft:{status:'unsigned',summary:'Preliminary interpretation',statements:[]}}}];
@@ -87,4 +88,75 @@ test('Radiology draft and ECGFounder measurements survive case export and enter 
  assert.match(saved,/810 ms/);
  assert.match(saved,/Limited review of one frame/);
  assert.match(saved,/неподписанный черновик/);
+});
+
+test('C2: replacing ECG and Radiology files preserves history without reusing stale evidence',()=>{
+ const value=newCase(91);
+ const oldEcg='a'.repeat(64),newEcg='b'.repeat(64);
+ const oldCt='c'.repeat(64),newCt='d'.repeat(64);
+ value.context='Non-patient longitudinal fixture';
+ value.files=[
+  {name:'same-name.csv',sha256:oldEcg,text:'sampling_rate,500\\nSYNTHETIC'},
+  {name:'same-name.dcm',sha256:oldCt,processingModule:'radiology'},
+ ];
+ value.moduleReports=[{id:'rad-old',module:'radiology',fileKeys:[oldCt],
+  sources:['same-name.dcm'],at:'2026-11-15T09:00:00Z',
+  text:'OLD RADIOLOGY FINDING — HISTORICAL ONLY'}];
+ const oldResult=conduct({text:'Synthetic old discussion'});
+ value.analyses=[{id:'ecg-old',at:'2026-11-15T09:01:00Z',context:'Synthetic initial question',
+  result:{...oldResult,clinicalDraft:'generated',
+   ecgEvidence:{module:'ecgfounder',method:'digital-ecg-waveform',
+    source:'same-name.csv',sha256:oldEcg,status:'read',threshold:0.5,
+    top:{label:'ATRIAL FIBRILLATION',score:0.82},
+    cleared:[{label:'ATRIAL FIBRILLATION',score:0.82}],reason:null,
+    measurements:{method:'digital',description:'Synthetic old reading',
+     lines:[{name:'OLD ECG INTERVAL',value:'730 ms'}],note:'Synthetic fixture'}},
+   draft:{status:'unsigned',summary:'Earlier discussion (not a diagnosis)',statements:[]}}}];
+ // Same original files: evidence may be reused, but no automatic paid inference.
+ const unchanged=caseAnalysisInput(value);
+ assert.match(unchanged.text,/OLD RADIOLOGY FINDING/);
+ assert.match(unchanged.text,/OLD ECG INTERVAL/);
+ assert.deepEqual(unchanged.pendingModules,[]);
+ // Replace both under their original filenames: hashes, not names, control identity.
+ value.files=[
+  {...value.files[0],sha256:newEcg,text:'sampling_rate,500\\nREPLACED'},
+  {...value.files[1],sha256:newCt},
+ ];
+ value.events.push({id:'followup',at:'2026-11-15T10:00:00Z',kind:'question',text:'What changed?'});
+ const after=caseAnalysisInput(value);
+ assert.match(after.text,/Исторический отчёт/);
+ assert.match(after.text,/не подтверждённый текущим SHA-256/);
+ assert.doesNotMatch(after.text,/OLD RADIOLOGY FINDING|OLD ECG INTERVAL|730 ms|0\\.82/);
+ assert.equal(after.pendingModules.length,1);
+ assert.equal(after.pendingModules[0].sha256,newCt);
+ assert.ok(after.files.some(file=>file.name==='same-name.csv'&&file.sha256===newEcg));
+ // Original immutable content stays available to the physician and exports.
+ const exported=exportCase(value);
+ assert.match(exported,/OLD RADIOLOGY FINDING/);
+ assert.match(exported,/OLD ECG INTERVAL/);
+ assert.match(exported,/What changed/);
+ // Switching back to the exact original source recovers matching, never filename-only reuse.
+ value.files=[
+  {...value.files[0],sha256:oldEcg},
+  {...value.files[1],sha256:oldCt},
+ ];
+ assert.match(caseAnalysisInput(value).text,/OLD RADIOLOGY FINDING/);
+ assert.match(caseAnalysisInput(value).text,/OLD ECG INTERVAL/);
+ assert.equal(caseAnalysisInput(value).pendingModules.length,0);
+});
+
+test('C2: ECG with absent SHA-256 is historical, never accepted solely by filename',()=>{
+ const value=newCase(92);
+ value.files=[{name:'trace.csv',text:'synthetic bytes',sha256:'e'.repeat(64)}];
+ value.analyses=[{id:'legacy',at:value.created,context:'Legacy fixture',
+  result:{...conduct({text:'Synthetic'}),clinicalDraft:'generated',
+   ecgEvidence:{module:'ecgfounder',method:'digital-ecg-waveform',
+    source:'trace.csv',sha256:null,status:'read',threshold:0.5,
+    top:{label:'SINUS RHYTHM',score:0.96},
+    cleared:[{label:'SINUS RHYTHM',score:0.96}],reason:null},
+   draft:{status:'unsigned',summary:'Legacy analysis',statements:[]}}}];
+ const input=caseAnalysisInput(value).text;
+ assert.match(input,/не подтверждённый текущим SHA-256/);
+ assert.doesNotMatch(input,/SINUS RHYTHM|0\\.96/);
+ assert.match(exportCase(value),/SINUS RHYTHM/);
 });
