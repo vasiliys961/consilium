@@ -1,5 +1,5 @@
 import{openRouterRuntime}from'./provider-runtime.ts';
-import {localOrigin,localPorts} from './local-ports.ts';
+import {isPreviewInstance,localOrigin,localPorts} from './local-ports.ts';
 import {spawn,type ChildProcess} from 'node:child_process';
 import {parseEnv} from 'node:util';
 import {homedir} from 'node:os';
@@ -17,7 +17,7 @@ export async function protocolStatus(){const [ru,en]=await Promise.all((['ru','e
 export function startProtocol(edition:ProtocolEdition){
  if(!protocolInstalled(edition))return false;const existing=children.get(edition);if(existing&&!existing.killed&&existing.exitCode===null&&existing.signalCode===null)return true;
  const original=process.env[edition==='ru'?'PROTOCOL_RU_SOURCE_HOME':'PROTOCOL_EN_SOURCE_HOME']||resolve(homedir(),'Desktop',edition==='ru'?'протокол осмотра':'протокол осмотра англ');
- let originalEnv:Record<string,string|undefined>={};try{originalEnv=parseEnv(readFileSync(resolve(original,'.env.local'),'utf8'));}catch{}
+ let originalEnv:Record<string,string|undefined>={};if(!isPreviewInstance())try{originalEnv=parseEnv(readFileSync(resolve(original,'.env.local'),'utf8'));}catch{}
  const runtimeEnv=openRouterRuntime({...originalEnv,...process.env});
  const built=existsSync(resolve(home(edition),'.next/BUILD_ID'));
  const child=spawn(process.execPath,[resolve(home(edition),'node_modules/next/dist/bin/next'),built?'start':'dev','--hostname','127.0.0.1','--port',String(edition==='ru'?localPorts().protocolRu:localPorts().protocolEn)],{cwd:home(edition),env:{...runtimeEnv,NODE_ENV:built?'production':'development',CONCILIUM_PROTOCOL_EDITION:edition,NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','ignore']});
