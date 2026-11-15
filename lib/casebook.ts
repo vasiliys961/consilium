@@ -146,8 +146,16 @@ export async function readCases(includeDeleted=false): Promise<ClinicalCase[]> {
 const writes=new Map<string,Promise<void>>();
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{const previous=writes.get(value.id)??Promise.resolve();const next=previous.catch(()=>{}).then(()=>writeVaultCase(value,remove));writes.set(value.id,next);try{await next;}finally{if(writes.get(value.id)===next)writes.delete(value.id);}}
 export function exportCase(value: ClinicalCase): string {
+  const editor=value.workspaceDraft;
+  const unfinished=[
+    editor?.question?.trim()&&`Вопрос врача, не отправлен в завершённый разбор: ${editor.question.trim()}`,
+    editor?.note?.trim()&&`Наблюдения в редакторе, ещё не утверждены: ${editor.note.trim()}`,
+    editor?.decision?.trim()&&`Проект решения врача, НЕ подписан: ${editor.decision.trim()}`,
+  ].filter(Boolean);
   return [ `# ${caseTitle(value,'Клинический случай')}`, `ID: ${value.id}`, `Статус: ${value.status}`, value.context,
-    `Вопрос: ${value.question}`, '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
+    `Вопрос: ${value.question}`,
+    ...(unfinished.length?['\n## Незавершённый редактор врача · не является заключением',...unfinished]:[]),
+    '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
     ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
