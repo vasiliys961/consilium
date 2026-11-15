@@ -66,6 +66,11 @@ function quiet(role: ConsiliumRole): ConsiliumVoice {
   };
 }
 
+/** Coordinator-level failure: preserve five explicit non-votes, never an empty "success". */
+export function unavailableConsilium(failure: NonNullable<ConsiliumVoice['failure']>): ConsiliumVoice[] {
+  return CONSILIUM_ROLES.map(role=>({...quiet(role),failure}));
+}
+
 export function readVoice(raw: string, allowed: Set<string>): { text: string; memory: boolean } | null {
   const json = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
   try {
