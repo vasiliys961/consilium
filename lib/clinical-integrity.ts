@@ -27,7 +27,7 @@ export function guardUnsupportedRestDyspnea(text:string, observedRecord:string):
  if(positive.test(observedRecord) && !denied.test(observedRecord))return {text,changed:false};
  let changed=false;
  // A prospective danger sign or a question is not an assertion about this patient.
- const prospective = /(?:при\s+(?:появлени[ии]|возникновени[ии]|развити[ии]|ухудшени[ии])|если|в\s+случае|следить\s+за|уточнить|есть\s+ли|исключить|оценить\s+наличие|if|when|whether|rule\s+out|watch\s+for|monitor\s+for|risk\s+of)\b/iu;
+ const prospective = /(?:при\s+(?:появлени[ии]|возникновени[ии]|развити[ии]|ухудшени[ии])|если|в\s+случае|следить\s+за|уточнить|есть\s+ли|исключить|оценить\s+наличие|if|when|whether|rule\s+out|watch\s+for|monitor\s+for|risk\s+of)(?![\p{L}])/iu;
  const shouldKeep=(offset:number,source:string)=>{
   const clause=source.slice(Math.max(0,offset-100),offset).split(/[.!?;:\n]/).pop()??'';
   return prospective.test(clause);
