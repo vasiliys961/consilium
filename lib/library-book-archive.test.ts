@@ -65,3 +65,13 @@ test('C8 portable archive cannot invent a source when original file is missing',
   await assert.rejects(()=>exportBookArchive(id),/Оригинал книги отсутствует/);
  }finally{await deleteDocument(id);}
 });
+
+test('C8 archives do not turn an arbitrary HTML original into a trusted browser document',async()=>{
+ const id=crypto.randomUUID(),file=new Blob(['<script>unsafe()</script>'],{type:'text/html'});
+ await saveDocument({id,name:'untrusted.html',size:file.size,uploaded_at:'2026',chunksCount:1},[{content:'Untrusted HTML',pageId:1}],file);
+ const archive=await exportBookArchive(id);
+ await deleteDocument(id);
+ const count=(await getAllDocuments()).length;
+ await assert.rejects(()=>restoreBookArchive(archive),/неподдерживаемый формат/);
+ assert.equal((await getAllDocuments()).length,count);
+});
