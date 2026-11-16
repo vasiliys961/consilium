@@ -41,11 +41,19 @@ test('C12: common units across Global and RU formats do not need extra paid infe
   ['تناول دواء 5 ملغ.','5 mg [T1].'],
   ['रोगी दवा 5 मिलीग्राम लेता है।','दवा 5 mg [T1].'],
   ['المريض يأخذ 5 ملجم.','5 mg [T1].'],
+  ['المريض يأخذ ٥ ملغ.','5 mg [T1].'],
  ];
  for(const [source,draft] of sources){
   assert.deepEqual(enAudit(source,draft),[],source);
   assert.deepEqual(ruAudit(source,draft),[],source);
  }
+});
+test('C12: Chinese adjacent doses and Arabic-Indic numerals are actually detected',()=>{
+ const chinese='患者服用阿哌沙班5毫克。';
+ assert.ok(enAudit(chinese,'阿哌沙班10毫克 [T1]').some(x=>x.code==='unsupported_dose'));
+ const arabic='المريض يأخذ ٥ ملغ.';
+ assert.ok(ruAudit(arabic,'10 mg [T1]').some(x=>x.code==='unsupported_dose'));
+ assert.deepEqual(enAudit(arabic,'5 mg [T1]'),[]);
 });
 test('C12: UI requires physician acknowledgment after mismatches, reset on edit and forbids stale draft',()=>{
  for(const edition of ['ru','en']){
