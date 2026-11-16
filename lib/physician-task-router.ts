@@ -17,6 +17,16 @@ const catalog:Record<PhysicianTool,Omit<PhysicianStep,'tool'>>={
  ambient:{title:'Запись беседы в протоколе',reason:'Использовать существующую запись/расшифровку RU или Global; микрофон и платное распознавание включаются только отдельно в редакторе.'},
  documents:{title:'Документы и лаборатория',reason:'Открыть выписку, таблицу или документ в рабочей станции.'},
 };
+/** Whitelisted module steps for conversational LLM output. No executable tool calls. */
+export function physicianToolSteps(ids:readonly PhysicianTool[]):PhysicianStep[]{
+ const steps:PhysicianStep[]=[];
+ for(const tool of ids){
+  if(Object.prototype.hasOwnProperty.call(catalog,tool)&&!steps.some(step=>step.tool===tool))
+   steps.push({tool,...catalog[tool]});
+  if(steps.length>=4)break;
+ }
+ return steps;
+}
 const word=(s:string)=>new RegExp('(?:^|[^a-zа-яё])(?:'+s+')(?![a-zа-яё])','i');
 const RAD=word('кт|мрт|кт\\/мрт|рентген|dicom|ct|mri|xray|x-ray');
 const ECG=/экг|электрокарди|ecg|ekg/i;
