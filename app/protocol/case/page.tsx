@@ -16,7 +16,7 @@ export default function OriginalProtocolModule(){
  const [cases,setCases]=useState<ClinicalCase[]>([]),[casesLoaded,setCasesLoaded]=useState(false),[selected,setSelected]=useState(''),[edition,setEdition]=useState<ProtocolEdition>('ru'),[session,setSession]=useState(''),[status,setStatus]=useState<Editions|null>(null),[linked,setLinked]=useState(false),[hasLoaded,setHasLoaded]=useState(false),[busy,setBusy]=useState(false),[starting,setStarting]=useState(false),[notice,setNotice]=useState('');
  const [documentLanguage,setDocumentLanguage]=useState<WorkspaceLanguage>('en');
  const [plannedLanguages,setPlannedLanguages]=useState<WorkspaceLanguage[]>([]);
- const sessionDrafts=useRef<Record<string,{source:string;text:string;state?:Record<string,string>}>>({});
+ const sessionDrafts=useRef<Record<string,{source:string;text:string;ambientTranscript?:string;state?:Record<string,string>}>>({});
  const [initialLanguage,setInitialLanguage]=useState<WorkspaceLanguage>('en');
  const current=cases.find(c=>c.id===selected),source=current?protocolSource(current):'',
   savedDocument=protocolForEdition(current?.protocols,edition,documentLanguage),
@@ -38,7 +38,7 @@ export default function OriginalProtocolModule(){
  async function start(){setStarting(true);setNotice('');try{const response=await fetch('/api/integrations/protocol',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({edition})});if(!response.ok){setStarting(false);setNotice(t('Не удалось запустить приложение протокола.'));}}catch{setStarting(false);setNotice(t('Не удалось запустить приложение протокола.'));}}
  useEffect(()=>{if(active?.running){setStarting(false);setHasLoaded(true);}if(active?.installed&&!active.running&&!attempted.current.has(edition)){attempted.current.add(edition);void start();}},[active?.installed,active?.running,edition,session]);
  useEffect(()=>{if(!starting)return;const timer=setTimeout(()=>{setStarting(false);setNotice(t('Запуск занимает больше обычного. Можно повторить попытку.'));},45000);return()=>clearTimeout(timer);},[starting,t]);
- useEffect(()=>{if(!linked||!session||!casesLoaded||deliveredSession.current===session)return;deliveredSession.current=session;frame.current?.contentWindow?.postMessage({type:'concilium.protocol.context',session,text:source,savedSource:sessionDrafts.current[draftKey]?.source??scratch?.source??savedDocument?.sourceSnapshot,protocol:sessionDrafts.current[draftKey]?.text??savedProtocol,state:sessionDrafts.current[draftKey]?.state??scratch?.state??savedDocument?.nativeState,format:sessionDrafts.current[draftKey]?'reasoning-draft':scratch?'reasoning-draft':savedDocument?.format,locale:documentLanguage},origin);},[linked,session,source,savedProtocol,savedDocument,scratch,origin,casesLoaded,draftKey,documentLanguage]);
+ useEffect(()=>{if(!linked||!session||!casesLoaded||deliveredSession.current===session)return;deliveredSession.current=session;frame.current?.contentWindow?.postMessage({type:'concilium.protocol.context',session,text:source,savedSource:sessionDrafts.current[draftKey]?.source??scratch?.source??savedDocument?.sourceSnapshot,protocol:sessionDrafts.current[draftKey]?.text??savedProtocol,ambientTranscript:sessionDrafts.current[draftKey]?.ambientTranscript??scratch?.ambientTranscript??savedDocument?.ambientTranscript??'',state:sessionDrafts.current[draftKey]?.state??scratch?.state??savedDocument?.nativeState,format:sessionDrafts.current[draftKey]?'reasoning-draft':scratch?'reasoning-draft':savedDocument?.format,locale:documentLanguage},origin);},[linked,session,source,savedProtocol,savedDocument,scratch,origin,casesLoaded,draftKey,documentLanguage]);
  useEffect(()=>{const receive=(event:MessageEvent)=>{
   if(event.origin!==origin||event.source!==frame.current?.contentWindow||event.data?.session!==session)return;
   if(event.data.type==='concilium.protocol.ready'){setLinked(true);if(edition==='en')frame.current?.contentWindow?.postMessage({type:'concilium.protocol.locale',session,locale:documentLanguage},origin);return;}
@@ -50,12 +50,12 @@ export default function OriginalProtocolModule(){
  };window.addEventListener('message',receive);return()=>window.removeEventListener('message',receive);},[origin,session,selected,edition,documentLanguage,t,language,setLanguage]);
  useEffect(()=>registerVaultFlush(async()=>{
   if(!linked||!frame.current?.contentWindow)return;
-  const snapshot=await new Promise<{source:string;text:string;state?:Record<string,string>}>((resolve,reject)=>{
+  const snapshot=await new Promise<{source:string;text:string;ambientTranscript?:string;state?:Record<string,string>}>((resolve,reject)=>{
    const timer=setTimeout(()=>{window.removeEventListener('message',receive);reject(Error('Не удалось сохранить черновик модуля перед блокировкой.'));},3000);
-   function receive(event:MessageEvent){if(event.source!==frame.current?.contentWindow||event.origin!==origin||event.data?.session!==session||event.data?.type!=='concilium.protocol.snapshot')return;const value=event.data;if(typeof value.source!=='string'||typeof value.text!=='string'||value.source.length+value.text.length>200000)return;clearTimeout(timer);window.removeEventListener('message',receive);resolve({source:value.source,text:value.text,...(value.state&&typeof value.state==='object'&&Object.values(value.state).every(s=>typeof s==='string')&&JSON.stringify(value.state).length<=200000?{state:value.state}:{})});}
+   function receive(event:MessageEvent){if(event.source!==frame.current?.contentWindow||event.origin!==origin||event.data?.session!==session||event.data?.type!=='concilium.protocol.snapshot')return;const value=event.data;if(typeof value.source!=='string'||typeof value.text!=='string'||value.source.length+value.text.length>200000)return;clearTimeout(timer);window.removeEventListener('message',receive);resolve({source:value.source,text:value.text,...(typeof value.ambientTranscript==='string'&&value.ambientTranscript.length<=100000?{ambientTranscript:value.ambientTranscript}:{}),...(value.state&&typeof value.state==='object'&&Object.values(value.state).every(s=>typeof s==='string')&&JSON.stringify(value.state).length<=200000?{state:value.state}:{})});}
    window.addEventListener('message',receive);frame.current!.contentWindow!.postMessage({type:'concilium.protocol.snapshot.request',session},origin);
   });
-  if(!snapshot.source.trim()&&!snapshot.text.trim())return;
+  if(!snapshot.source.trim()&&!snapshot.text.trim()&&!snapshot.ambientTranscript?.trim())return;
   if(!selected)throw Error('Выберите случай и сохраните черновик перед блокировкой.');
   const values=await readCases(),value=values.find(c=>c.id===selected);if(!value)throw Error('Случай не найден.');await persistCase({...value,protocolScratchByLocale:{...value.protocolScratchByLocale,[documentLanguage]:{...snapshot,at:new Date().toISOString()}}});
  }),[linked,origin,session,selected,edition,documentLanguage]);
@@ -65,7 +65,7 @@ export default function OriginalProtocolModule(){
   if(next!==documentLanguage&&linked&&frame.current?.contentWindow){
    await new Promise<void>(resolve=>{
     const finish=()=>{window.removeEventListener('message',receive);clearTimeout(timer);resolve();};
-    const receive=(event:MessageEvent)=>{if(event.source!==frame.current?.contentWindow||event.origin!==origin||event.data?.session!==session||event.data?.type!=='concilium.protocol.snapshot')return;const value=event.data;if(typeof value.source==='string'&&typeof value.text==='string'&&value.source.length+value.text.length<=200000)sessionDrafts.current[draftKey]={source:value.source,text:value.text,...(value.state&&typeof value.state==='object'?{state:value.state}:{})};finish();};
+    const receive=(event:MessageEvent)=>{if(event.source!==frame.current?.contentWindow||event.origin!==origin||event.data?.session!==session||event.data?.type!=='concilium.protocol.snapshot')return;const value=event.data;if(typeof value.source==='string'&&typeof value.text==='string'&&value.source.length+value.text.length<=200000)sessionDrafts.current[draftKey]={source:value.source,text:value.text,...(typeof value.ambientTranscript==='string'&&value.ambientTranscript.length<=100000?{ambientTranscript:value.ambientTranscript}:{}),...(value.state&&typeof value.state==='object'?{state:value.state}:{})};finish();};
     const timer=setTimeout(finish,1200);window.addEventListener('message',receive);frame.current!.contentWindow!.postMessage({type:'concilium.protocol.snapshot.request',session},origin);
    });
   }
