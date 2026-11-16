@@ -69,7 +69,12 @@ async function transcribeAudio(formData: FormData) {
     console.log(`🚀 Транскрипция через ${provider.name} с MIME:`, mimeType)
 
     const { text, duration, costUsd } = await provider.transcribe(arrayBuffer, mimeType);
-    const diarizedText = await maybeApplyRoleDiarization(text);
+    // Integrated Ambient keeps the raw OpenRouter transcript and acoustic Speaker IDs.
+    // The existing clinical draft is the single explicitly invoked LLM review step.
+    // Do not auto-call another LLM here or fabricate physician/patient roles.
+    const diarizedText = process.env.CONCILIUM_OPENROUTER_ONLY === '1'
+      ? text
+      : await maybeApplyRoleDiarization(text);
 
     // Расчет стоимости
     const durationMinutes = duration / 60;
