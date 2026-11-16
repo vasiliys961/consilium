@@ -261,15 +261,17 @@ export async function deleteDocument(id: string): Promise<void> {
 
 /** Quick local check for a connected folder file. Size/date are indicators, not a cryptographic recheck. */
 export type LibraryFolderSourceState='current'|'modified'|'unavailable'|'unverified';
+export function libraryFolderFileState(doc:LibraryDocument,file:Blob|null):LibraryFolderSourceState{
+  if(doc.storage!=='folder')return 'current';
+  if(!file)return 'unavailable';
+  if(doc.sourceModifiedAt===undefined)return 'unverified';
+  const modified='lastModified' in file && typeof file.lastModified==='number' ? file.lastModified : null;
+  return file.size!==doc.size || modified===null || modified!==doc.sourceModifiedAt ? 'modified' : 'current';
+}
 export async function checkLibraryFolderSource(doc:LibraryDocument):Promise<LibraryFolderSourceState>{
   if(doc.storage!=='folder')return 'current';
-  try{
-    const file=await getDocumentSourceFile(doc.id);
-    if(!file)return 'unavailable';
-    if(doc.sourceModifiedAt===undefined)return 'unverified';
-    const modified='lastModified' in file && typeof file.lastModified==='number' ? file.lastModified : null;
-    return file.size!==doc.size || modified===null || modified!==doc.sourceModifiedAt ? 'modified' : 'current';
-  }catch{return 'unavailable';}
+  try{return libraryFolderFileState(doc,await getDocumentSourceFile(doc.id));}
+  catch{return 'unavailable';}
 }
 
 /**
