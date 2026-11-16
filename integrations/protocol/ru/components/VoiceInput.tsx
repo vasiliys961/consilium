@@ -4,22 +4,26 @@ import { useEffect, useRef, useState } from 'react'
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void
+  /** Temporary recognition hypothesis, never persisted as a clinical fact. */
+  onInterim?: (text: string) => void
   disabled?: boolean
   className?: string
   placeholder?: string
 }
 
-export default function VoiceInput({ onTranscript, disabled = false, className = '', placeholder = '' }: VoiceInputProps) {
+export default function VoiceInput({ onTranscript, onInterim, disabled = false, className = '', placeholder = '' }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false)
   const [supported, setSupported] = useState(true)
   const recognitionRef = useRef<any>(null)
   const shouldListenRef = useRef(false)
   const pendingInterimRef = useRef('')
   const onTranscriptRef = useRef(onTranscript)
+  const onInterimRef = useRef(onInterim)
 
   useEffect(() => {
     onTranscriptRef.current = onTranscript
   }, [onTranscript])
+  useEffect(() => { onInterimRef.current = onInterim }, [onInterim])
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -37,6 +41,7 @@ export default function VoiceInput({ onTranscript, disabled = false, className =
   const flushPending = () => {
     const pending = pendingInterimRef.current.trim()
     pendingInterimRef.current = ''
+    onInterimRef.current?.('')
     if (pending) onTranscriptRef.current(pending)
   }
 
@@ -76,8 +81,10 @@ export default function VoiceInput({ onTranscript, disabled = false, className =
         else interim += text
       }
       pendingInterimRef.current = interim
+      onInterimRef.current?.(interim.trim())
       if (finalChunk.trim()) {
         pendingInterimRef.current = ''
+        onInterimRef.current?.('')
         onTranscriptRef.current(finalChunk.trim())
       }
     }
