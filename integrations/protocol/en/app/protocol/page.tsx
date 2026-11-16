@@ -108,7 +108,7 @@ export default function ProtocolPage() {
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
-  const [conversationStats, setConversationStats] = useState({ duration: 0, cost: 0 })
+  const [conversationStats, setConversationStats] = useState({ duration: 0, cost: 0, costKnown: true })
   const [protocol, setProtocol] = useState('')
   const [editingDraft,setEditingDraft]=useState(false)
   const [editingFinal,setEditingFinal]=useState(false)
@@ -955,7 +955,7 @@ export default function ProtocolPage() {
               </p>
               {conversationStats.duration > 0 && (
                 <p className="text-[11px] font-semibold text-indigo-800 mb-3">
-                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {ui("· STT")}{conversationStats.cost.toFixed(2)} {ui("cr.")}</p>
+                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ui("· STT billing not reported")}</p>
               )}
               <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
@@ -967,7 +967,7 @@ export default function ProtocolPage() {
                     setCostPart('stt', meta.cost, 'add')
                     recordUsageCost({
                       section: 'appointment-protocol',
-                      model: speechModel||speechProvider,
+                      model: meta.model||speechModel||speechProvider,
                       costUnits: meta.cost,
                     })
                   }
@@ -975,6 +975,7 @@ export default function ProtocolPage() {
                     setConversationStats((prev) => ({
                       duration: prev.duration + (Number(meta.duration) || 0),
                       cost: prev.cost + (Number(meta.cost) || 0),
+                      costKnown: prev.costKnown && meta.costKnown === true,
                     }))
                   }
                   const nextTranscript = conversationTranscriptText
@@ -1068,7 +1069,7 @@ export default function ProtocolPage() {
                     💰 {t.serviceCost}: {currentCost.toFixed(2)} {ui("cr.")}</div>
                   {conversationStats.cost > 0 && (
                     <div className="mt-1 text-[10px] text-teal-700">
-                      {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {ui("· STT")}{conversationStats.cost.toFixed(2)} {ui("cr.")}</div>
+                      {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ui("· STT billing not reported")}</div>
                   )}
                 </div>
               )}
