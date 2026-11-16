@@ -465,6 +465,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
       let duration = 0
       let cost = 0
       let costKnown = true
+      const models = new Set<string>()
       for (const [index, blob] of segments.entries()) {
         let result = segmentResultsRef.current[index]
         if (!result) {
@@ -479,10 +480,11 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
         duration += result.duration
         cost += result.cost
         costKnown = costKnown && result.costKnown
+        if(result.model)models.add(result.model)
       }
       // No partial transcript may masquerade as a complete consultation.
       setLastAnalysis({ duration, cost, costKnown })
-      onTranscribe(texts.join('\n\n'), { duration, cost, costKnown })
+      onTranscribe(texts.join('\n\n'), { duration, cost, costKnown, model:models.size===1?[...models][0]:'multiple' })
       segmentsRef.current = []
       segmentResultsRef.current = {}
     } catch (err: any) {
@@ -729,7 +731,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
                 {t.maxSize(maxSize)}
               </p>
               <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mt-2">
-                {costByDuration}
+                {sttCostHint}
               </p>
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
                 {t.privacyHint}
@@ -759,7 +761,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
               ✕
             </button>
           </div>
-          <p className="mt-1 text-[11px] text-indigo-600">{costByDuration}</p>
+          <p className="mt-1 text-[11px] text-indigo-600">{sttCostHint}</p>
         </div>
       )}
     </div>
