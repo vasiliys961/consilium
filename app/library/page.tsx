@@ -147,7 +147,7 @@ export default function LibraryPage() {
             const archive=await exportBookArchive(book.id);
             const url=URL.createObjectURL(archive);
             const anchor=document.createElement('a');anchor.href=url;
-            anchor.download=book.name.replace(/[^\\p{L}\\p{N}._-]/gu,'_')+BOOK_ARCHIVE_EXTENSION;
+            anchor.download=book.name.replace(/[^\p{L}\p{N}._-]/gu,'_')+BOOK_ARCHIVE_EXTENSION;
             anchor.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
             setMessage(t('Архив книги создан локально. Храните его как личный файл: он содержит полный оригинал и извлечённый текст.'));
         }catch(error){setMessage(error instanceof Error?error.message:t('Не удалось создать архив книги.'));}
