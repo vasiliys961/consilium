@@ -7,6 +7,7 @@ import {GenomicReviewView} from './genomic-review';
 import {MedicationReviewView} from './drug-label-picker';
 import {StudyReports} from './study-reports';
 import {ClinicalSourcesPanel} from './clinical-sources-panel';
+import {medicationRisksForFeed} from '@/lib/clinical-feed-risks';
 import {useWorkspaceLanguage} from './workspace-language';
 import styles from '@/app/workspace.module.css';
 
@@ -22,12 +23,19 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
    const studies=(result.draft.studyReports??[]).filter(report=>firstStudy.get(JSON.stringify(report))===analysis.id);
    const final=result.voices.find(voice=>voice.id==='checklist');
    const missing=result.voices.filter(voice=>voice.status!=='done');
+   const medicationRisks=medicationRisksForFeed(result.draft.report);
    return <article key={analysis.id} id={`analysis-${analysis.id}`} tabIndex={-1} className={`${styles.feedEntry} ${newest?styles.feedLatest:''}`}>
     <header className={styles.feedHeader}><span>{t('Разбор')} {number}{analysis.kind==='summary'?' · '+t('Резюме'):analysis.kind==='council'?' · '+t('Консилиум'):''}</span><time dateTime={analysis.at}>{new Date(analysis.at).toLocaleString(language,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</time></header>
     <h3>{t(analysisQuestion(analysis))}</h3>
     <small>{result.clinicalDraft==='generated'?t('ЧЕРНОВИК · ПРОВЕРИТЬ ВРАЧУ'):t('РАЗБОР НЕ ЗАВЕРШЁН')}</small>
     {analysis.newFacts&&<details><summary>{t('Новые данные этого этапа')}</summary><p className={styles.voiceText}>{analysis.newFacts}</p></details>}
     <div className={styles.feedAnswer}><p>{result.draft.summary}</p></div>
+    {medicationRisks.risks.length>0&&<section aria-label={t('Лекарственные риски · проверить врачу')} style={{borderLeft:'3px solid #b07c42',padding:'7px 14px',margin:'12px 0',background:'rgba(184,129,57,.06)'}}>
+      <h4 style={{margin:'0 0 5px'}}>{t('Перед назначением: важные лекарственные риски')}</h4>
+      <ul style={{margin:'6px 0'}}>{medicationRisks.risks.map((risk,i)=><li key={i}><strong>{risk.option}:</strong> {risk.severity==='contraindicated'?t('Противопоказание: '):''}{risk.risk}</li>)}</ul>
+      {medicationRisks.remaining>0&&<small>{t('Дополнительные предупреждения в подробном плане:')} {medicationRisks.remaining}.</small>}
+      <small style={{display:'block'}}>{t('Это предварительная проверка отдельных вариантов. Отсутствие предупреждения не подтверждает совместимость препаратов.')}</small>
+    </section>}
     {result.visualReadings?.filter(a=>a.secondOpinion).map(a=><section key={a.source}><h4>{t('Второе мнение')} · {imageModelLabel(a.secondOpinion?.model??'')} · {a.source}</h4>{a.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{a.secondOpinion?.status==='completed'?a.secondOpinion.reading:t('Второе мнение не получено. Основное заключение сохранено.')}</p><small>{t('Сопоставьте мнения по исходному изображению. Окончательное решение принимает врач.')}</small></section>)}
     {result.validationWarnings?.map((warning,i)=><p role="alert" key={i}>{warning}</p>)}
     {analysis.reusedSources?.length ? <small>{t('Использованы ранее прочитанные исследования:')} {analysis.reusedSources.join(', ')}. {t('Повторное чтение изображений не выполнялось.')}</small>:null}
