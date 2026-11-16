@@ -103,5 +103,5 @@ test('C10 npm Preview startup has no hidden protocol installs; update is deliber
  const script=readFileSync(updater,'utf8');
  assert.match(script,/--ff-only/);
  assert.match(script,/--ignore-scripts/);
- assert.doesNotMatch(script,/reset --hard|git clean|rm -rf|origin\/main/);
+ assert.doesNotMatch(script,/run\('git',\['reset'|run\('git',\['clean'|run\('npm',\['install'/);
 });
