@@ -123,8 +123,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
     {dialogue.map((turn,index)=><p key={index} style={{whiteSpace:'pre-wrap',margin:'8px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Opus Copilot')}:</strong> {turn.text}</p>)}
   </section>}
   {agentError&&<p role="alert" style={{color:'#8a2b17'}}>{t(agentError)}</p>}
-  {agentReply&&<p role="status" style={{fontSize:12,color:'#52665b'}}>{agentReply.usedModel?
-   `${t('Ответ ИИ')}: ${agentReply.model??'OpenRouter'} · ${agentReply.estimatedUsd!==null?t('Оценочная стоимость')+' 
+  {agentReply&&<p role="status" style={{fontSize:12,color:'#52665b'}}>
+    {agentReply.usedModel
+      ? <>{t('Ответ ИИ')}: {agentReply.model??t('Модель не указана')} · {agentReply.estimatedUsd!==null?t('Оценочная стоимость')+': $'+agentReply.estimatedUsd.toFixed(5):t('Провайдер не сообщил расход токенов')}</>
+      : t('Использован локальный маршрутизатор. Модель не ответила.')}
+  </p>}
   <div aria-label={t('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
     <strong style={{width:'100%',fontSize:14}}>{t('С чего начать?')}</strong>
     {examples.map(example=><button type="button" key={example} onClick={()=>propose(example)} style={{textAlign:'left',border:'1px solid #b0c8b9',background:'#fff',padding:'8px 12px',borderRadius:8}}>{t(example)}</button>)}
@@ -149,37 +152,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
      </li>;
     })}
    </ol>}
-   <p><small>{agentReply?t('ИИ предлагает маршрут, но не запускает инструменты и не проверяет медицинские выводы. Каждый шаг подтверждает врач.'):t('Маршрут построен без LLM и без передачи текста на сервер. В каждом модуле анализ, облачная передача и стоимость подтверждаются отдельно. Для сохранения результата используйте выбранный случай.')}</small></p>
-  </section>}
- </section>;
-}
-+agentReply.estimatedUsd.toFixed(5):t('Провайдер не сообщил расход токенов')}`
-   :t('Использован локальный маршрутизатор. Модель не ответила.')}</p>}
-  <div aria-label={t('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
-    <strong style={{width:'100%',fontSize:14}}>{t('С чего начать?')}</strong>
-    {examples.map(example=><button type="button" key={example} onClick={()=>propose(example)} style={{textAlign:'left',border:'1px solid #b0c8b9',background:'#fff',padding:'8px 12px',borderRadius:8}}>{t(example)}</button>)}
-    <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')} style={{border:'1px solid #6c9981',background:'#e8f4ed',padding:'8px 12px',borderRadius:8}}>{t('Показать все возможности')}</button>
-  </div>
-  {request.trim()&&<section aria-label={t('План работы')} style={{marginTop:16}}>
-   <h3>{t('Предлагаемый маршрут')}</h3>
-   <p>{t(plan.message)}</p>
-   {plan.steps.length>0&&<ol style={{paddingLeft:22}}>
-    {plan.steps.map(step=>{
-     const {allowed,hint}=availability(step.tool);
-     const href=physicianTaskHref(step.tool,caseId,language);
-     const isClinical=step.tool==='clinical';
-     return <li key={step.tool} style={{marginBottom:14}}>
-      <strong>{t(step.title)}</strong><p style={{margin:'5px 0'}}>{t(step.reason)}</p>
-      <small>{t(hint)}</small><div style={{marginTop:6}}>
-      {isClinical&&caseId&&onClinical?
-       <button type="button" disabled={caseClosed} onClick={()=>onClinical(request)}>{t('Перенести задачу в разбор случая')}</button>:
-       allowed?<Link href={href}>{t('Открыть инструмент для этого шага')}</Link>:
-       <span role="status">{t('Инструмент недоступен в текущей установке.')}</span>}
-      </div>
-     </li>;
-    })}
-   </ol>}
-   <p><small>{t('Маршрут построен без LLM и без передачи текста на сервер. В каждом модуле анализ, облачная передача и стоимость подтверждаются отдельно. Для сохранения результата используйте выбранный случай.')}</small></p>
+   <p><small>{agentReply?t('Opus Copilot предложил шаги, но пока не выполняет их самостоятельно. Каждый запуск подтверждает врач.'):t('Маршрут построен без LLM и без передачи текста на сервер. В каждом модуле анализ, облачная передача и стоимость подтверждаются отдельно. Для сохранения результата используйте выбранный случай.')}</small></p>
   </section>}
  </section>;
 }
