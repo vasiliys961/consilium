@@ -89,6 +89,7 @@ export default function ProtocolPage() {
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
+  const [draftSourceTranscript, setDraftSourceTranscript] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
@@ -1609,6 +1610,7 @@ export default function ProtocolPage() {
         throw new Error('Черновик получился пустым')
       }
       setRecordedDraftText(draft)
+      setDraftSourceTranscript(safeTranscript)
       setDraftFromConversationModel(typeof data?.modelUsed === 'string' ? data.modelUsed : null)
     } catch (error: any) {
       setDraftFromConversationError(error?.message || 'Ошибка формирования черновика')
@@ -1833,12 +1835,10 @@ export default function ProtocolPage() {
               </label>
               {ambientAudioConsent ? <AudioUpload
                 variant="cabinet"
+                maxSize={gateway==='openrouter'?24:500}
                 provider={gateway}
                 onTranscribe={(transcript) => {
-                  const nextTranscript = conversationTranscriptText
-                    ? `${conversationTranscriptText}\n\n${transcript}`
-                    : transcript
-                  setConversationTranscriptText(nextTranscript)
+                  setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // C14: a transcript is only source material. Do not make a paid
                   // LLM draft request until the physician explicitly asks for one.
                 }}
@@ -1854,6 +1854,7 @@ export default function ProtocolPage() {
               )}
               {recordedDraftText && (
                 <div className="mt-3">
+                  {draftSourceTranscript!==conversationTranscriptText.trim()&&<p role="alert" className="mb-2 text-xs text-amber-800">Расшифровка изменена после создания черновика. Проверьте текст и сформируйте черновик заново перед передачей в протокол.</p>}
                   <label className="block text-xs font-medium text-gray-700 mb-2">Черновик по жалобам/анамнезу (можно редактировать перед вставкой):</label>
                   <textarea
                     value={recordedDraftText}
@@ -1866,7 +1867,7 @@ export default function ProtocolPage() {
                     <button
                       onClick={() => setRawText(prev => prev ? `${prev}\n\n${recordedDraftText}` : recordedDraftText)}
                       className="bg-[#9C4221] px-3 py-1.5 text-xs text-[#FBF7F0] hover:bg-[#7C341A] disabled:opacity-50"
-                      disabled={loading || !recordedDraftText.trim()}
+                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim()}
                     >
                       Вставить черновик в протокол
                     </button>
