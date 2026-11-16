@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
-import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,saveLibraryPageOcr,deleteDocument} from './library-db.ts';
+import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,saveLibraryPageOcr,searchLibraryLocalWithMeta,deleteDocument} from './library-db.ts';
 import {exportBookArchive,restoreBookArchive,BOOK_ARCHIVE_EXTENSION} from './library-book-archive.ts';
 
 test('C8 portable book restores original, per-page OCR and local 384-dim vectors atomically',async()=>{
@@ -74,4 +74,29 @@ test('C8 archives do not turn an arbitrary HTML original into a trusted browser 
  const count=(await getAllDocuments()).length;
  await assert.rejects(()=>restoreBookArchive(archive),/неподдерживаемый формат/);
  assert.equal((await getAllDocuments()).length,count);
+});
+
+test('C8 physician question retrieves the right restored page, with no extra document or duplicated OCR',async()=>{
+ const id=crypto.randomUUID();
+ const raw=new Blob(['Pleural effusion drainage overview\fWarfarin anticoagulation bleeding interaction recommendations'],{type:'text/plain'});
+ await saveDocument({id,name:'Synthetic respiratory handbook.txt',size:raw.size,uploaded_at:'2026',chunksCount:2,pageCount:2,textPages:2},[
+   {content:'Pleural effusion drainage overview',pageId:1},
+   {content:'Warfarin anticoagulation bleeding interaction recommendations',pageId:2}
+ ],raw);
+ await saveLibraryPageOcr(id,2,'Warfarin anticoagulation bleeding risks — original page verification required.');
+ const archive=await exportBookArchive(id);
+ await deleteDocument(id);
+ let restoredId='';
+ try{
+  const first=await restoreBookArchive(archive);restoredId=first.document.id;
+  const hits=await searchLibraryLocalWithMeta('warfarin anticoagulation bleeding',5,restoredId);
+  assert.ok(hits.length);
+  assert.equal(hits[0].documentId,restoredId);
+  assert.equal(hits[0].pageId,2,'retrieval must preserve actual source page');
+  assert.equal(hits.filter(hit=>hit.pageId===1).length,0,'unrelated page must not be cited');
+  assert.equal((await getDocumentChunkRecords(restoredId)).filter(chunk=>chunk.pageId===2).length,2);
+  const again=await restoreBookArchive(archive);
+  assert.equal(again.alreadyPresent,true);
+  assert.equal(again.document.id,restoredId,'reimport must not create a duplicate');
+ }finally{if(restoredId)await deleteDocument(restoredId);await deleteDocument(id);}
 });
