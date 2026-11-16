@@ -8,7 +8,7 @@ import { ambientUi } from '@/lib/i18n/ambient-ui'
 import type { Locale } from '@/lib/i18n/config'
 
 const RECORDING_TIMESLICE_MS = 1000
-const SEGMENT_SECONDS = 5 * 60
+const SEGMENT_SECONDS = 3 * 60
 
 function extensionForMime(mimeType: string): string {
   if (mimeType.includes('mp4')) return 'mp4'
