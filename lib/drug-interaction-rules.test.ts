@@ -85,7 +85,8 @@ test('C3: all simultaneous NSAIDs are reported; alternatives are NEVER combined 
  assert.deepEqual(pairs.map(x=>x.second),['ibuprofen 200 mg','naproxen 250 mg']);
  const separated=checkMedicationRegimen({current:'warfarin',proposed:'amiodarone',alternatives:'moxifloxacin\nibuprofen + naproxen'});
  assert.equal(separated.alternatives.length,2);
- assert.equal(separated.alternatives[0].alerts.length,0,'moxifloxacin should not be tested against proposed amiodarone from another option');
+ assert.equal(separated.alternatives[0].alerts.length,1,'moxifloxacin retains its real interaction with current warfarin');
+ assert.equal(separated.alternatives[0].alerts.some(a=>a.risk.includes('QT')),false,'moxifloxacin must not be tested against proposed amiodarone from another option');
  assert.equal(separated.alternatives[1].alerts.length,2,'both drugs in one option tested against current warfarin');
 });
 test('C3: renal/hepatic impairment changes conditional colchicine risk, and aliases really stop drugs',()=>{
