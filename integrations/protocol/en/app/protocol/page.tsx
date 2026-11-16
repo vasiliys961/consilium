@@ -102,6 +102,8 @@ export default function ProtocolPage() {
   const [ambientAudioConsent, setAmbientAudioConsent] = useState(false)
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
+  const [liveInterim, setLiveInterim] = useState('')
+  const [browserSpeechConsent, setBrowserSpeechConsent] = useState(false)
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
@@ -971,6 +973,26 @@ export default function ProtocolPage() {
                 />
                 {t.autoInsertDraft}
               </label>
+              <section aria-label="Live encounter dictation" className="mb-4 rounded border border-indigo-200 bg-indigo-50 p-3">
+                <strong className="block text-sm">{ui('Live text · browser speech recognition')}</strong>
+                <p className="mt-1 text-xs">{ui('Partial speech appears during the visit. Browser recognition may transmit voice to the browser vendor; it is not guaranteed to process locally. Speaker identities are unverified. No Doctor Opus paid STT request is made.')}</p>
+                <label className="mt-2 flex items-start gap-2 text-xs">
+                  <input type="checkbox" checked={browserSpeechConsent} onChange={event=>{setBrowserSpeechConsent(event.target.checked);setLiveInterim('')}} />
+                  {ui('I confirm consent for browser speech recognition, including possible cloud processing. I will start the microphone separately.')}
+                </label>
+                {browserSpeechConsent&&<div className="mt-2 flex items-center gap-2">
+                  <VoiceInput
+                    continuous
+                    onTranscript={text=>setConversationTranscriptText(previous=>previous?previous+'\n'+text:text)}
+                    onInterim={setLiveInterim}
+                    placeholder="Click to start live dictation"
+                    disabled={loading}
+                  />
+                  <span className="text-xs">{ui('Click the microphone to begin or stop.')}</span>
+                </div>}
+                {liveInterim&&<p role="status" className="mt-2 italic text-sm">{ui('Unconfirmed partial speech:')} {liveInterim}</p>}
+                <p className="mt-2 text-xs">{ui('Unsupported browser? Use the existing recorded-audio transcription below. Only finalized phrases enter the editable encounter transcript.')}</p>
+              </section>
               <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
                 I confirm the required consent to record and transmit raw audio to the configured speech provider. A voice recording may identify a person even without a name; privacy review is required. Recording begins only after pressing Record.
