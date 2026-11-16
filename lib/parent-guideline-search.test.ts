@@ -4,12 +4,13 @@ import {readFileSync} from 'node:fs';
 import {GUIDELINE_MODES,isGuidelineMode,guidelineSearchPrompt,searchClinicalGuidelines} from './parent-guideline-search.ts';
 import {MODELS} from './cost.ts';
 
-test('original Doctor Opus guideline modes: fast Flash, deep Sonnet, current Sonar',()=>{
- assert.equal(GUIDELINE_MODES.brief.model,MODELS.flash);
+test('stable guideline modes: standard Flash, deep Sonnet, live Sonar; brief mode removed',()=>{
+ assert.equal(Object.hasOwn(GUIDELINE_MODES,'brief'),false);
  assert.equal(GUIDELINE_MODES.standard.model,MODELS.flash);
  assert.equal(GUIDELINE_MODES.detailed.model,MODELS.sonnet);
  assert.equal(GUIDELINE_MODES.online.model,'perplexity/sonar');
  assert.equal(isGuidelineMode('online'),true);
+ assert.equal(isGuidelineMode('brief'),false);
  assert.equal(isGuidelineMode('gpt-sol'),false);
 });
 test('one-word pleuritis query generates usable diagnostic and therapeutic instruction',()=>{
