@@ -21,6 +21,12 @@ export function CaseResultsSummary({record}:{record:ClinicalCase}){
     <summary>{t('Протокол')} · {t(document.kind)} · {document.locale.toUpperCase()} · {document.created.slice(0,10)}</summary>
     <p><Link href={protocolEditorHref(record.id,document)}>{t('Открыть сохранённый протокол в редакторе')}</Link></p>
     <p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{protocolText(document)}</p>
+    {document.ambientSource?.segments.length ? <details><summary>{t('Исходная расшифровка приёма')} · {document.ambientSource.segments.length} {t('фрагментов')}</summary>
+      <p>{t('Роли говорящих и временные метки не подтверждены. Сверьте каждую значимую жалобу, отрицание, лекарство и дозировку с исходной беседой. Этот текст не является подтверждённым объективным осмотром.')}</p>
+      <div style={{maxHeight:280,overflow:'auto',whiteSpace:'pre-wrap'}}>
+        {document.ambientSource.segments.map(segment=><p key={segment.id}><strong>[{segment.id}]</strong> {segment.text}</p>)}
+      </div>
+    </details>:null}
     {revisions.length>0&&<details><summary>{t('Предыдущие редакции')} · {revisions.length}</summary>
       {revisions.map((item,index)=><details key={item.savedAt+index}><summary>{item.savedAt}</summary><p style={{whiteSpace:'pre-wrap'}}>{protocolText(item.document)}</p></details>)}
     </details>}
