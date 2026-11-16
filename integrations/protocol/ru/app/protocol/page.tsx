@@ -86,6 +86,7 @@ export default function ProtocolPage() {
   const [rawText, setRawText] = useState('')
   const [showConversationRecorder, setShowConversationRecorder] = useState(false)
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
+  const [ambientConsent, setAmbientConsent] = useState(false)
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
@@ -1631,7 +1632,7 @@ export default function ProtocolPage() {
   const templateLabel = (name: string) => name.replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').trim()
 
   return (
-    <><ConciliumProtocolBridge rawText={rawText} protocol={protocol} busy={loading||draftFromConversationLoading||interactionLoading} onImport={setRawText} onProtocolImport={setProtocol}/><div className="min-h-screen bg-[#E7E0D4] text-[#1C1612] lg:pl-16">
+    <><ConciliumProtocolBridge rawText={rawText} protocol={protocol} ambientTranscript={conversationTranscriptText} onTranscriptImport={setConversationTranscriptText} busy={loading||draftFromConversationLoading||interactionLoading} onImport={setRawText} onProtocolImport={setProtocol}/><div className="min-h-screen bg-[#E7E0D4] text-[#1C1612] lg:pl-16">
       <aside className="fixed inset-y-0 left-0 hidden w-16 flex-col items-center justify-between bg-[#1C1612] py-7 text-[#F3E7D3] lg:flex">
         <span className="text-sm font-semibold">П</span>
         <span className="[writing-mode:vertical-rl] rotate-180 text-[11px] uppercase tracking-[0.32em]">Осмотр</span>
@@ -1841,8 +1842,9 @@ export default function ProtocolPage() {
                 />
                 Сразу класть черновик в заметки
               </label>
-              <AudioUpload
-                autoStartOnMount
+              <label className="my-3 flex items-start gap-2 text-xs text-[#5C4636]"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> Подтверждаю необходимое согласие на запись беседы и передачу обезличенного звука выбранному сервису распознавания. Запись включается только по отдельному нажатию.</label>
+              {ambientConsent ? <AudioUpload
+                autoStartOnMount={false}
                 variant="cabinet"
                 provider={gateway}
                 onTranscribe={(transcript) => {
@@ -1850,9 +1852,8 @@ export default function ProtocolPage() {
                     ? `${conversationTranscriptText}\n\n${transcript}`
                     : transcript
                   setConversationTranscriptText(nextTranscript)
-                  void buildDraftFromConversation(nextTranscript)
                 }}
-              />
+              /> : <p role="status" className="my-2 text-xs">Сначала подтвердите согласие. Без него микрофон и загрузка аудио недоступны.</p>}
               {draftFromConversationLoading && (
                 <p className="mt-2 text-xs text-[#9C4221]">Лёгкая модель формирует черновик по транскрипту...</p>
               )}
@@ -1890,6 +1891,7 @@ export default function ProtocolPage() {
                   </div>
                 </div>
               )}
+              {conversationTranscriptText.trim() && <><p className="mt-3 text-xs text-amber-800">Исходную речь, лекарства, дозировки, отрицания и говорящего необходимо сверить. Расстановка ролей по тексту не подтверждает личность говорящего.</p><button type="button" disabled={draftFromConversationLoading||loading||!ambientConsent} onClick={()=>void buildDraftFromConversation(conversationTranscriptText)} className="border border-[#9C4221] px-3 py-2 text-xs">Сформировать черновик по расшифровке · внешний модельный запрос</button></>}
               {conversationTranscriptText && (
                 <details className="mt-3">
                   <summary className="text-xs text-gray-500 cursor-pointer">Показать исходную транскрипцию беседы</summary>
