@@ -1,4 +1,5 @@
 import {recognizeWords} from '../intake/ocr.ts';
+import type {WordBox} from '../intake/burned.ts';
 import { spawn } from 'node:child_process';
 import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -45,16 +46,40 @@ export function scannerPdfPageCoverage(bytes:Uint8Array,rendered:ReadonlyArray<{
  return {expected:count,received:ids,missing,complete:ids.length===count&&ids.every((id,i)=>id===i+1)};
 }
 
+/** Layout-informed OCR: retain column separation without guessing missing characters. */
+export function scannerOcrWordLines(words:readonly WordBox[]):string[]{
+ const lines:Array<{y:number;h:number;words:WordBox[]}>= [];
+ for(const word of [...words].sort((a,b)=>a.y-b.y||a.x-b.x)){
+  const line=lines.find(l=>Math.abs(l.y-word.y)<Math.max(l.h,word.height)*.65);
+  if(line)line.words.push(word);
+  else lines.push({y:word.y,h:word.height,words:[word]});
+ }
+ return lines.map(line=>{
+  const sorted=line.words.sort((a,b)=>a.x-b.x);
+  return sorted.map((word,index)=>{
+   if(index===0)return word.text;
+   const prev=sorted[index-1];
+   const gap=word.x-(prev.x+prev.width);
+   const charWidth=prev.width/Math.max(1,prev.text.length);
+   // A large visual gap is evidence of separate columns, not a missing digit.
+   return (gap>Math.max(28,charWidth*3)?'\t':' ')+word.text;
+  }).join('');
+ });
+}
+
 /** OCR for scanner-produced documents; raw page pixels remain local. */
 export async function ocrScannedPdf(bytes:Uint8Array):Promise<string|null>{
  const pages=await renderPdfPages(bytes,10);
  const coverage=scannerPdfPageCoverage(bytes,pages);
  if(!coverage.complete)return null; // fail closed: no partial clinical evidence
  const text:string[]=[];
- for(const page of pages){const words=await recognizeWords(Buffer.from(page.image.split(',')[1],'base64'),'jpg');if(words===null)return null;
-  const lines:Array<{y:number;h:number;words:typeof words}>=[];
-  for(const word of words.slice().sort((a,b)=>a.y-b.y||a.x-b.x)){const line=lines.find(line=>Math.abs(line.y-word.y)<Math.max(line.h,word.height)*.65);if(line)line.words.push(word);else lines.push({y:word.y,h:word.height,words:[word]});}
-  text.push(`Страница ${page.page} · OCR, сверить с оригиналом\n`+lines.map(line=>line.words.sort((a,b)=>a.x-b.x).map(word=>word.text).join(' ')).join('\n'));
+ for(const page of pages){
+  const words=await recognizeWords(Buffer.from(page.image.split(',')[1],'base64'),'jpg');
+  if(words===null)return null;
+  const lines=scannerOcrWordLines(words);
+  // A blank OCR result on even one page cannot be promoted to a complete scan.
+  if(!lines.some(line=>line.trim()))return null;
+  text.push(`Страница ${page.page} · OCR, сверить с оригиналом\n`+lines.join('\n'));
  }
  return text.some(part=>part.split('\n').slice(1).join('').trim())?text.join('\n\n'):null;
 }

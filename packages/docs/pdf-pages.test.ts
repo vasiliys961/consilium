@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {existsSync} from 'node:fs';
-import {extractPdfText,renderPdfPages,scannerPdfPageCoverage} from './pdf-pages.ts';
+import {extractPdfText,renderPdfPages,scannerPdfPageCoverage,scannerOcrWordLines} from './pdf-pages.ts';
 import {scanPdf} from '../../lib/scan-pdf.ts';
 import {createRequire} from 'node:module';
 function pdf():Uint8Array {
@@ -38,4 +38,19 @@ test('C5 scanner PDF page numbering preserves a complete ten-page synthetic docu
  const pdf=scanPdf(Array.from({length:10},()=>page));
  assert.equal(scannerPdfPageCoverage(pdf,Array.from({length:10},(_,i)=>({page:i+1}))).complete,true);
  assert.deepEqual(scannerPdfPageCoverage(pdf,Array.from({length:9},(_,i)=>({page:i+1}))).missing,[10]);
+});
+
+test('C5 OCR layout: large column gaps remain visible and negative/decimal tokens remain verbatim',()=>{
+ const words=[
+  {text:'Калий',x:10,y:15,width:42,height:16},
+  {text:'5,9',x:125,y:15,width:24,height:16},
+  {text:'ммоль/л',x:155,y:15,width:65,height:16},
+  {text:'не',x:10,y:40,width:17,height:16},
+  {text:'принимает',x:31,y:40,width:85,height:16},
+  {text:'-3,2',x:125,y:40,width:30,height:16},
+ ];
+ const lines=scannerOcrWordLines(words);
+ assert.deepEqual(lines,['Калий\t5,9 ммоль/л','не принимает -3,2']);
+ assert.ok(lines[0].includes('5,9'),'OCR must never transform a decimal comma');
+ assert.ok(lines[1].includes('не'),'OCR must not drop a negation');
 });
