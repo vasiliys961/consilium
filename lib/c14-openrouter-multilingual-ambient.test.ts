@@ -117,3 +117,30 @@ test('C14: model draft never auto-inserts; transcript and document locale are re
  }
  assert.match(repo('integrations/protocol/en/app/protocol/page.tsx'),/draftSourceLocale!==locale/);
 });
+
+test('C14: RU long encounter is segmented into complete files and STT runs only after stop',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ const route=repo('integrations/protocol/ru/app/api/transcribe/route.ts');
+ assert.match(recorder,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(recorder,/new MediaRecorder\(stream/);
+ assert.match(recorder,/segmentsRef\.current\.push\(new File\(/);
+ assert.match(recorder,/rotatingRef\.current=true/);
+ assert.match(recorder,/void transcribeSegments\(\)/);
+ assert.match(recorder,/const stopRecording = \(\) =>/);
+ assert.match(recorder,/if\(rotatingRef\.current&&recordingRef\.current&&activeStreamRef\.current\)/);
+ assert.match(recorder,/onTranscribe\(texts\.join\('\\n\\n'\)/);
+ assert.match(recorder,/segmentResultsRef\.current\[index\]=result/);
+ assert.match(recorder,/hasPendingSegments&&!transcribing&&!recording/);
+ assert.match(recorder,/Повторить оставшуюся расшифровку/);
+ assert.match(recorder,/window\.addEventListener\('pagehide', cancelOnLeave\)/);
+ assert.match(route,/CONCILIUM_OPENROUTER_ONLY === '1'\s*\? text\s*:\s*await maybeApplyRoleDiarization\(text\)/);
+});
+test('C14: incomplete RU ambient transcript cannot be silently inserted as a complete consultation',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ assert.doesNotMatch(recorder,/onTranscribe\(result\.transcript.*for \(let/);
+ const complete=recorder.indexOf("onTranscribe(texts.join('\\n\\n')");
+ const clear=recorder.indexOf("segmentsRef.current=[]",complete);
+ assert.ok(complete>0&&clear>complete,'only deliver after all segments succeed, then discard temporary audio');
+ assert.match(recorder,/Запись временно хранится в этой вкладке/);
+ assert.match(recorder,/возможна повторная оплата/);
+});
