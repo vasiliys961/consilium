@@ -4,10 +4,12 @@ import { MODELS, sendTextRequest } from '@/lib/openrouter'
 import { runWithLlmProvider } from '@/lib/llm-provider'
 
 const DEFAULT_DRAFT_MODEL = process.env.PROTOCOL_DIALOGUE_DRAFT_MODEL?.trim() || MODELS.HAIKU
-const FALLBACK_DRAFT_MODEL = MODELS.GEMINI_3_PRO
+const FALLBACK_DRAFT_MODEL = MODELS.GEMINI_3_FLASH
 
 function buildDialogueDraftPrompt(params: { transcript: string; specialistName?: string }): string {
   const { transcript, specialistName } = params
+  // These T-identifiers use the same line enumeration as protocolDocumentMessage.
+  const numberedTranscript = transcript.replace(/\r\n?/g,'\n').split('\n').filter(Boolean).map((line,index)=>`[T${index+1}] ${line}`).join('\n')
   return `Ты медицинский ассистент по первичному структурированию данных приёма.
 Задача: из транскрипта беседы "врач-пациент" собрать черновик для дальнейшего заполнения протокола.
 Специальность врача: ${specialistName || 'терапевт'}.
@@ -16,6 +18,10 @@ function buildDialogueDraftPrompt(params: { transcript: string; specialistName?:
 - Это только черновик из жалоб/анамнеза, без финального диагноза и без назначения окончательной терапии.
 - Если данных нет — явно пиши "НЕТ ДАННЫХ", чтобы врач быстро дополнил.
 - Не придумывай факты. Используй только то, что есть в беседе.
+- Сохраняй отрицания, названия препаратов, дозировки, единицы и длительности точно. Врачебный вопрос не означает, что пациент подтвердил симптом.
+- "Speaker 0/1" и "Говорящий 0/1" — акустические метки, НЕ подтверждённые роли врача и пациента. При сомнении пиши "роль не подтверждена".
+- Каждый извлечённый клинический факт сопровождай [T1], [T2] и т.д. — номером исходной строки. Не выдумывай ссылки и не добавляй факты без источника.
+- Противоречия, неразборчивые лекарства, отрицания и дозы перечисли отдельно для перепроверки врачом.
 - Пиши на русском, без markdown, без списков с "*", только обычный текст.
 
 Верни текст строго по структуре:
@@ -38,8 +44,11 @@ function buildDialogueDraftPrompt(params: { transcript: string; specialistName?:
 1. ...
 2. ...
 
-Сырой текст беседы:
-${transcript}`
+Требует проверки врачом (с исходными цитатами [Tn]):
+...
+
+Исходные строки беседы (Tn; роли не подтверждены):
+${numberedTranscript}`
 }
 
 export async function POST(request: NextRequest) {
