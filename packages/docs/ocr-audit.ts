@@ -10,7 +10,7 @@ const patterns:ReadonlyArray<{kind:OcrReviewKind;pattern:RegExp}>= [
  {kind:'negation',pattern:/(?:^|[^\p{L}])(?:нет|не|без|отрицает|отрицател[ьи]|no|not|denies|negative|without)(?!\p{L})/iu},
  {kind:'dose',pattern:/(?:\b(?:mg|mcg|µg|ug|g|ml|iu|units)\b|(?:мг|мкг|мл|мЕ|МЕ|ед)(?!\p{L}))/iu},
  {kind:'lab',pattern:/(?:\b(?:INR|HbA1c|eGFR|Hb|Na|K\+|glucose|creatinine)\b|(?:МНО|СКФ|гемоглобин|глюкоз[аы]|креатинин|натрий|калий|ммоль\/л)(?!\p{L}))/iu},
- {kind:'number-spacing',pattern:/(?:^|[^\d])(?:-|\+)?\d+\s+[.,]\s*\d+|(?:^|[^\d])(?:-|\+)?\d+\s*[.,]\s+\d+/u},
+ {kind:'number-spacing',pattern:/(?:^|[^\d])(?:-|\+)?\d+\s+[.,]\s*\d+|(?:^|[^\d])(?:-|\+)?\d+\s*[.,]\s+\d+|(?:^|[\s:(])[-+]\s+\d+(?:[.,]\d+)?/u},
  {kind:'table',pattern:/\t/u},
 ];
 
