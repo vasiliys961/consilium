@@ -4,6 +4,8 @@ import type { Locale } from "./locale.ts";
 export type Shelf = "world" | "russia" | "europepmc" | "local" | "drug" | "genetics";
 
 export interface Citation {
+  /** Other independently identified sections read from the same full-text document. */
+  relatedPassages?: Array<{excerpt:string;chapter:string;paragraph:number}>;
   passageId?: string;
   pmcid?: string;
   doi?: string;
@@ -24,6 +26,27 @@ export interface Citation {
   edition: string | null;
   chapter: string | null;
   page: string | null;
+}
+
+/** Turn a multi-section article into individually citable snippets. Keeping distinct
+ * passage IDs prevents a management claim from referring to the wrong section.
+ * Existing one-passsage citations retain their original identity.
+ */
+export function citationPassages(card:Citation):Citation[] {
+ const pmcid=card.pmcid;
+ if(!pmcid||!/^PMC\d+$/.test(pmcid)||!Array.isArray(card.relatedPassages))return [card];
+ const seen=new Set<string>(card.passageId?[card.passageId]:[]);
+ const extras=card.relatedPassages.flatMap(passage=>{
+  if(!passage||!Number.isSafeInteger(passage.paragraph)||passage.paragraph<1
+   ||typeof passage.excerpt!=='string'||!passage.excerpt.trim()
+   ||typeof passage.chapter!=='string')return [];
+  const key=`pmc:${pmcid}:${passage.paragraph}`;
+  if(seen.has(key))return [];
+  seen.add(key);
+  return [{...card,passageId:key,paragraph:passage.paragraph,excerpt:passage.excerpt,
+   chapter:passage.chapter,relatedPassages:undefined}];
+ });
+ return [card,...extras.slice(0,2)];
 }
 
 export interface LocalShelfNote {
