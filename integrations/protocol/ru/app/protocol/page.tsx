@@ -88,6 +88,8 @@ export default function ProtocolPage() {
   const [ambientAudioConsent, setAmbientAudioConsent] = useState(false)
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
+  const [liveInterim, setLiveInterim] = useState('')
+  const [browserSpeechConsent, setBrowserSpeechConsent] = useState(false)
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
@@ -1843,6 +1845,25 @@ export default function ProtocolPage() {
                 />
                 Сразу класть черновик в заметки
               </label>
+              <section aria-label="Живая расшифровка беседы" className="mb-4 rounded border border-[#C9BBA8] bg-white p-3">
+                <strong className="block text-sm">Живой текст беседы · браузерная диктовка</strong>
+                <p className="mt-1 text-xs">Реплики появляются во время разговора. Браузер может отправлять аудио в собственный облачный сервис; это не локальная анонимная обработка. Роли говорящих не подтверждены. Нет запросов к платным моделям Doctor Opus.</p>
+                <label className="mt-2 flex items-start gap-2 text-xs">
+                  <input type="checkbox" checked={browserSpeechConsent} onChange={event=>{setBrowserSpeechConsent(event.target.checked);setLiveInterim('')}} />
+                  Подтверждаю согласие на речевой ввод через браузер с возможной передачей голоса его поставщику. Включу микрофон отдельной кнопкой.
+                </label>
+                {browserSpeechConsent&&<div className="mt-2 flex items-center gap-2">
+                  <VoiceInput
+                    onTranscript={text=>setConversationTranscriptText(previous=>previous?previous+'\n'+text:text)}
+                    onInterim={setLiveInterim}
+                    placeholder="Нажмите для живого распознавания речи"
+                    disabled={loading}
+                  />
+                  <span className="text-xs">Нажмите на микрофон для начала / «Стоп» для завершения.</span>
+                </div>}
+                {liveInterim&&<p role="status" className="mt-2 italic text-sm text-[#6B655E]">Сейчас распознано (не подтверждено): {liveInterim}</p>}
+                <p className="mt-2 text-xs">Если браузер не поддерживает распознавание, используйте запись с Aiesa/Whisper ниже. Живой текст сохраняется в расшифровке только после получения окончательной фразы.</p>
+              </section>
               <label className="mb-3 flex items-start gap-2 text-xs leading-relaxed text-[#5C4636]">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={e=>setAmbientAudioConsent(e.target.checked)}/>
                 Подтверждаю необходимое согласие пациента на запись и передачу исходного аудио внешнему сервису распознавания. Даже без ФИО голос может раскрывать личность; перед передачей требуется проверка приватности. Запись включается только по кнопке.
