@@ -118,7 +118,7 @@ const rules = [
 ] as const;
 
 export type MedicationSeverity='contraindicated'|'major'|'monitor';
-export type MedicationContext={egfr?:number|null;potassium?:number|null;ageYears?:number|null;qtcMs?:number|null;decompensatedCirrhosis?:boolean;severeHepaticImpairment?:boolean};
+export type MedicationContext={egfr?:number|null;potassium?:number|null;ageYears?:number|null;qtcMs?:number|null;activeBleeding?:boolean;decompensatedCirrhosis?:boolean;severeHepaticImpairment?:boolean};
 export type DrugInteractionAlert={first:string;second:string;risk:string;action:string;url:string;severity:MedicationSeverity;relation:'current-current'|'current-proposed'|'proposed-proposed';source:string;section:string;monitoring:string;mechanism:string;conditions:string};
 export type OrganSafetyAlert={drug:string;risk:string;action:string;severity:MedicationSeverity;url:string;section:string};
 const evidence=[
@@ -190,7 +190,16 @@ export function drugEntries(text:string):string[]{return text.split(/[\n;+]|(?<!
 export function localDrugCoverage(current:string,proposed=''){
  const entries=[...new Set([...drugEntries(current),...drugEntries(proposed)])];
  const recognized=(value:string)=>!nonSystemic.test(value)&&(rules.some(rule=>rule.a.test(value)||rule.b.test(value))||/^(?:metformin|glucophage|метформин|глюкофаж)(?!\p{L})/iu.test(value));
- return {recognized:entries.filter(recognized),unrecognized:entries.filter(value=>!recognized(value)),ruleCount:rules.length};
+ const systemic=entries.filter(value=>!nonSystemic.test(value)).slice(0,32);
+ const matches=knownDrugInteractions(current,proposed);
+ const unverifiedPairs:string[]=[];
+ let unverifiedPairCount=0;
+ for(let i=0;i<systemic.length;i++)for(let j=i+1;j<systemic.length;j++){
+  const left=systemic[i],right=systemic[j];
+  const checked=matches.some(a=>(a.first===left&&a.second===right)||(a.first===right&&a.second===left));
+  if(!checked){unverifiedPairCount++;if(unverifiedPairs.length<6)unverifiedPairs.push(left+' + '+right);}
+ }
+ return {recognized:entries.filter(recognized),unrecognized:entries.filter(value=>!recognized(value)),ruleCount:rules.length,unverifiedPairCount,unverifiedPairs};
 }
 
 
@@ -267,6 +276,16 @@ export function checkMedicationRegimen(input:{current:string;proposed?:string;st
   if(context.qtcMs!=null&&Number.isFinite(context.qtcMs)&&context.qtcMs>=500)organAlerts.push({drug:'Моксифлоксацин',severity:'major',risk:'Моксифлоксацин при выраженном удлинении QTc — риск torsade de pointes',action:'По инструкции избегать моксифлоксацина при известном удлинении QT; оценить альтернативу и электролиты.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.6'});
   if(context.ageYears!=null&&Number.isFinite(context.ageYears)&&context.ageYears>60)organAlerts.push({drug:'Моксифлоксацин',severity:'monitor',risk:'Возраст >60 лет: повышен риск тендинита и разрыва сухожилий, особенно с ГКС',action:'Уточните предшествующее поражение сухожилий, использование системных ГКС и возможные альтернативы фторхинолону.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.2 / 8.5'});
   if(alerts.some(alert=>alert.risk.includes('удлинение QT'))&&context.qtcMs==null)missing.push('Моксифлоксацин + антиаритмик: исходная QTc не указана (сочетание всё равно рекомендуется избегать).');
+ }
+ if(context.activeBleeding===true){
+  const anticoagulants=[
+   {pattern:/^(?:apixaban|eliquis|апиксабан|эликвис)(?!\p{L})/iu,name:'Апиксабан',setid:'7be1f4c1-bb2f-4ded-ae9a-515d2a22f93e'},
+   {pattern:/^(?:rivaroxaban|xarelto|ривароксабан|ксарелто)(?!\p{L})/iu,name:'Ривароксабан',setid:'10db92f9-2300-4a80-836b-673e1ae91610'},
+  ];
+  for(const drug of anticoagulants)if(active.some(value=>drug.pattern.test(value)))organAlerts.push({
+   drug:drug.name,severity:'contraindicated',risk:drug.name+': активное патологическое кровотечение — противопоказание по инструкции',
+   action:'Не считать эту схему безопасной: требуется срочная клиническая оценка кровотечения и тактики антикоагуляции.',
+   url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid='+drug.setid,section:'4 / 5.2'});
  }
  if(context.decompensatedCirrhosis&&has(/^(?:simvastatin|zocor|симвастатин|зокор)(?!\p{L})/iu))organAlerts.push({drug:'Симвастатин',severity:'contraindicated',risk:'Симвастатин противопоказан при декомпенсированном циррозе',action:'Пересмотрите назначение по инструкции.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e59bf31f-d880-4d9e-b6c2-5a18a53718f9',section:'4'});
  if(context.severeHepaticImpairment&&has(/^(?:apixaban|eliquis|апиксабан|эликвис)(?!\p{L})/iu))organAlerts.push({drug:'Апиксабан',severity:'major',risk:'Апиксабан при тяжёлой печёночной недостаточности не рекомендуется',action:'Уточните печёночный статус и альтернативы.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=7be1f4c1-bb2f-4ded-ae9a-515d2a22f93e',section:'8.7'});

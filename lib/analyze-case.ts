@@ -43,6 +43,7 @@ import { parseLocale } from "./locale.ts";
 import { retrievePassages, passageCitations } from "./local-rag.ts";
 import { drugLabelCitations, reviewDrugLabels } from './drug-labels.ts';
 import { checkMedicationRegimen, reportedMedications } from './drug-interaction-rules.ts';
+import {extractMedicationSafetyContext} from './medication-context.ts';
 import { extractPdfText } from "../packages/docs/pdf-pages.ts";
 import { prepareServerFiles } from "./intake-server.ts";
 import { normalizeFiles, evidenceIndex } from "./module-catalog.ts";
@@ -382,15 +383,20 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     if (written) {
       if ((plan.task === 'management' || plan.task === 'clinical') && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
+        const clinicalSafety=extractMedicationSafetyContext(cleanedNote.text);
         for (const option of written.report.management) {
           const checked = checkMedicationRegimen({
             current: currentMedications,
             proposed: (option.medications??[]).join('\n'),
             stopped: (option.stoppedMedications??[]).join('\n'),
+            context: clinicalSafety.context,
           });
           const localInteractions=checked.alerts.filter(alert=>alert.relation!=='current-current');
           if (localInteractions.length) option.localInteractions=localInteractions;
           if (option.medications?.length) option.localCoverage=checked.coverage;
+          if (checked.organAlerts.length) option.localOrganAlerts=checked.organAlerts;
+          const gaps=[...clinicalSafety.issues,...checked.missing];
+          if (gaps.length) option.localSafetyGaps=[...new Set(gaps)].slice(0,8);
         }
       }
       draft = { status: "unsigned", summary: written.summary, statements: written.statements, ...(written.report ? { report: written.report } : {}), ...(written.studyReports?.length ? { studyReports: written.studyReports } : {}) };
