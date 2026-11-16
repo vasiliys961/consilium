@@ -60,3 +60,13 @@ test('C3 scenario: anticoagulant switching only suppresses concurrent alerts aft
  assert.equal(withNsaid.alerts.length,1,'Current ibuprofen continues and still interacts with proposed apixaban');
  assert.match(withNsaid.alerts[0].risk,/кровотечения/);
 });
+
+test('C3 AI management plan contract preserves explicit stopped medicines without assuming they were stopped',async()=>{
+ const {readClinicalReport,clinicalDraftSchema}=await import('./clinical-report.ts');
+ const report=readClinicalReport({problem:'Synthetic anticoagulation switch',
+  management:[{option:'switch therapy',medications:['apixaban'],stoppedMedications:['warfarin'],conditions:['after clinician review'],safetyChecks:[],monitoring:[]},
+   {option:'continue therapy',medications:['warfarin'],conditions:[],safetyChecks:[],monitoring:[]}]});
+ assert.deepEqual(report?.management[0].stoppedMedications,['warfarin']);
+ assert.equal(report?.management[1].stoppedMedications,undefined,'unspecified stop must not be silently inferred');
+ assert.match(JSON.stringify(clinicalDraftSchema('management')),/"stoppedMedications"/);
+});
