@@ -15,7 +15,7 @@ test('C13: medicines, kidney function and source requests choose independent too
 test('C13: ambient uses the existing protocol, never auto-starts a microphone or paid STT',()=>{
  const plan=planPhysicianTask('Записать приём и расшифровать беседу, подготовить протокол');
  assert.deepEqual(plan.steps.map(s=>s.tool),['ambient']);
- assert.equal(physicianTaskHref('ambient','11111111-2222-3333-4444-555555555555','ru'),'/protocol/case?case=11111111-2222-3333-4444-555555555555&locale=ru');
+ assert.equal(physicianTaskHref('ambient','11111111-2222-3333-4444-555555555555','ru'),'/protocol/case?case=11111111-2222-3333-4444-555555555555&locale=ru&ambient=1');
 });
 test('C13: new case and existing case routes remain distinct and encoded',()=>{
  assert.equal(physicianTaskHref('radiology','case with spaces'),'/radiology?case=case+with+spaces');

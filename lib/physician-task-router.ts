@@ -60,5 +60,6 @@ export function physicianTaskHref(tool:PhysicianTool,caseId?:string,locale='ru')
  const params=new URLSearchParams();
  if(caseId)params.set('case',caseId);
  if(tool==='protocol'||tool==='ambient')params.set('locale',locale);
+ if(tool==='ambient')params.set('ambient','1');
  return path[tool]+(params.size?'?'+params.toString():'');
 }

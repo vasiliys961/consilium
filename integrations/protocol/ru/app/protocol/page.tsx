@@ -86,6 +86,7 @@ export default function ProtocolPage() {
   const [rawText, setRawText] = useState('')
   const [showConversationRecorder, setShowConversationRecorder] = useState(false)
   const [ambientAudioConsent, setAmbientAudioConsent] = useState(false)
+  useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
