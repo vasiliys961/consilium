@@ -131,11 +131,13 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       const texts:string[]=[]
       let duration=0, cost=0, costKnown=true
       for(let index=0;index<segments.length;index++){
+        if(!mountedRef.current)throw Error('Recording panel was closed; no further audio will be sent.')
         let result=segmentResultsRef.current[index]
         if(!result){
           // A failed/uncertain request is never automatically retried: the physician
           // must click retry, because the provider may have already charged for it.
           result=await transcribeFile(segments[index],audioSessionRef.current)
+          if(!mountedRef.current)throw Error('Recording panel was closed; no further audio will be sent.')
           segmentResultsRef.current[index]=result
         }
         texts.push(result.transcript)
