@@ -220,6 +220,7 @@ export async function saveDocument(
     
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error ?? Error('Не удалось сохранить книгу: транзакция отменена.'));
   });
 }
 
