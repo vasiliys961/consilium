@@ -7,6 +7,8 @@ import type { Locale } from '@/lib/i18n/config'
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void
+  /** Temporary hypothesis; never automatically saved. */
+  onInterim?: (text: string) => void
   disabled?: boolean
   className?: string
   placeholder?: string
@@ -25,7 +27,7 @@ const SPEECH_RECOGNITION_LANG_BY_LOCALE: Record<Locale, string> = {
   'zh-CN': 'zh-CN',
 }
 
-export default function VoiceInput({ onTranscript, disabled = false, className = "", placeholder = "" }: VoiceInputProps) {
+export default function VoiceInput({ onTranscript, onInterim, disabled = false, className = "", placeholder = "" }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false)
   const [supported, setSupported] = useState(true)
   const recognitionRef = useRef<any | null>(null)
@@ -78,6 +80,7 @@ export default function VoiceInput({ onTranscript, disabled = false, className =
 
     recognition.onstart = () => {
       latestInterimRef.current = ''
+      onInterim?.('')
       hasEmittedFinalRef.current = false
       setIsListening(true)
     }
@@ -94,12 +97,12 @@ export default function VoiceInput({ onTranscript, disabled = false, className =
           interimTranscript += (interimTranscript ? ' ' : '') + chunk
         }
       }
-      if (interimTranscript) {
-        latestInterimRef.current = interimTranscript
-      }
+      latestInterimRef.current = interimTranscript
+      onInterim?.(interimTranscript)
       if (finalTranscript) {
         hasEmittedFinalRef.current = true
         latestInterimRef.current = ''
+        onInterim?.('')
         onTranscript(finalTranscript)
       }
     }
@@ -107,6 +110,7 @@ export default function VoiceInput({ onTranscript, disabled = false, className =
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error)
       setIsListening(false)
+      onInterim?.('')
       recognitionRef.current = null
     }
 
