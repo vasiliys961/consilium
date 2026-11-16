@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
-import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,searchLibraryLocalWithMeta,deleteDocument} from './library-db.ts';
-import {chunkLibraryPages} from './library-import.ts';
+import {File} from 'node:buffer';
+import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,searchLibraryLocalWithMeta,checkLibraryFolderSource,deleteDocument} from './library-db.ts';
+import {chunkLibraryPages,importLibraryFile} from './library-import.ts';
 import {libraryHitFile} from './library-selection.ts';
 import {retrievePassages,passageCitations} from './local-rag.ts';
 import {preparePrivacy} from './privacy-prepare.ts';
@@ -54,4 +55,37 @@ test('resumable page OCR replaces only that page OCR and invalidates stale seman
  const hits=await searchLibraryLocalWithMeta('пневмонии',6,id);assert.equal(hits[0].pageId,8);
  const visual=libraryHitFile({...hits[0],image:'data:image/jpeg;base64,TEST'});assert.equal(visual.image,'data:image/jpeg;base64,TEST');assert.equal(visual.librarySource?.page,8);
  await deleteDocument(id);
+});
+
+test('C8 exact file fingerprint prevents duplicate import without reindexing; changed edition is retained separately',async()=>{
+ const first=new File(['Synthetic clinical handbook: pleural effusion.'],'version.pdf.txt',{type:'text/plain',lastModified:123});
+ const alias=new File(['Synthetic clinical handbook: pleural effusion.'],'same-book-in-folder.txt',{type:'text/plain',lastModified:456});
+ const updated=new File(['Synthetic clinical handbook: revised chapter on pleural effusion.'],'version.pdf.txt',{type:'text/plain',lastModified:789});
+ const one=await importLibraryFile(first,()=>{});
+ const two=await importLibraryFile(alias,()=>{});
+ const three=await importLibraryFile(updated,()=>{});
+ try{
+  assert.equal(one.alreadyPresent,false);assert.equal(one.fingerprintChecked,true);
+  assert.equal(two.alreadyPresent,true);assert.equal(two.document.id,one.document.id);
+  assert.equal(three.alreadyPresent,false);assert.notEqual(three.document.id,one.document.id);
+  assert.equal((await getAllDocuments()).filter(doc=>[one.document.id,three.document.id].includes(doc.id)).length,2);
+  assert.equal((await getDocumentChunkRecords(one.document.id)).length,1,'second import must not duplicate page chunks');
+  assert.match(one.document.fileSha256??'',/^[a-f0-9]{64}$/);
+ }finally{await deleteDocument(one.document.id);await deleteDocument(three.document.id);}
+});
+
+test('C8 changed and unavailable folder originals are not presented as current indexed clinical evidence',async()=>{
+ const original=new File(['Pneumonia guideline treatment A'],'folder-book.txt',{type:'text/plain',lastModified:100});
+ const changed=new File(['Pneumonia guideline treatment B'],'folder-book.txt',{type:'text/plain',lastModified:200});
+ const id1=crypto.randomUUID(),id2=crypto.randomUUID(),id3=crypto.randomUUID();
+ try{
+  await saveDocument({id:id1,name:'Folder current',size:original.size,storage:'folder',sourceModifiedAt:original.lastModified,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment A']),original);
+  await saveDocument({id:id2,name:'Folder changed',size:changed.size,storage:'folder',sourceModifiedAt:original.lastModified,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment B']),changed);
+  await saveDocument({id:id3,name:'Folder unavailable',size:100,storage:'folder',sourceModifiedAt:100,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment C']));
+  const docs=await getAllDocuments();
+  assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id1)!), 'current');
+  assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id2)!), 'modified');
+  assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id3)!), 'unavailable');
+  assert.deepEqual((await searchLibraryLocalWithMeta('Pneumonia guideline',8)).filter(hit=>[id1,id2,id3].includes(hit.documentId??'')).map(hit=>hit.documentId),[id1]);
+ }finally{await deleteDocument(id1);await deleteDocument(id2);await deleteDocument(id3);}
 });
