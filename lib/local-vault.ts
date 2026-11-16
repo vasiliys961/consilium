@@ -163,6 +163,22 @@ export async function writeVaultCase(value:ClinicalCase,remove=false){
  });
 }
 
+/** Import a single encrypted portable case without ever overwriting an existing ID.
+ * IndexedDB.add rejects duplicates atomically, including races between tabs. */
+export async function insertVaultCaseIfAbsent(value:ClinicalCase):Promise<void>{
+ const meta=await readMeta();
+ const active=meta?unlockedKey(meta):undefined;
+ const record:StoredCase=active?await encryptCase(active,value):value;
+ await updateStorage((tx,latestMeta)=>{
+  if(latestMeta?.check.data!==meta?.check.data)
+   throw Error('Режим защиты хранилища изменился. Откройте его снова.');
+  if(latestMeta&&unlockedKey(latestMeta)!==active)
+   throw Error('Хранилище заблокировано.');
+  // Never use put(): add() aborts the whole transaction on a colliding ID.
+  tx.objectStore('cases').add(record);
+ });
+}
+
 export async function exportVault():Promise<string>{
  await flushVault();
  const {meta,records}=await readSnapshot();
