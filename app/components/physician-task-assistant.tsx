@@ -91,7 +91,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
     throw Error('Не удалось получить корректный ответ помощника.');
    const answer=value as PhysicianAgentResult;
    const responseText=[answer.message,answer.question].filter(Boolean).join('\n\n');
-   setDialogue([...turns,{role:'assistant',text:responseText}].slice(-6));
+   setDialogue([...turns,{role:'assistant' as const,text:responseText}].slice(-6));
    setAgentReply(answer);setRequest(utterance);setText('');
   }catch(error){
    if(!controller.signal.aborted){
