@@ -92,7 +92,6 @@ export default function ProtocolPage() {
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
-  const [autoInsertConversationToProtocol, setAutoInsertConversationToProtocol] = useState(false)
   const [protocol, setProtocol] = useState('')
   const [editingProtocol, setEditingProtocol] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -1611,16 +1610,10 @@ export default function ProtocolPage() {
       }
       setRecordedDraftText(draft)
       setDraftFromConversationModel(typeof data?.modelUsed === 'string' ? data.modelUsed : null)
-      if (autoInsertConversationToProtocol) {
-        setRawText((prev) => (prev ? `${prev}\n\n${draft}` : draft))
-      }
     } catch (error: any) {
       setDraftFromConversationError(error?.message || 'Ошибка формирования черновика')
-      setRecordedDraftText(safeTranscript)
+      // An STT transcript must not masquerade as a structured clinical draft on failure.
       setDraftFromConversationModel(null)
-      if (autoInsertConversationToProtocol) {
-        setRawText((prev) => (prev ? `${prev}\n\n${safeTranscript}` : safeTranscript))
-      }
     } finally {
       setDraftFromConversationLoading(false)
     }
@@ -1834,15 +1827,6 @@ export default function ProtocolPage() {
               <p className="mb-3 text-xs leading-relaxed text-[#5C4636]">
                 Микрофон слушает приём, пока вы сами не остановите запись. Из разговора соберётся черновик жалоб и анамнеза. Чего не прозвучало, черновик не допишет.
               </p>
-              <label className="mb-3 inline-flex items-center gap-2 text-[11px] text-[#5C4636]">
-                <input
-                  type="checkbox"
-                  checked={autoInsertConversationToProtocol}
-                  onChange={(e) => setAutoInsertConversationToProtocol(e.target.checked)}
-                  className="w-3.5 h-3.5"
-                />
-                Сразу класть черновик в заметки
-              </label>
               <label className="mb-3 flex items-start gap-2 text-xs leading-relaxed text-[#5C4636]">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={e=>setAmbientAudioConsent(e.target.checked)}/>
                 Подтверждаю необходимое согласие пациента на запись и передачу исходного аудио внешнему сервису распознавания. Даже без ФИО голос может раскрывать личность; перед передачей требуется проверка приватности. Запись включается только по кнопке.
