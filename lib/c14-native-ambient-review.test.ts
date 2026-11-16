@@ -46,3 +46,13 @@ test('C14: native protocols may not auto-start microphone or paid dialogue draft
  assert.match(ru,/transcript=\{conversationTranscriptText\}/);
  assert.match(global,/transcript=\{conversationTranscriptText\}/);
 });
+
+test('C14: assistant opens the original ambient panel with selected case and without starting microphone',()=>{
+ const main=readFileSync('app/protocol/case/page.tsx','utf8');
+ const ru=readFileSync('integrations/protocol/ru/app/protocol/page.tsx','utf8');
+ const en=readFileSync('integrations/protocol/en/app/protocol/page.tsx','utf8');
+ assert.match(main,/conciliumAmbient=\$\{ambientRequested\?'1':'0'\}/);
+ assert.match(ru,/get\('conciliumAmbient'\)==='1'\)setShowConversationRecorder\(true\)/);
+ assert.match(en,/get\('conciliumAmbient'\)==='1'\)setShowConversationRecorder\(true\)/);
+ assert.doesNotMatch(ru,/autoStartOnMount/);
+});
