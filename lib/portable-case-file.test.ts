@@ -32,7 +32,7 @@ test('C9 sealed one-case roundtrip retains private details, provenance, sources,
  let copiedId:string|undefined;
  try{
   const archive=await createPortableCaseFile(value.id,'correct horse battery staple');
-  assert.match(archive,/doctor-opus-single-case\\/v1/);
+  assert.ok(archive.includes('"schema":"doctor-opus-single-case/v1"'));
   for(const secret of ['SYNTHETIC-PERSON-ONLY','FAKE-RECORD-001','Original synthetic clinical decision','synthetic-ecg.txt'])
    assert.equal(archive.includes(secret),false,'the archive must not leak case contents outside authenticated ciphertext');
   await writeVaultCase(value,true);
