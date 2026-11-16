@@ -3,7 +3,7 @@ import {LanguageSwitcher} from '@/app/components/language-switcher';
 import {preferredInterfaceLanguage} from '@/lib/interface-language';
 import {registerVaultFlush} from '@/lib/local-vault';
 import {useEffect,useRef,useState} from 'react';
-import {caseTitle,readCases,persistCase,protocolSource,type ClinicalCase} from '@/lib/casebook';
+import {caseTitle,readCases,persistCase,persistNativeProtocol,protocolSource,type ClinicalCase} from '@/lib/casebook';
 import {protocolDocumentMessage,nativeProtocolText,protocolForEdition,shouldSwitchProtocolLanguage,type ProtocolEdition} from '@/lib/protocol-bridge';
 import {localOrigin} from '@/lib/local-ports';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
@@ -46,7 +46,7 @@ export default function OriginalProtocolModule(){
   if(event.data.type==='concilium.protocol.state'){setBusy(event.data.busy===true);return;}
   const document=protocolDocumentMessage(event.data,session,edition);if(!document)return;
   if(!selected){setNotice(t('Выберите случай перед передачей протокола.'));return;}
-  void readCases().then(async values=>{const value=values.find(c=>c.id===selected);if(!value){setNotice(t('Случай не найден. Протокол остаётся в отдельном приложении.'));return;}const updated={...value,updated:new Date().toISOString(),protocolScratch:{...value.protocolScratch,[edition]:undefined},protocolScratchByLocale:{...value.protocolScratchByLocale,[documentLanguage]:undefined},protocols:[document,...(value.protocols??[]).filter(p=>p.id!==document.id)]};await persistCase(updated);setCases(old=>old.map(c=>c.id===updated.id?updated:c));setNotice(t('Протокол сохранён в случае.'));}).catch(()=>setNotice(t('Не удалось сохранить протокол. Текст остаётся в отдельном приложении.')));
+  void persistNativeProtocol(selected,document,edition,documentLanguage).then(updated=>{setCases(old=>[updated,...old.filter(c=>c.id!==updated.id)]);setNotice(t('Протокол сохранён в случае. Предыдущие редакции доступны в истории.'));}).catch(error=>setNotice(error instanceof Error?error.message:t('Не удалось сохранить протокол. Текст остаётся в отдельном приложении.')));
  };window.addEventListener('message',receive);return()=>window.removeEventListener('message',receive);},[origin,session,selected,edition,documentLanguage,t,language,setLanguage]);
  useEffect(()=>registerVaultFlush(async()=>{
   if(!linked||!frame.current?.contentWindow)return;
