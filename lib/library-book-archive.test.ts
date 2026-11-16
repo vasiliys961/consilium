@@ -50,7 +50,7 @@ test('C8 portable archive rejects altered source, altered index, truncated files
  const archive=await exportBookArchive(id);await deleteDocument(id);
  const orig=new Uint8Array(await archive.arrayBuffer());
  const before=(await getAllDocuments()).length;
- async function reject(bytes:Uint8Array){await assert.rejects(()=>restoreBookArchive(new Blob([bytes])));}
+ async function reject(bytes:Uint8Array){const copy=new ArrayBuffer(bytes.byteLength);new Uint8Array(copy).set(bytes);await assert.rejects(()=>restoreBookArchive(new Blob([copy])));}
  const header=orig.slice();header[0]^=1;await reject(header);
  const changedIndex=orig.slice();changedIndex[65]^=1;await reject(changedIndex);
  const changedFile=orig.slice();changedFile[changedFile.length-1]^=1;await reject(changedFile);
