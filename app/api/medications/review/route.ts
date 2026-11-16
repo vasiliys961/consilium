@@ -1,6 +1,6 @@
 import {validCaseInput} from '@/lib/input-validation';
 import {verifyPrivacy} from '@/lib/privacy-ticket';
-import {medicationReview} from '@/lib/medication-review';
+import {medicationReview,quickMedicationReview} from '@/lib/medication-review';
 export const dynamic='force-dynamic';
 export async function POST(request:Request){
  const {port}=new URL(request.url),host=request.headers.get('host');
@@ -10,7 +10,10 @@ export async function POST(request:Request){
  if(!validCaseInput(data))return Response.json({error:'invalid'},{status:400});
  const {privacy,...body}=data as typeof data&{privacy?:{consent?:boolean;token?:string}};
  if(!privacy?.consent||!verifyPrivacy(body,privacy.token))return Response.json({error:'privacy_review_required'},{status:428});
- if(!body.drugLabels?.length)return Response.json({error:'verified_labels_unavailable'},{status:422});
- try{return Response.json(await medicationReview(body,{OPENROUTER_API_KEY:process.env.OPENROUTER_API_KEY},fetch,request.signal));}
+ if(!body.text?.trim())return Response.json({error:'invalid_medication_list'},{status:422});
+ try{
+  const env={OPENROUTER_API_KEY:process.env.OPENROUTER_API_KEY,MEDICATION_CHECK_MODEL:process.env.MEDICATION_CHECK_MODEL};
+  return Response.json(body.drugLabels?.length ? await medicationReview(body,env,fetch,request.signal) : await quickMedicationReview(body,env,fetch,request.signal));
+ }
  catch(error){return Response.json({error:error instanceof Error?error.message:'review_failed'},{status:502});}
 }

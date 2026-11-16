@@ -6,7 +6,7 @@ import {ClinicalReportView} from './clinical-report';
 import {GenomicReviewView} from './genomic-review';
 import {MedicationReviewView} from './drug-label-picker';
 import {StudyReports} from './study-reports';
-import {CitationContent} from './citation-content';
+import {ClinicalSourcesPanel} from './clinical-sources-panel';
 import {useWorkspaceLanguage} from './workspace-language';
 import styles from '@/app/workspace.module.css';
 
@@ -45,7 +45,7 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
 {result.readings?.filter(r=>r.secondOpinion).map(r=><section key={'opinion-'+r.source}><h4>{t('Второе мнение')} · {imageModelLabel(r.secondOpinion?.model??'')} · {r.source}</h4>{r.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{r.secondOpinion?.status==='completed'?r.secondOpinion.text:t('Второе мнение не получено. Основное заключение сохранено.')}</p></section>)}
     {studies.length>0&&<section className={styles.feedStudies} aria-label={t('Исследования этого этапа')}><StudyReports reports={studies}/></section>}
     {result.draft.statements.length>0&&<details><summary>{t('Утверждения и привязка к источникам')} · {result.draft.statements.length}</summary>{result.draft.statements.map((statement,i)=><p key={i}>{statement.text}<br/><small>{statement.source||t('Источник не подтверждён · вывод модели')}{statement.held?' · '+t('ТРЕБУЕТ ПРОВЕРКИ'):''}</small></p>)}</details>}
-    <details><summary>{t('Источники для проверки')} · {result.citations.length}</summary><p>{t('Международные руководства и индексируемые исследования — в приоритете. Ссылка сама по себе не подтверждает вывод.')}</p>{!result.citations.length&&<p>{t('Подходящих источников не найдено.')}</p>}{result.citations.map((citation,i)=><section key={i}><h4>{/^https?:\/\//.test(citation.url??'')?<a href={citation.url!} target="_blank" rel="noreferrer">{citation.title} ↗</a>:citation.title}</h4><CitationContent citation={citation}/></section>)}</details>
+    <ClinicalSourcesPanel value={value} analysis={analysis} index={index}/>
     <details><summary>{t('Что обработано и расход')}</summary>{result.ledger.map((entry,i)=><p key={i}>{entry.source} · {entry.status==='read'?t('прочитано'):t('не оценено')}{entry.reason?' · '+entry.reason:''}</p>)}{result.unassessed.length>0&&<p>{t('Не оценено:')} {result.unassessed.join(', ')}</p>}<p>${result.cost.totalUsd.toFixed(4)}{result.cost.usageComplete===false?' · '+t('Расчётная стоимость неполная'):''}</p><details><summary>{t('Контекст этого этапа')}</summary><pre>{analysis.context}</pre></details></details>
     {newest&&analysis.kind==='summary'&&<button disabled={busy} onClick={onDecision}>{t('Открыть проект решения врача →')}</button>}
     {newest&&value.analyses.length>1&&<nav aria-label={t('Перейти к предыдущему разбору')} className={styles.feedIndex}><h4>{t('Ранее в разборе')}</h4>{value.analyses.slice(1).map((earlier,i)=><div key={earlier.id}><a href={`#analysis-${earlier.id}`}>{value.analyses.length-i-1}. {t(analysisQuestion(earlier))}</a>{(earlier.result.draft.studyReports??[]).filter(report=>firstStudy.get(JSON.stringify(report))===earlier.id).map((report,j)=><small key={j}> · {report.source} · {report.modality}</small>)}</div>)}</nav>}

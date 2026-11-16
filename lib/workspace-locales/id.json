@@ -1221,5 +1221,18 @@
   "Второе мнение": "Pendapat kedua",
   "Второе мнение по исходным изображениям": "Pendapat kedua atas gambar asli",
   "Проверка с учётом первого ответа": "Tinjauan dengan mempertimbangkan jawaban pertama",
-  "Микроскопия крови": "Mikroskopi sel darah"
+  "Микроскопия крови": "Mikroskopi sel darah",
+  "Разбор завершён. Оформить протокол?": "Analisis selesai. Buat laporan klinis?",
+  "Клинический разбор уже сохранён. Выбор языка откроет существующий модуль протокола с данными случая — повторного консилиума не будет.": "Analisis klinis sudah disimpan. Pemilihan bahasa akan membuka modul laporan yang sudah ada beserta data kasus, tanpa menjalankan ulang analisis klinis.",
+  "Выбор языка протокола": "Bahasa laporan klinis",
+  "Русский": "Bahasa Rusia",
+  "Другие языки / несколько версий": "Bahasa lain / beberapa versi",
+  "Выберите языки отдельных версий протокола": "Pilih bahasa untuk setiap versi laporan",
+  "Формирование текста в модуле может потребовать отдельного модельного запроса. Переключение языка само по себе платный анализ не запускает; клинические выводы не переводятся незаметно.": "Pembuatan teks dalam modul mungkin memerlukan permintaan model tambahan. Mengganti bahasa saja tidak memulai analisis berbayar dan tidak menerjemahkan temuan klinis secara diam-diam.",
+  "Перейти к оформлению протокола": "Buka modul laporan",
+  "Пока продолжить работу со случаем": "Lanjutkan mengerjakan kasus ini",
+  "Языковые версии протокола": "Versi laporan berdasarkan bahasa",
+  "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Analisis klinis yang disimpan tidak diulang. Buat dan simpan versi terpisah untuk setiap bahasa; pembuatan teks dalam modul mungkin dikenai biaya.",
+  "Сохранён": "Tersimpan",
+  "Не создан": "Belum dibuat"
 }

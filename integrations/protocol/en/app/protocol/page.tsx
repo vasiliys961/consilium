@@ -107,6 +107,8 @@ export default function ProtocolPage() {
   const [autoInsertConversationToProtocol, setAutoInsertConversationToProtocol] = useState(false)
   const [conversationStats, setConversationStats] = useState({ duration: 0, cost: 0 })
   const [protocol, setProtocol] = useState('')
+  const [editingDraft,setEditingDraft]=useState(false)
+  const [editingFinal,setEditingFinal]=useState(false)
   const [finalNote, setFinalNote] = useState('')
   const [physicianAdditions, setPhysicianAdditions] = useState('')
   const [finalNoteLoading, setFinalNoteLoading] = useState(false)
@@ -1094,17 +1096,29 @@ export default function ProtocolPage() {
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{protocol}</ReactMarkdown>
               </div>
             ) : (
-              <textarea dir="auto"
-                data-tour="protocol-generated-result"
-                aria-label={t.draftTitle}
-                value={protocol}
-                onChange={(e) => {
-                  setProtocol(e.target.value)
-                  setFinalNote('')
-                }}
-                className="w-full min-h-[280px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                disabled={loading || finalNoteLoading}
-              />
+              <div>
+                <button type="button" onClick={()=>setEditingDraft(value=>!value)} disabled={loading||finalNoteLoading}
+                  className="mb-3 border border-[#9C4221] px-3 py-1.5 text-sm text-[#9C4221] disabled:opacity-40">
+                  {editingDraft ? ui("Show formatted note") : ui("Edit text")}
+                </button>
+                {editingDraft ? (
+                  <textarea dir="auto"
+                    data-tour="protocol-generated-result"
+                    aria-label={t.draftTitle}
+                    value={protocol}
+                    onChange={(e) => {
+                      setProtocol(e.target.value)
+                      setFinalNote('')
+                    }}
+                    className="w-full min-h-[280px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                    disabled={loading || finalNoteLoading}
+                  />
+                ) : (
+                  <div dir="auto" data-tour="protocol-generated-result" className="prose prose-sm max-w-none min-h-[260px] border border-gray-200 rounded-lg bg-white p-6">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{protocol.replace(/\\([*#_])/g,'$1')}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
             )
           ) : (
             <div className="text-center text-gray-500 py-20 border-2 border-dashed border-gray-100 rounded-lg">
@@ -1151,7 +1165,17 @@ export default function ProtocolPage() {
                 </div>
               </div>
               <div className="prose prose-sm max-w-none border border-indigo-100 rounded-lg p-6 bg-indigo-50/30 overflow-y-auto max-h-[520px]">
-                <label>{ui("Review and edit SOAP note")}<textarea dir="auto" aria-label={ui("Review and edit SOAP note")} value={finalNote} onChange={event=>setFinalNote(event.target.value)} className="mt-2 min-h-[360px] w-full border border-[#C9BBA8] bg-white px-4 py-3" disabled={loading||finalNoteLoading}/></label>
+                <button type="button" onClick={()=>setEditingFinal(value=>!value)} disabled={loading||finalNoteLoading}
+                  className="mb-3 border border-[#9C4221] px-3 py-1.5 text-sm text-[#9C4221] disabled:opacity-40">
+                  {editingFinal ? ui("Show formatted note") : ui("Edit SOAP note")}
+                </button>
+                {editingFinal ?
+                  <label>{ui("Review and edit SOAP note")}<textarea dir="auto" aria-label={ui("Review and edit SOAP note")}
+                    value={finalNote} onChange={event=>setFinalNote(event.target.value)}
+                    className="mt-2 min-h-[360px] w-full border border-[#C9BBA8] bg-white px-4 py-3" disabled={loading||finalNoteLoading}/></label>
+                  : <div dir="auto" className="prose prose-sm max-w-none bg-white p-4">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{finalNote.replace(/\\([*#_])/g,'$1')}</ReactMarkdown>
+                    </div>}
               </div>
             </div>
           )}

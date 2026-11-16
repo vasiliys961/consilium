@@ -1221,5 +1221,18 @@
   "Второе мнение": "İkinci görüş",
   "Второе мнение по исходным изображениям": "Orijinal görüntüler için ikinci görüş",
   "Проверка с учётом первого ответа": "İlk yanıt dikkate alınarak yapılan inceleme",
-  "Микроскопия крови": "Kan hücresi mikroskopisi"
+  "Микроскопия крови": "Kan hücresi mikroskopisi",
+  "Разбор завершён. Оформить протокол?": "Analiz tamamlandı. Klinik rapor hazırlansın mı?",
+  "Клинический разбор уже сохранён. Выбор языка откроет существующий модуль протокола с данными случая — повторного консилиума не будет.": "Klinik analiz kaydedildi. Dil seçildiğinde, mevcut rapor modülü vaka verileriyle açılır; klinik analiz yeniden çalıştırılmaz.",
+  "Выбор языка протокола": "Klinik rapor dili",
+  "Русский": "Rusça",
+  "Другие языки / несколько версий": "Diğer diller / birden fazla sürüm",
+  "Выберите языки отдельных версий протокола": "Raporun ayrı sürümleri için dilleri seçin",
+  "Формирование текста в модуле может потребовать отдельного модельного запроса. Переключение языка само по себе платный анализ не запускает; клинические выводы не переводятся незаметно.": "Modülde metin oluşturmak ek bir model isteği gerektirebilir. Dili değiştirmek tek başına ücretli analiz başlatmaz veya klinik bulguları habersizce çevirmez.",
+  "Перейти к оформлению протокола": "Rapor modülünü aç",
+  "Пока продолжить работу со случаем": "Bu vaka üzerinde çalışmaya devam et",
+  "Языковые версии протокола": "Raporun dil sürümleri",
+  "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Kaydedilen klinik analiz tekrarlanmaz. Her dilde ayrı bir sürüm oluşturup kaydedin; modülde metin üretimi ücretli olabilir.",
+  "Сохранён": "Kaydedildi",
+  "Не создан": "Oluşturulmadı"
 }
