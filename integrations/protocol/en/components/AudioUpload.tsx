@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR, calculateAudioTranscriptionCost } from '@/lib/cost-calculator'
 import { getClientLocale } from '@/lib/i18n/client'
 import { mapLocaleToAssemblyAiLanguage } from '@/lib/i18n/stt-language'
-import { nativeProtocolUi } from '@/lib/native-ui'
+import { ambientUi } from '@/lib/i18n/ambient-ui'
 import type { Locale } from '@/lib/i18n/config'
 
 const RECORDING_TIMESLICE_MS = 1000
@@ -330,7 +330,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
   const [locale, setLocale] = useState<Locale>('en')
   const t = AUDIO_UPLOAD_TEXT[locale] || AUDIO_UPLOAD_TEXT.en
   const costByDuration = t.costByDuration.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))
-  const sttCostHint = openrouterOnly ? nativeProtocolUi(locale,'OpenRouter: charges depend on the selected model; the actual charge is shown when reported by the provider.') : costByDuration
+  const sttCostHint = openrouterOnly ? ambientUi(locale,'cost') : costByDuration
 
   const releaseWakeLock = () => {
     wakeLockRef.current?.release().catch(() => undefined)
@@ -734,7 +734,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
                 {sttCostHint}
               </p>
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                {t.privacyHint}
+                {openrouterOnly?ambientUi(locale,'privacy'):t.privacyHint}
               </p>
             </>
           )}
@@ -746,13 +746,13 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
         </div>
       )}
       
-      {segmentsRef.current.length>0 && !transcribing && !recording && <button type="button" onClick={()=>void transcribeSegments()} className="mt-3 rounded border border-indigo-500 px-3 py-2 text-sm text-indigo-800">{nativeProtocolUi(locale,'Retry unfinished audio transcription (completed segments will not be billed twice)')}</button>}
+      {segmentsRef.current.length>0 && !transcribing && !recording && <button type="button" onClick={()=>void transcribeSegments()} className="mt-3 rounded border border-indigo-500 px-3 py-2 text-sm text-indigo-800">{ambientUi(locale,'retry')}</button>}
       {lastAnalysis && !transcribing && !recording && (
         <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg">
           <div className="flex items-center justify-between text-sm">
             <div className="flex flex-wrap items-center gap-4">
               <span>⏱️ {t.duration}: <b>{formatClock(lastAnalysis.duration)}</b></span>
-              {lastAnalysis.costKnown ? <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span> : <span>{nativeProtocolUi(locale,'Actual STT charge not reported by provider')}</span>}
+              {lastAnalysis.costKnown ? <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span> : <span>{ambientUi(locale,'unreported')}</span>}
             </div>
             <button
               onClick={() => setLastAnalysis(null)}
