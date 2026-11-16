@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import {scopeAmbientSpeakers} from '@/lib/ambient-chunk-speakers'
 
 // Recording is segmented without cloud calls until the physician stops the conversation.
 // Each segment is a complete MediaRecorder file, not a potentially undecodable WebM slice.
@@ -140,7 +141,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
           if(!mountedRef.current)throw Error('Recording panel was closed; no further audio will be sent.')
           segmentResultsRef.current[index]=result
         }
-        texts.push(result.transcript)
+        texts.push(scopeAmbientSpeakers(result.transcript,index))
         duration+=result.duration
         cost+=result.cost
         costKnown=costKnown&&result.costKnown
