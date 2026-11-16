@@ -92,6 +92,7 @@ export default function ProtocolPage() {
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
   const [autoInsertConversationToProtocol, setAutoInsertConversationToProtocol] = useState(false)
   const [protocol, setProtocol] = useState('')
+  const [editingProtocol, setEditingProtocol] = useState(false)
   const [loading, setLoading] = useState(false)
   const [useStreaming, setUseStreaming] = useState(true)
   const [stabilityMode, setStabilityMode] = useState(false)
@@ -2019,20 +2020,33 @@ export default function ProtocolPage() {
           </div>
 
           {protocol ? (
-            <label className="mb-5 block pl-2">
-              <span className={labelClass}>Править протокол здесь</span>
-              <textarea
-                data-tour="protocol-generated-result"
-                value={protocol}
-                onChange={(e) => {
-                  setProtocol(e.target.value)
-                  setInteractionChecked(false)
-                  setInteractionResults([])
-                }}
-                disabled={loading}
-                className="mt-1 min-h-[420px] w-full resize-y border border-[#C9BBA8] bg-white px-4 py-3 font-serif text-[15px] leading-7 text-[#1C1612] outline-none focus:border-[#9C4221]"
-              />
-            </label>
+            <section className="mb-5 block pl-2" aria-label="Редактор протокола">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                <span className={labelClass}>{editingProtocol ? 'Редактирование протокола' : 'Готовый вид протокола'}</span>
+                <button type="button" onClick={()=>setEditingProtocol(value=>!value)} disabled={loading}
+                  className="border border-[#9C4221] px-3 py-1.5 text-sm text-[#9C4221] hover:bg-[#f5e6d7] disabled:opacity-40">
+                  {editingProtocol ? 'Завершить редактирование' : 'Редактировать текст'}
+                </button>
+              </div>
+              {editingProtocol ? (
+                <textarea
+                  data-tour="protocol-generated-result"
+                  aria-label="Текст протокола для исправления врачом"
+                  value={protocol}
+                  onChange={(e) => {
+                    setProtocol(e.target.value)
+                    setInteractionChecked(false)
+                    setInteractionResults([])
+                  }}
+                  disabled={loading}
+                  className="mt-1 min-h-[420px] w-full resize-y border border-[#C9BBA8] bg-white px-4 py-3 font-serif text-[15px] leading-7 text-[#1C1612] outline-none focus:border-[#9C4221]"
+                />
+              ) : (
+                <div data-tour="protocol-generated-result" className="prose max-w-none min-h-[280px] border border-[#C9BBA8] bg-white px-5 py-4 font-serif text-[15px] leading-7 text-[#1C1612]">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{protocol.replace(/\\([*#_])/g,'$1')}</ReactMarkdown>
+                </div>
+              )}
+            </section>
           ) : (
             <div className="mb-5 border border-dashed border-[#C9BBA8] px-6 py-16 text-sm text-[#8A7563]">
               {loading ? 'Формируем протокол. Он появится в этом поле, и его можно будет править сразу.' : 'Нажмите «Составить протокол». Текст откроется в этом поле для правки.'}

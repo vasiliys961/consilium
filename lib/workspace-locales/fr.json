@@ -1221,5 +1221,18 @@
   "Второе мнение": "Second avis",
   "Второе мнение по исходным изображениям": "Second avis sur les images originales",
   "Проверка с учётом первого ответа": "Relecture tenant compte de la première réponse",
-  "Микроскопия крови": "Microscopie sanguine"
+  "Микроскопия крови": "Microscopie sanguine",
+  "Разбор завершён. Оформить протокол?": "Analyse terminée. Préparer le compte rendu ?",
+  "Клинический разбор уже сохранён. Выбор языка откроет существующий модуль протокола с данными случая — повторного консилиума не будет.": "L’analyse clinique est déjà enregistrée. Le choix de la langue ouvre le module de comptes rendus existant avec les données du dossier, sans répéter l’analyse clinique.",
+  "Выбор языка протокола": "Langue du compte rendu",
+  "Русский": "Russe",
+  "Другие языки / несколько версий": "Autres langues / plusieurs versions",
+  "Выберите языки отдельных версий протокола": "Choisissez les langues des différentes versions du compte rendu",
+  "Формирование текста в модуле может потребовать отдельного модельного запроса. Переключение языка само по себе платный анализ не запускает; клинические выводы не переводятся незаметно.": "La rédaction dans le module peut nécessiter un nouvel appel au modèle. Changer de langue ne déclenche pas une analyse payante et ne traduit pas les conclusions cliniques à votre insu.",
+  "Перейти к оформлению протокола": "Ouvrir le module de comptes rendus",
+  "Пока продолжить работу со случаем": "Continuer à travailler sur ce dossier",
+  "Языковые версии протокола": "Versions linguistiques du compte rendu",
+  "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "L’analyse clinique enregistrée n’est pas relancée. Créez et enregistrez une version dans chaque langue ; la génération du texte dans le module peut être facturée.",
+  "Сохранён": "Enregistré",
+  "Не создан": "Non créé"
 }

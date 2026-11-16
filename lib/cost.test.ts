@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CONSILIUM_ROLES } from "./consilium.ts";
-import { creditsFor, MODELS, planCost, priceUsd } from "./cost.ts";
+import { creditsFor, MODELS, planCost, priceUsd, chargeForCall } from "./cost.ts";
 import { conduct } from "./conductor.ts";
 
 test("sol, opus, gemini and sonnet use the maternal prices", () => {
@@ -68,4 +68,15 @@ test("opening a case writes the planned tape and still does not call a model", (
   );
   assert.equal(image.cost.totalUsd, 0);
   assert.equal(dose.gateway.called, false);
+});
+
+test('OpenRouter billed usage wins over local tariff estimates (including zero-cost calls)',()=>{
+ const usage={prompt_tokens:1000,completion_tokens:500,cost:0.214};
+ assert.deepEqual(chargeForCall(MODELS.opus,usage),{usd:0.214,source:'openrouter'});
+ assert.deepEqual(chargeForCall(MODELS.opus,{...usage,cost:0}),{usd:0,source:'openrouter'});
+ const estimate=chargeForCall(MODELS.opus,{prompt_tokens:1000,completion_tokens:500});
+ assert.equal(estimate.source,'estimate');
+ assert.equal(estimate.usd,priceUsd(MODELS.opus,1000,500));
+ assert.equal(chargeForCall(MODELS.opus,{...usage,cost:-1}).source,'estimate');
+ assert.equal(chargeForCall(MODELS.opus,{...usage,cost:NaN}).source,'estimate');
 });

@@ -105,3 +105,24 @@ test('confirmed December price rise sends hypothesis to Flash through OpenRouter
   assert.ok(!models.includes('google/gemini-3.1-pro-preview'));
  }finally{t.mock.timers.reset();}
 });
+
+test('duplicate identical evidence is sent only once per role without dropping a unique excerpt',async()=>{
+ const excerpts:string[]=[];
+ const input={note:'Synthetic clinical uncertainty',locale:'en' as const,draft:'Uncertain diagnosis',citations:[
+  {title:'QA synthetic evidence',pmid:'123',excerpt:'Synthetic unique evidence A'},
+  {title:'QA synthetic evidence',pmid:'123',excerpt:'Synthetic unique evidence A'},
+  {title:'QA synthetic evidence B',pmid:'456',excerpt:'Synthetic unique evidence B'},
+ ] as unknown as Parameters<typeof runConsilium>[1]['citations']};
+ const result=await runConsilium({OPENROUTER_API_KEY:'test'},input,async(_url,init)=>{
+  const req=JSON.parse(String(init?.body));const prompt=String(req.messages?.[1]?.content??'');
+  excerpts.push(prompt);
+  return Response.json({choices:[{message:{content:JSON.stringify({text:'Synthetic safe opinion',source:null})}}]});
+ });
+ assert.equal(excerpts.length,5);
+ for(const prompt of excerpts){
+  assert.equal(prompt.split('Synthetic unique evidence A').length-1,1);
+  assert.equal(prompt.split('Synthetic unique evidence B').length-1,1);
+  assert.match(prompt,/Synthetic clinical uncertainty/);
+ }
+ assert.equal(result.filter(item=>item.status==='done').length,5);
+});
