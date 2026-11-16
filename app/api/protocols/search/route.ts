@@ -1,6 +1,7 @@
 import {verifyPrivacy} from '@/lib/privacy-ticket';
 import {validCaseInput} from '@/lib/input-validation';
-import {parseLocale} from '@/lib/locale';
+import {WORKSPACE_LANGUAGES} from '@/lib/workspace-i18n';
+import type {WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {isGuidelineMode,searchClinicalGuidelines} from '@/lib/parent-guideline-search';
 
 export const dynamic='force-dynamic';
@@ -25,6 +26,7 @@ export async function POST(request:Request){
  const {modelMode,specialty,privacy,...input}=supplied;
  if(!validCaseInput(input)||typeof input.text!=='string'
   ||!isGuidelineMode(modelMode)
+  ||!WORKSPACE_LANGUAGES.some(item=>item.code===input.locale)
   ||!(specialty===undefined||typeof specialty==='string'&&specialty.length<=100))
   return Response.json({error:'input'},{status:400});
  const approval=privacy as {consent?:unknown;token?:unknown}|undefined;
@@ -35,11 +37,12 @@ export async function POST(request:Request){
  if(!process.env.OPENROUTER_API_KEY)return Response.json({error:'openrouter_not_configured'},{status:503});
  try{
   const result=await searchClinicalGuidelines({
-   query,specialty:typeof specialty==='string'?specialty:'',mode:modelMode,locale:parseLocale(input.locale)
+   query,specialty:typeof specialty==='string'?specialty:'',mode:modelMode,locale:input.locale as WorkspaceLanguage
   },{OPENROUTER_API_KEY:process.env.OPENROUTER_API_KEY},fetch);
   return Response.json(result,{headers:{'Cache-Control':'no-store'}});
  }catch(error){
-  return Response.json({error:error instanceof Error&&error.message==='provider_no_clinical_guidance'
-   ?'provider_no_clinical_guidance':'guideline_service_unavailable'}, {status:502});
+  const reason=error instanceof Error?error.message:'guideline_service_unavailable';
+  const allowed=['guideline_provider_error','guideline_invalid_response','guideline_truncated','guideline_payment_required','guideline_unavailable','guideline_schema_rejected'];
+  return Response.json({error:allowed.includes(reason)?reason:'guideline_service_unavailable'}, {status:reason==='guideline_payment_required'?402:502});
  }
 }
