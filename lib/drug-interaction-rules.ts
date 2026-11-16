@@ -149,7 +149,7 @@ const evidence=[
  ['major','XARELTO · 2026-03','7.4','Признаки кровотечения','Аддитивное влияние на гемостаз','Сочетания с антиагрегантами могут быть показаны, требуется индивидуальная оценка'],
  ['major','WARFARIN · 2026-08-10','7.3','МНО, кровотечение','Аддитивное антитромботическое действие','Показание и срок сопутствующей антитромботической терапии'],
 ] as const;
-const nonSystemic=/(?:глазн|офтальм|наружн|мазь|гель|крем|ophthalmic|topical|cutaneous|eye drops)/iu;
+const nonSystemic=/(?:глазн|офтальм|наружн|мазь|гель|крем|ophthalmic|topical|cutaneous|eye drops|\bgel\b|\bcream\b|\bointment\b)/iu;
 
 export const CURRENT_MEDICATIONS_HEADING = 'Current medications reported by the physician:';
 
