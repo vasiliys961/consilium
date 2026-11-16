@@ -23,7 +23,7 @@
 
 - [C7 post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43891251420) завершился успешно.
 - [C8 PR #33 CI](https://github.com/vasiliys961/consilium/actions/runs/43896058881) завершился успешно: синтетические тесты, TypeScript, Next.js build. Первые две ошибки нового тестового пакета были исправлены до успешного CI.
-- [C8 post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43896391779): проверить итоговый статус; на момент подготовки этой записи запускался.
+- [C8 post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43896391779): **успешен**.
 - Все тесты используют синтетические данные, платных медицинских API не вызывали. Сквозная проверка реальной библиотеки в Preview 3207 пока не выполнена.
 
 ## Дальнейшие приоритеты
