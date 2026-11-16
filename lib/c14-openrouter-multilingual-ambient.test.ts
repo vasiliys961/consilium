@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT,ambientModelSelection,transcribeAmbientOpenRouter} from '../integrations/protocol/en/lib/concilium-openrouter-stt.ts';
 import {ambientModelSelection as ruModels,transcribeAmbientOpenRouter as ruTranscribe} from '../integrations/protocol/ru/lib/concilium-openrouter-stt.ts';
+import {scopeAmbientSpeakers as ruScope} from '../integrations/protocol/ru/lib/ambient-chunk-speakers.ts';
+import {scopeAmbientSpeakers as enScope} from '../integrations/protocol/en/lib/ambient-chunk-speakers.ts';
 
 const repo=(path:string)=>readFileSync(path,'utf8');
 function withMock<T>(request:(url:string,init:RequestInit)=>Promise<Response>,action:()=>Promise<T>):Promise<T>{
@@ -187,4 +189,17 @@ test('C14: revoking microphone consent or closing RU panel stops subsequent paid
  assert.match(recorder,/if\(!mountedRef\.current\)throw Error/);
  assert.match(recorder,/stream\.getTracks\(\)\.forEach\(track=>track\.stop\(\)\)/);
  assert.match(recorder,/revokeAudioSession\(\)/);
+});
+
+test('C14: repeated acoustic speaker IDs in separate audio files are never presented as the same person',()=>{
+ const source='Speaker 0: No fever or penicillin allergy.\nSpeaker 1: Are you taking warfarin 5 mg?';
+ const first='Chunk 1 / Speaker 0: No fever or penicillin allergy.\nChunk 1 / Speaker 1: Are you taking warfarin 5 mg?';
+ const second=first.replaceAll('Chunk 1','Chunk 2');
+ assert.equal(ruScope(source,0),first);
+ assert.equal(enScope(source,1),second);
+ assert.equal(ruScope('Пациент: нет аллергии.',0),'Пациент: нет аллергии.');
+ assert.throws(()=>enScope(source,-1),/Invalid audio chunk index/);
+ for(const edition of ['ru','en']){
+  assert.match(repo('integrations/protocol/'+edition+'/components/AudioUpload.tsx'),/scopeAmbientSpeakers\(result\.transcript/);
+ }
 });
