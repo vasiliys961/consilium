@@ -58,7 +58,7 @@ test('C13: provider or invalid output has local fallback, no silent retry or inv
  assert.equal(first.usedModel,false);
  assert.equal(first.model,null);
  assert.equal(first.warning,'model_unavailable');
- assert.deepEqual(first.plan.steps.map(s=>s.tool),['ecg']);
+ assert.deepEqual(first.plan.steps.map(s=>s.tool),['ecg','clinical']); // Existing free planner follows ECG interpretation with a clinical review.
  const noKey=await converseWithPhysician({text:'[PHYSICIAN]\nНужно записать приём',locale:'ru'},{} as NodeJS.ProcessEnv,async()=>{throw Error('Never call without key')});
  assert.deepEqual(noKey.plan.steps.map(s=>s.tool),['ambient']);
  assert.equal(noKey.usedModel,false);
