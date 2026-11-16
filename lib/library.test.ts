@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
-import {File} from 'node:buffer';
 import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,searchLibraryLocalWithMeta,checkLibraryFolderSource,deleteDocument} from './library-db.ts';
 import {chunkLibraryPages,importLibraryFile} from './library-import.ts';
 import {libraryHitFile} from './library-selection.ts';
