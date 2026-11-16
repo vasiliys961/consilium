@@ -12,7 +12,7 @@ const globalId='abcdef12-1234-1234-1234-123456789abc';
 function protocol(id:string,text:string,edition:'ru'|'en',locale:string){
  return protocolDocumentMessage({
   type:'concilium.protocol.document',id,session,text,source:'Synthetic case source',
-  ...(edition==='en'?{locale,format:'soap',state:{finalNote:text,physicianAdditions:'Synthetic physician edits'}}:{})
+  ...(edition==='en'?{locale,format:'soap',state:{reasoningDraft:'Synthetic prior reasoning',finalNote:text,physicianAdditions:'Synthetic physician edits',templateId:'clinical-general',specialistName:'Synthetic physician',customTemplate:'',universalPrompt:''}}:{})
  },session,edition)!;
 }
 function fixture(){
