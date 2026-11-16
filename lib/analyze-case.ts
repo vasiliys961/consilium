@@ -380,7 +380,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       ].filter(Boolean).join("\n"),
     }, stageFetch("synthesis")).catch(() => null);
     if (written) {
-      if (plan.task === 'management' && written.report) {
+      if ((plan.task === 'management' || plan.task === 'clinical') && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
         for (const option of written.report.management) {
           const localInteractions = checkProposedMedications(currentMedications, option.medications ?? []);
