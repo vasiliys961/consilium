@@ -37,11 +37,19 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const lastSegmentAtRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const mountedRef = useRef(false)
+  const audioSessionRef = useRef('')
   const interruptedRef = useRef(false)
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current)
     timerRef.current = null
+  }
+
+  const revokeAudioSession = () => {
+    const session=audioSessionRef.current
+    if(session&&typeof window!=='undefined')
+      window.dispatchEvent(new CustomEvent('concilium.audio-session-revoke',{detail:{session}}))
+    audioSessionRef.current=''
   }
 
   const stopTracks = () => {
@@ -63,6 +71,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       stopTracks()
       segmentsRef.current = []
       segmentResultsRef.current = {}
+      revokeAudioSession()
     }
     window.addEventListener('pagehide', cancelOnLeave)
     return () => {
@@ -72,7 +81,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     }
   }, [])
 
-  const transcribeFile = async (file: File): Promise<TranscriptionData> => {
+  const transcribeFile = async (file: File, audioSession?:string): Promise<TranscriptionData> => {
     if (!file.size || file.size > maxSize * 1024 * 1024)
       throw Error(`Аудио пустое или превышает ${maxSize} МБ. Разделите запись на части.`)
     if (!file.type.startsWith('audio/') && !file.type.includes('webm') && !file.type.includes('octet-stream'))
@@ -80,6 +89,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     const formData = new FormData()
     formData.append('file', file)
     formData.append('provider', provider)
+    if(audioSession)formData.append('conciliumAudioSession',audioSession)
     const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || !data?.success) throw Error(String(data?.error || 'Сервис не распознал запись.'))
@@ -125,7 +135,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         if(!result){
           // A failed/uncertain request is never automatically retried: the physician
           // must click retry, because the provider may have already charged for it.
-          result=await transcribeFile(segments[index])
+          result=await transcribeFile(segments[index],audioSessionRef.current)
           segmentResultsRef.current[index]=result
         }
         texts.push(result.transcript)
@@ -139,6 +149,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       segmentsRef.current=[]
       segmentResultsRef.current={}
       setHasPendingSegments(false)
+      revokeAudioSession()
     }catch(error:any){
       setHasPendingSegments(true)
       setError((error?.message||'Ошибка расшифровки')+' Запись сохранена только в текущей вкладке; можно повторить неготовую часть вручную, возможна повторная оплата.')
@@ -242,6 +253,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       }
       segmentsRef.current=[]
       segmentResultsRef.current={}
+      revokeAudioSession()
+      audioSessionRef.current=crypto.randomUUID()
       rotatingRef.current=false
       interruptedRef.current=false
       recordingRef.current=true
@@ -420,7 +433,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         <div className="mt-3 flex flex-wrap items-center gap-2" role="alert">
           <p className="w-full text-sm text-amber-900">{interruptedRef.current?'Запись прервана, полный текст восстановить нельзя. Повторите приём или используйте другую подтверждённую запись.':'Часть беседы ещё не распознана. Неполный текст не передан в протокол. Запись временно хранится в этой вкладке.'}</p>
           {!interruptedRef.current&&<button type="button" className="border border-[#9C4221] px-3 py-2 text-sm" onClick={()=>void transcribeSegments()}>Повторить оставшуюся расшифровку (возможна повторная оплата)</button>}
-          <button type="button" className="border border-gray-400 px-3 py-2 text-sm" onClick={()=>{segmentsRef.current=[];segmentResultsRef.current={};interruptedRef.current=false;setHasPendingSegments(false);setError(null)}}>Удалить неготовую запись</button>
+          <button type="button" className="border border-gray-400 px-3 py-2 text-sm" onClick={()=>{segmentsRef.current=[];segmentResultsRef.current={};interruptedRef.current=false;revokeAudioSession();setHasPendingSegments(false);setError(null)}}>Удалить неготовую запись</button>
         </div>
       )}
       {lastAnalysis && !transcribing && !recording && (
