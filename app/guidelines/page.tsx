@@ -1,101 +1,89 @@
 'use client';
 import Link from 'next/link';
-import {useEffect,useState} from 'react';
-import {readCases,persistCase,caseContext,type ClinicalCase} from '@/lib/casebook';
+import {useState} from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {reviewBeforeSending} from '@/lib/privacy-client';
-import {useWorkspaceLanguage} from '@/app/components/workspace-language';
 import {downloadDocx} from '@/lib/download-docx';
-import type {GuidelinePlan,GuidelineResult} from '@/lib/guideline-review';
+import {useWorkspaceLanguage} from '@/app/components/workspace-language';
+import type {GuidelineMode} from '@/lib/parent-guideline-search';
 
-type Section='differential'|'investigations'|'treatment'|'monitoring'|'safety';
-const SECTIONS:readonly [Section,string,string][]=[
- ['differential','Дифференциальная диагностика','Differential diagnosis'],
- ['investigations','Предлагаемые обследования','Proposed investigations'],
- ['treatment','Предлагаемое лечение','Proposed treatment'],
- ['monitoring','Контроль и мониторинг','Follow-up and monitoring'],
- ['safety','Ограничения и безопасность','Safety and contraindications']
-];
-function planText(plan:GuidelinePlan,topic:string){
- return [topic,plan.summary,...SECTIONS.map(([key,title])=>title+':\n'+plan[key].map((v,i)=>String(i+1)+'. '+v.text+(v.sources.length?' ['+v.sources.join(', ')+']':' [Модельная рекомендация, без проверенного фрагмента]')).join('\n')),'Уточнить:\n'+plan.uncertainties.join('\n')].join('\n\n');
-}
+type SearchResult={text:string;model:string;estimatedUsd:number;inputTokens:number;outputTokens:number;searchMode:GuidelineMode};
+const specialties=['Кардиология','Пульмонология','Неврология','Эндокринология','Гастроэнтерология','Нефрология','Ревматология','Онкология','Инфекционные болезни','Педиатрия','Акушерство и гинекология','Хирургия','Анестезиология и реаниматология'];
+const modes:readonly [GuidelineMode,string][]=[['brief','Кратко · Gemini Flash'],['standard','Стандарт · Gemini Flash'],['detailed','Подробно · Sonnet 5.5'],['online','Актуальные · Perplexity Sonar']];
 export default function ClinicalGuidelines(){
  const {language}=useWorkspaceLanguage();
- const label=(ru:string,en:string)=>language==='ru'?ru:en;
- const [cases,setCases]=useState<ClinicalCase[]>([]),[caseId,setCaseId]=useState(''),[topic,setTopic]=useState(''),[context,setContext]=useState('');
- const [result,setResult]=useState<GuidelineResult|null>(null),[plan,setPlan]=useState<GuidelinePlan|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
- useEffect(()=>{
-  const query=new URLSearchParams(location.search);
-  void readCases().then(items=>{setCases(items);const found=items.find(x=>x.id===query.get('case'));if(found){setCaseId(found.id);setContext(caseContext(found).slice(0,7000));setTopic(found.question.slice(0,350));}}).catch(()=>setNotice('Локальные случаи недоступны'));
- },[]);
- function changeCase(id:string){
-  if(plan&&!window.confirm(label('Есть несохранённые правки. Продолжить?','Discard unsaved edits?')))return;
-  setCaseId(id);const selected=cases.find(x=>x.id===id);
-  setContext(selected?caseContext(selected).slice(0,7000):'');setTopic(selected?selected.question.slice(0,350):'');setResult(null);setPlan(null);
- }
- async function generate(){
-  if(topic.trim().length<4||busy)return;
-  setBusy(true);setResult(null);setPlan(null);setNotice('');
+ const tr=(ru:string,en:string)=>language==='ru'?ru:en;
+ const [query,setQuery]=useState(''),[specialty,setSpecialty]=useState(''),[mode,setMode]=useState<GuidelineMode>('standard');
+ const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<SearchResult|null>(null),[editing,setEditing]=useState(false);
+ async function search(){
+  if(busy||query.trim().length<3)return;
+  setBusy(true);setNotice('');setResult(null);setEditing(false);
   try{
-   const reviewed=await reviewBeforeSending({text:JSON.stringify({topic:topic.trim(),context}),locale:language,sourceLocale:language,task:'management',retain:false,externalSearch:true});
-   const response=await fetch('/api/guidelines',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(reviewed)});
-   if(!response.ok)throw Error(label('Не удалось получить рекомендации','Guideline search failed'));
-   const data=await response.json() as GuidelineResult;
-   if(!data.plan||!Array.isArray(data.sources))throw Error('Invalid response');
-   setResult(data);setPlan(data.plan);
-  }catch(e){setNotice(e instanceof Error?e.message:'Error');}
+   const reviewed=await reviewBeforeSending({text:query.trim(),task:'evidence',locale:language,sourceLocale:language,retain:false,externalSearch:false});
+   const response=await fetch('/api/protocols/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...reviewed,modelMode:mode,specialty})});
+   if(!response.ok){
+    const data=await response.json().catch(()=>({error:'unknown'}));
+    const reason=data.error;
+    throw Error(reason==='openrouter_not_configured'?tr('В Preview не задан OPENROUTER_API_KEY','OPENROUTER_API_KEY not configured'):
+     reason==='provider_no_clinical_guidance'?tr('Модель не ответила. Это техническая ошибка, а не отсутствие рекомендаций. Попробуйте другой режим.','Model returned no answer; this is not evidence that no guideline exists.'):
+     tr('Ошибка получения рекомендаций: '+String(reason),'Guideline search error: '+String(reason)));
+   }
+   const data=await response.json() as SearchResult;
+   if(!data.text?.trim())throw Error(tr('Пустой ответ модели','Empty model response'));
+   setResult(data);
+  }catch(e){setNotice(e instanceof Error?e.message:tr('Ошибка запроса','Request error'));}
   finally{setBusy(false);}
  }
- function edit(key:Section,index:number,value:string){
-  setPlan(old=>old&&({...old,[key]:old[key].map((item,i)=>i===index?{...item,text:value}:item)}));
- }
- async function attach(){
-  if(!plan||!result||!caseId)return;
-  const existing=cases.find(x=>x.id===caseId);if(!existing)return;
-  const refs=result.sources.map(x=>x.id+' '+x.title+' '+(x.url??'no URL')).join('\n');
-  const report='РЕДАКТИРУЕМЫЕ ПРЕДЛОЖЕНИЯ ИИ ПО КЛИНИЧЕСКИМ РЕКОМЕНДАЦИЯМ. НЕ ЯВЛЯЮТСЯ ПОДПИСАННЫМИ НАЗНАЧЕНИЯМИ.\n'+planText(plan,topic)+'\n\nИСТОЧНИКИ ПОИСКА (полный текст не подтверждён):\n'+refs;
-  const at=new Date().toISOString();
-  const updated={...existing,updated:at,events:[...existing.events,{id:crypto.randomUUID(),kind:'note' as const,at,text:report.slice(0,12000)}]};
-  try{await persistCase(updated);setCases(old=>old.map(x=>x.id===caseId?updated:x));setNotice(label('Предложения добавлены в случай и будут доступны в следующем разборе','Proposals added to the case for subsequent clinical review'));}
-  catch{setNotice(label('Ошибка сохранения','Save failed'));}
- }
  async function share(){
-  if(!plan)return;
-  const text=planText(plan,topic);
-  try{if(navigator.share)await navigator.share({title:topic,text});else{await navigator.clipboard.writeText(text);setNotice(label('Скопировано для отправки','Copied for sharing'));}}
-  catch{setNotice(label('Отправка отменена','Sharing cancelled'));}
+  if(!result)return;
+  try{if(navigator.share)await navigator.share({title:query,text:result.text});
+   else{await navigator.clipboard.writeText(result.text);setNotice(tr('Скопировано для отправки','Copied for sharing'));}}
+  catch{setNotice(tr('Отправка отменена','Sharing canceled'));}
  }
- return <main className="module-page" style={{maxWidth:1020,margin:'auto',padding:26,lineHeight:1.6}}>
-  <p><Link href="/workspace">← {label('Клинические случаи','Clinical cases')}</Link></p>
-  <h1>{label('Клинические рекомендации','Clinical guidelines')}</h1>
-  <p>{label('ИИ самостоятельно предлагает обследование, лечение, альтернативы и мониторинг. Врач редактирует все предложения. Подтверждённые источники отображаются отдельно от выводов модели.','AI proposes diagnostics, treatment, alternatives and monitoring. The physician edits proposals; retrieved sources remain distinguishable from model reasoning.')}</p>
-  <label>{label('Случай (необязательно)','Case (optional)')}<select value={caseId} disabled={busy} onChange={e=>changeCase(e.target.value)}>
-   <option value="">{label('Самостоятельный поиск','Standalone')}</option>
-   {cases.map(c=><option key={c.id} value={c.id}>{c.title||c.id.slice(0,8)}</option>)}
-  </select></label>
-  <label>{label('Клинический вопрос','Clinical question')}<input maxLength={350} value={topic} disabled={busy} onChange={e=>{setTopic(e.target.value);setResult(null);setPlan(null);}} placeholder={label('Сердечная недостаточность: обследование и лечение','Heart failure: investigations and treatment')}/></label>
-  <label>{label('Клинический контекст','Clinical context')}<textarea rows={7} value={context} maxLength={9000} disabled={busy} onChange={e=>{setContext(e.target.value);setResult(null);setPlan(null);}} placeholder={label('Возраст, симптомы, лаборатория, препараты, аллергии и функция органов','Age, symptoms, labs, medicines, allergies, organ function')}/></label>
-  <p><small>{label('Перед отправкой проводится проверка обезличивания. Поиск и модель могут расходовать средства. Предлагаемые назначения врач проверяет и исправляет.','Privacy review is required; retrieval and reasoning may incur API costs. The physician reviews and edits all proposed prescriptions.')}</small></p>
-  <button disabled={busy||topic.trim().length<4} onClick={()=>void generate()}>{busy?label('Анализ…','Analyzing…'):label('Найти рекомендации и составить план · GPT-6.1 Sol','Find guidelines and draft plan · GPT-6.1 Sol')}</button>
+ return <main className="module-page" style={{maxWidth:1080,margin:'auto',padding:28,lineHeight:1.6}}>
+  <p><Link href="/workspace">← {tr('Клинические случаи','Clinical cases')}</Link></p>
+  <h1>📚 {tr('Клинические рекомендации','Clinical guidelines')}</h1>
+  <p>{tr('Самостоятельный поиск материнского Doctor Opus: от краткого обзора до подробной клинической тактики и актуальных документов через Sonar. Одного названия болезни достаточно.','Standalone guidance search adapted from Doctor Opus. A single disease name is sufficient.')}</p>
+  <section style={{padding:20,background:'#fcfdfb',border:'1px solid #c4d1c7',borderRadius:10,margin:'18px 0'}}>
+   <label>{tr('Специальность (необязательно)','Specialty (optional)')}
+    <select disabled={busy} value={specialty} onChange={e=>setSpecialty(e.target.value)}>
+     <option value="">{tr('Без выбора','Any')}</option>{specialties.map(v=><option key={v} value={v}>{v}</option>)}
+    </select>
+   </label>
+   <label>{tr('Тема или клинический вопрос','Topic or clinical question')}
+    <textarea disabled={busy} rows={3} maxLength={550} value={query} onChange={e=>setQuery(e.target.value)}
+     placeholder={tr('Например: плеврит','Example: pleuritis')}
+     onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void search();}}}/>
+   </label>
+   <p><strong>{tr('Глубина анализа','Search depth')}</strong></p>
+   <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+    {modes.map(([value,title])=><button type="button" key={value} disabled={busy} aria-pressed={mode===value}
+     onClick={()=>setMode(value)} style={{border:'1px solid #8c9c90',background:mode===value?'#20543d':'#edf3ee',color:mode===value?'#fff':'#1c3b2d',borderRadius:6,padding:'9px 12px'}}>{title}</button>)}
+   </div>
+   <p><small>{mode==='online'?tr('Perplexity Sonar ищет актуальные сведения в интернете. Ссылки и применимость проверяются врачом.','Sonar searches online; verify citations and clinical applicability.'):tr('Gemini Flash — быстрее и дешевле; Sonnet — подробнее. Источники в ответе модели не считаются автоматически проверенными.','Flash is faster; Sonnet more detailed. Model references need verification.')}</small></p>
+   <button disabled={busy||query.trim().length<3} onClick={()=>void search()}>{busy?tr('Поиск…','Searching…'):tr('🔍 Найти клинические рекомендации','🔍 Find clinical guidelines')}</button>
+   <p><small>{tr('Перед отправкой — стандартная проверка обезличивания. Запросы к моделям могут расходовать API-баланс.','Privacy review precedes the model call. Calls may cost API credits.')}</small></p>
+  </section>
   {notice&&<p role="status">{notice}</p>}
-  {plan&&result&&<section>
-   <h2>{label('Предложения ИИ — редактируемый черновик','AI proposals — editable draft')}</h2>
-   <p><small>{label('Модель','Model')}: {result.model}. {label('Расчётная стоимость','Estimated cost')}: {'$'+result.estimatedUsd.toFixed(5)}. {label('Доказательная база','Evidence coverage')}: {result.sourceCoverage==='none'?label('источники не найдены','none retrieved'):result.sourceCoverage==='metadata_only'?label('только библиография','bibliography only'):label('фрагменты публикаций','retrieved excerpts')}.</small></p>
-   <label>{label('Резюме','Summary')}<textarea value={plan.summary} rows={4} onChange={e=>setPlan(old=>old&&({...old,summary:e.target.value}))}/></label>
-   {SECTIONS.map(([key,ru,en])=><section key={key}><h3>{label(ru,en)}</h3>
-    {plan[key].map((v,i)=><div key={i}><label>{i+1}.<textarea rows={3} value={v.text} maxLength={1000} onChange={e=>edit(key,i,e.target.value)}/></label>
-     <small>{v.sources.length?label('Связанные источники: ','Model-linked sources: ')+v.sources.join(', '):label('Предложение модели без подтверждённого фрагмента','Model proposal without a cited excerpt')}</small>
-    </div>)}
-   </section>)}
-   <h3>{label('Что необходимо уточнить','Missing key information')}</h3>
-   {plan.uncertainties.map((v,i)=><label key={i}>{i+1}.<textarea rows={2} value={v} onChange={e=>setPlan(old=>old&&({...old,uncertainties:old.uncertainties.map((x,j)=>i===j?e.target.value:x)}))}/></label>)}
-   <h3>{label('Найденные источники','Retrieved sources')}</h3>
-   {result.sources.map(s=><article key={s.id}><strong>{s.id}</strong> · {s.url?<a href={s.url} rel="noreferrer" target="_blank">{s.title}</a>:s.title} ({s.year??label('год неизвестен','year unknown')})<p><small>{s.excerpt?label('Доступен фрагмент, требуется сверка с полным текстом','Excerpt only; verify full text'):label('Только библиографическая запись','Bibliographic metadata only')}</small></p></article>)}
-   {result.sources.length===0&&<p>{label('Проверенных поиском источников нет: выводы являются предложениями модели.','No retrieved sources; these are model-only proposals.')}</p>}
-   <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-    <button type="button" disabled={!caseId} onClick={()=>void attach()}>{label('Использовать в клиническом случае','Add to clinical case')}</button>
-    <button type="button" onClick={()=>void downloadDocx(label('Клинические рекомендации','Clinical guidelines'),planText(plan,topic),language).catch(()=>setNotice('DOCX failed'))}>DOCX</button>
-    <button type="button" onClick={()=>void share()}>{label('Поделиться','Share')}</button>
-    <button type="button" onClick={()=>window.print()}>{label('Печать / PDF','Print / PDF')}</button>
+  {result&&<section style={{padding:22,background:'white',border:'1px solid #d2ded6',borderRadius:9}}>
+   <h2>{tr('Найденные рекомендации и клиническая тактика','Clinical recommendations')}</h2>
+   <p><small>{tr('Модель','Model')}: {result.model} · {tr('Расчётная стоимость','Estimated cost')}: {'$'+result.estimatedUsd.toFixed(5)} · {tr('Токены','Tokens')}: {result.inputTokens+result.outputTokens}</small></p>
+   {editing?<label>{tr('Редактировать текст','Edit text')}<textarea rows={24} value={result.text} onChange={e=>setResult(prev=>prev&&({...prev,text:e.target.value}))}/></label>:
+    <article className="clinical-guideline-markdown" style={{whiteSpace:'normal',lineHeight:1.75}}><ReactMarkdown remarkPlugins={[remarkGfm]}>{result.text}</ReactMarkdown></article>}
+   <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:20}}>
+    <button type="button" onClick={()=>setEditing(prev=>!prev)}>{editing?tr('Просмотр','Preview'):tr('Редактировать','Edit')}</button>
+    <button type="button" onClick={()=>void downloadDocx(query,result.text,language).catch(()=>setNotice(tr('Ошибка DOCX','DOCX failed')))}>DOCX</button>
+    <button type="button" onClick={()=>window.print()}>{tr('Печать / PDF','Print / PDF')}</button>
+    <button type="button" onClick={()=>void share()}>{tr('Поделиться','Share')}</button>
+    <button type="button" onClick={()=>void navigator.clipboard.writeText(result.text).then(()=>setNotice(tr('Текст скопирован для клинического разбора','Copied for clinical review'))).catch(()=>setNotice(tr('Не удалось скопировать','Copy failed')))}>{tr('Копировать для разбора','Copy for clinical case')}</button>
+   </div>
+   <p><small>{tr('Выводы ИИ, дозировки и ссылки требуют сверки с первоисточником. Это не утверждённые назначения врача.','Verify recommendations, doses and sources. Not a signed physician order.')}</small></p>
+  </section>}
+  {!busy&&!result&&<section>
+   <h3>{tr('Примеры запросов','Example searches')}</h3>
+   <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+    {['Плеврит','Острый коронарный синдром','Декомпенсация сердечной недостаточности','Фибрилляция предсердий','Внебольничная пневмония'].map(v=><button type="button" key={v} onClick={()=>setQuery(v)}>{v}</button>)}
    </div>
   </section>}
  </main>;
