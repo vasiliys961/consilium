@@ -14,7 +14,7 @@ test('a proposed active ingredient is checked against current drugs, including a
 test('numbered prescriptions and plus-separated names are parsed; unsupported drugs are visible',()=>{
  assert.equal(knownDrugInteractions('1. таб. Варфарин 5 мг + Ибупрофен 200 мг').length,1);
  const coverage=localDrugCoverage('Верошпирон 25 мг, Лозартан 50 мг, Метформин');
- assert.equal(coverage.recognized.length,3);assert.deepEqual(coverage.unrecognized,[]);assert.equal(coverage.ruleCount,20);
+ assert.equal(coverage.recognized.length,3);assert.deepEqual(coverage.unrecognized,[]);assert.equal(coverage.ruleCount,23);
 });
 
 test('C3: risk matrix has source-backed actionable signals and avoids route/lookalike false positives',()=>{
@@ -103,4 +103,18 @@ test('C3: renal/hepatic impairment changes conditional colchicine risk, and alia
  const normal=checkMedicationRegimen({current:'spironolactone',context:{potassium:4.4,egfr:70}});
  assert.equal(normal.organAlerts.length,0);
  assert.ok(checkMedicationRegimen({current:'moxifloxacin',context:{qtcMs:520}}).organAlerts.some(a=>a.risk.includes('QTc')));
+});
+
+test('C3: dual anticoagulant use is flagged, but a planned switch can mark the old agent stopped',()=>{
+ const pairs:[string,string][]=[['варфарин','апиксабан'],['warfarin','Xarelto'],['Eliquis','rivaroxaban']];
+ for(const [a,b] of pairs){
+  const finding=knownDrugInteractions(a,b);
+  assert.equal(finding.length,1,a+' / '+b);assert.equal(finding[0].severity,'major');
+  assert.match(finding[0].risk,/кровотечения/);
+  assert.match(finding[0].source,/ELIQUIS|XARELTO/);
+ }
+ assert.equal(checkMedicationRegimen({current:'варфарин',proposed:'апиксабан',stopped:'warfarin'}).alerts.length,0);
+ const options=checkMedicationRegimen({current:'',alternatives:'апиксабан\nривароксабан'});
+ assert.equal(options.alerts.length,0);
+ assert.equal(options.alternatives.every(option=>option.alerts.length===0),true);
 });

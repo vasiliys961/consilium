@@ -50,3 +50,13 @@ test('C3 scenario: hepatic failure changes risk only where actual medicine is pr
  assert.ok(v.organAlerts.some(a=>a.drug==='Апиксабан'&&a.severity==='major'));
  assert.equal(checkMedicationRegimen({current:'apixaban'}).organAlerts.length,0);
 });
+
+test('C3 scenario: anticoagulant switching only suppresses concurrent alerts after explicit discontinuation',()=>{
+ const before=checkMedicationRegimen({current:'варфарин',proposed:'апиксабан'});
+ assert.equal(before.alerts.length,1);
+ const after=checkMedicationRegimen({current:'варфарин',proposed:'апиксабан',stopped:'warfarin'});
+ assert.equal(after.alerts.length,0);
+ const withNsaid=checkMedicationRegimen({current:'варфарин + ибупрофен',proposed:'апиксабан',stopped:'warfarin'});
+ assert.equal(withNsaid.alerts.length,1,'Current ibuprofen continues and still interacts with proposed apixaban');
+ assert.match(withNsaid.alerts[0].risk,/кровотечения/);
+});

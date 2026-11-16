@@ -46,6 +46,7 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
         <h4>{t('Локальная проверка сочетаний')}</h4>
         <DrugInteractionAlerts alerts={item.localInteractions}/>
       </section>}
+      {item.stoppedMedications?.length ? <p><small>{t('Предложено отменить перед этой схемой (проверить врачу):')} {item.stoppedMedications.join(', ')}. {t('Не считать совместным приёмом после отмены; проверьте план перехода и мониторинг.')}</small></p>:null}
       {item.medications?.length ? <p><small>{t('Локальная проверка препаратов, предложенных ИИ для этой схемы:')} {item.medications.join(', ')}. {t('Проверено только')} {item.localCoverage?.ruleCount??'—'} {t('локальных правил; отсутствие совпадения не доказывает совместимость.')}
       {item.localCoverage?.unrecognized.length ? ' '+t('Не охвачены локальными правилами:')+' '+item.localCoverage.unrecognized.join(', '):''}</small></p>:null}
       {medicationCheck && Boolean(item.medications?.length) && <>

@@ -42,7 +42,7 @@ import { parseLocale } from "./locale.ts";
 
 import { retrievePassages, passageCitations } from "./local-rag.ts";
 import { drugLabelCitations, reviewDrugLabels } from './drug-labels.ts';
-import { checkProposedMedications, localDrugCoverage, reportedMedications } from './drug-interaction-rules.ts';
+import { checkMedicationRegimen, reportedMedications } from './drug-interaction-rules.ts';
 import { extractPdfText } from "../packages/docs/pdf-pages.ts";
 import { prepareServerFiles } from "./intake-server.ts";
 import { normalizeFiles, evidenceIndex } from "./module-catalog.ts";
@@ -383,9 +383,14 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       if ((plan.task === 'management' || plan.task === 'clinical') && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
         for (const option of written.report.management) {
-          const localInteractions = checkProposedMedications(currentMedications, option.medications ?? []);
-          if (localInteractions.length) option.localInteractions = localInteractions;
-          if (option.medications?.length) option.localCoverage = localDrugCoverage(currentMedications,option.medications.join('\n'));
+          const checked = checkMedicationRegimen({
+            current: currentMedications,
+            proposed: (option.medications??[]).join('\n'),
+            stopped: (option.stoppedMedications??[]).join('\n'),
+          });
+          const localInteractions=checked.alerts.filter(alert=>alert.relation!=='current-current');
+          if (localInteractions.length) option.localInteractions=localInteractions;
+          if (option.medications?.length) option.localCoverage=checked.coverage;
         }
       }
       draft = { status: "unsigned", summary: written.summary, statements: written.statements, ...(written.report ? { report: written.report } : {}), ...(written.studyReports?.length ? { studyReports: written.studyReports } : {}) };
