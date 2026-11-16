@@ -934,7 +934,7 @@ export default function ProtocolPage() {
           </div>
 
           <div className="flex gap-2 mb-4 flex-wrap">
-            <button onClick={() => setShowConversationRecorder(!showConversationRecorder)} className="px-4 py-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg transition-colors text-sm" disabled={loading}>
+            <button onClick={() => { setShowConversationRecorder(!showConversationRecorder); setAmbientConsent(false); }} className="px-4 py-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg transition-colors text-sm" disabled={loading}>
               🎙️ {t.recordConversation}
             </button>
             <button onClick={() => setRawText('')} className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm" disabled={!rawText || loading}>
@@ -970,7 +970,7 @@ export default function ProtocolPage() {
                 />
                 {t.autoInsertDraft}
               </label>
-              <label className="flex items-start gap-2 text-xs text-gray-700 my-3"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> {ui('I confirm the required consent to record this consultation and send de-identified audio to the configured external transcription service. Recording begins only by a separate action.')}</label>
+              <label className="flex items-start gap-2 text-xs text-gray-700 my-3"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> {ui('I confirm the required consent to record this consultation and potentially send audio to the external transcription service after checking for personal identifiers. Recording begins only by a separate action.')}</label>
               {!ambientConsent?<p role="status" className="text-sm text-gray-600">{ui('Confirm consent before microphone recording or audio upload.')}</p>:speechReady?<AudioUpload maxSize={100}
                 onTranscribe={(transcript, meta) => {
                   if (meta?.cost) {
