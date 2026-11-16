@@ -36,6 +36,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const elapsedRef = useRef(0)
   const lastSegmentAtRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const mountedRef = useRef(false)
+  const interruptedRef = useRef(false)
 
   const clearTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -48,7 +50,9 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   }
 
   useEffect(() => {
+    mountedRef.current=true
     const cancelOnLeave = () => {
+      mountedRef.current=false
       recordingRef.current = false
       rotatingRef.current = false
       if (mediaRecorderRef.current) {
@@ -152,7 +156,13 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     recorder.ondataavailable=(event)=>{
       if(event.data.size)chunksRef.current.push(event.data)
     }
-    recorder.onerror=()=>{setError('Ошибка записи микрофона. Проверьте полученные фрагменты.')}
+    recorder.onerror=()=>{
+      interruptedRef.current=true
+      recordingRef.current=false
+      rotatingRef.current=false
+      if(recorder.state==='recording')recorder.stop()
+      setError('Микрофон прервался. Запись неполная: нельзя формировать из неё протокол как из полной беседы.')
+    }
     recorder.onstop=()=>{
       const actualMime=recorder.mimeType||mimeType||'audio/webm'
       const blob=new Blob(chunksRef.current,{type:actualMime})
@@ -165,7 +175,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         rotatingRef.current=false
         lastSegmentAtRef.current=elapsedRef.current
         try{attachRecorder(activeStreamRef.current,mimeType).start(TIMESLICE_MS)}
-        catch{recordingRef.current=false;setError('Не удалось продолжить запись после разделения. Проверьте сохранённые части.');stopTracks();clearTimer();setHasPendingSegments(segmentsRef.current.length>0)}
+        catch{recordingRef.current=false;interruptedRef.current=true;setRecording(false);setError('Не удалось продолжить запись после разделения. Запись неполная.');stopTracks();clearTimer();setHasPendingSegments(segmentsRef.current.length>0)}
         return
       }
       recordingRef.current=false
@@ -174,6 +184,10 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       clearTimer()
       setRecordingTime(0)
       setHasPendingSegments(segmentsRef.current.length>0)
+      if(interruptedRef.current){
+        setError('Запись прервана. Неполная беседа не отправлена на распознавание; удалите запись и повторите. Не используйте это как полный протокол.')
+        return
+      }
       void transcribeSegments()
     }
     return recorder
@@ -181,6 +195,10 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
 
   const startRecording = async () => {
     try {
+      if (hasPendingSegments || segmentsRef.current.length || transcribing) {
+        setError('Завершите или удалите предыдущую запись перед новой.')
+        return
+      }
       if (typeof window === 'undefined' || !navigator?.mediaDevices?.getUserMedia) {
         setError('Браузер не поддерживает доступ к микрофону (mediaDevices/getUserMedia недоступен).')
         return
@@ -201,6 +219,11 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
           autoGainControl: true,
         },
       })
+      // Permission may resolve after the physician closes the panel or revokes consent.
+      if (!mountedRef.current) {
+        stream.getTracks().forEach(track=>track.stop())
+        return
+      }
       activeStreamRef.current = stream
       
       // Определяем поддерживаемый MIME тип
@@ -220,6 +243,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       segmentsRef.current=[]
       segmentResultsRef.current={}
       rotatingRef.current=false
+      interruptedRef.current=false
       recordingRef.current=true
       elapsedRef.current=0
       lastSegmentAtRef.current=0
@@ -394,9 +418,9 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       
       {hasPendingSegments&&!transcribing&&!recording&&(
         <div className="mt-3 flex flex-wrap items-center gap-2" role="alert">
-          <p className="w-full text-sm text-amber-900">Часть беседы ещё не распознана. Неполный текст не передан в протокол. Запись временно хранится в этой вкладке.</p>
-          <button type="button" className="border border-[#9C4221] px-3 py-2 text-sm" onClick={()=>void transcribeSegments()}>Повторить оставшуюся расшифровку (возможна повторная оплата)</button>
-          <button type="button" className="border border-gray-400 px-3 py-2 text-sm" onClick={()=>{segmentsRef.current=[];segmentResultsRef.current={};setHasPendingSegments(false);setError(null)}}>Удалить неготовую запись</button>
+          <p className="w-full text-sm text-amber-900">{interruptedRef.current?'Запись прервана, полный текст восстановить нельзя. Повторите приём или используйте другую подтверждённую запись.':'Часть беседы ещё не распознана. Неполный текст не передан в протокол. Запись временно хранится в этой вкладке.'}</p>
+          {!interruptedRef.current&&<button type="button" className="border border-[#9C4221] px-3 py-2 text-sm" onClick={()=>void transcribeSegments()}>Повторить оставшуюся расшифровку (возможна повторная оплата)</button>}
+          <button type="button" className="border border-gray-400 px-3 py-2 text-sm" onClick={()=>{segmentsRef.current=[];segmentResultsRef.current={};interruptedRef.current=false;setHasPendingSegments(false);setError(null)}}>Удалить неготовую запись</button>
         </div>
       )}
       {lastAnalysis && !transcribing && !recording && (
