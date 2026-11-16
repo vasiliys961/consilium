@@ -7,12 +7,20 @@ export function protocolDocumentMessage(input:unknown,session:string,edition:Pro
  const value=input as Record<string,unknown>;
  if(value.type!=='concilium.protocol.document'||value.session!==session||typeof value.id!=='string'||!UUID.test(value.id)||typeof value.text!=='string'||!value.text.trim()||value.text.length>100000||/^(Ошибка|Error):/i.test(value.text.trim()))return null;
  if(typeof value.source!=='string'||value.source.length>100000)return null;
+ // Preserve the actual transcribed lines as separate source evidence.
+ // No inferred speaker role or timestamp is presented as a verified fact.
+ if(value.transcript!==undefined&&(typeof value.transcript!=='string'||value.transcript.length>100000))return null;
+ const transcript=typeof value.transcript==='string'?value.transcript.trim():'';
+ const lines=transcript?transcript.replace(/\r\n?/g,'\n').split('\n').filter(Boolean):[];
+ if(lines.length>5000)return null;
+ const ambientSource=lines.length?{kind:'transcript' as const,speakerAssignment:'unverified' as const,
+  segments:lines.map((text,index)=>({id:`T${index+1}`,text}))}:undefined;
  if(edition==='en'&&value.locale!==undefined&&!LOCALES.some(item=>item.code===value.locale&&item.code!=='ru'))return null;
  if(edition==='en'&&value.format!==undefined&&!['reasoning-draft','soap','diagnostic-report'].includes(String(value.format)))return null;
  const localeValue=edition==='ru'?'ru':parseLocale(value.locale??'en');if(edition==='en'&&localeValue==='ru')return null;
  let nativeState:Record<string,string>|undefined;if(edition==='en'&&value.state&&typeof value.state==='object'&&!Array.isArray(value.state)){nativeState={};for(const key of ['reasoningDraft','finalNote','physicianAdditions','templateId','specialistName','customTemplate','universalPrompt']){const field=(value.state as Record<string,unknown>)[key];if(typeof field!=='string'||field.length>100000)return null;nativeState[key]=field;}if(Object.values(nativeState).reduce((n,s)=>n+s.length,0)>200000)return null;}
  const format=edition==='ru'?'original':value.format==='soap'?'soap':value.format==='diagnostic-report'?'diagnostic-report':'reasoning-draft';
- return {edition:edition==='ru'?'ru':'global',format,...(nativeState?{nativeState}:{}),id:value.id,created:new Date().toISOString(),kind:'encounter',locale:localeValue,sourceSnapshot:value.source,sections:[{id:'native',title:edition==='ru'?'Протокол приёма':format==='soap'?'SOAP note':format==='diagnostic-report'?'Diagnostic report':'Diagnostic reasoning draft',text:value.text.trim()}],edited:true};
+ return {edition:edition==='ru'?'ru':'global',format,...(nativeState?{nativeState}:{}),id:value.id,created:new Date().toISOString(),kind:'encounter',locale:localeValue,sourceSnapshot:value.source,...(ambientSource?{ambientSource}:{}),sections:[{id:'native',title:edition==='ru'?'Протокол приёма':format==='soap'?'SOAP note':format==='diagnostic-report'?'Diagnostic report':'Diagnostic reasoning draft',text:value.text.trim()}],edited:true};
 }
 /** A saved whole-text note must not acquire another wrapper heading on every reopening. */
 export function nativeProtocolText(document:ProtocolDocument|undefined):string{

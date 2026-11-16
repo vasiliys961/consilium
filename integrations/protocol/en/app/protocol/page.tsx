@@ -99,6 +99,7 @@ export default function ProtocolPage() {
   const chooseLocale=(next:Locale)=>{setClientLocale(next);setLocale(next);window.dispatchEvent(new Event('protocol-locale'));}
   const [rawText, setRawText] = useState('')
   const [showConversationRecorder, setShowConversationRecorder] = useState(false)
+  const [ambientAudioConsent, setAmbientAudioConsent] = useState(false)
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
@@ -781,7 +782,7 @@ export default function ProtocolPage() {
   const restoreGlobal=(saved:Record<string,string>)=>{setProtocol(saved.reasoningDraft);setFinalNote(saved.finalNote);setPhysicianAdditions(saved.physicianAdditions);setSelectedTemplateId(saved.templateId);setSpecialistName(saved.specialistName);setCustomTemplate(saved.customTemplate);setUniversalPrompt(saved.universalPrompt);}
   useEffect(()=>{document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';},[locale]);
   return (
-    <><GlobalCaseBridge locale={locale} rawText={rawText} state={{reasoningDraft:protocol,finalNote,physicianAdditions,templateId:selectedTemplateId,specialistName,customTemplate,universalPrompt}} diagnostic={isDiagnosticProtocol} busy={loading||finalNoteLoading||draftFromConversationLoading} onImport={setRawText} onRestore={restoreGlobal} onLocale={chooseLocale}/><GlobalProtocolChrome locale={locale} onLocale={chooseLocale} busy={loading||finalNoteLoading||draftFromConversationLoading}>
+    <><GlobalCaseBridge transcript={conversationTranscriptText} locale={locale} rawText={rawText} state={{reasoningDraft:protocol,finalNote,physicianAdditions,templateId:selectedTemplateId,specialistName,customTemplate,universalPrompt}} diagnostic={isDiagnosticProtocol} busy={loading||finalNoteLoading||draftFromConversationLoading} onImport={setRawText} onRestore={restoreGlobal} onLocale={chooseLocale}/><GlobalProtocolChrome locale={locale} onLocale={chooseLocale} busy={loading||finalNoteLoading||draftFromConversationLoading}>
     <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">
       <h1 className="mb-6 border-b border-[#CDBFAE] pb-6 font-serif text-4xl font-medium text-[#1C1612]">
         {isDiagnosticProtocol
@@ -969,7 +970,11 @@ export default function ProtocolPage() {
                 />
                 {t.autoInsertDraft}
               </label>
-              {speechReady?<AudioUpload maxSize={100}
+              <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
+                <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
+                I confirm the required consent to record and transmit raw audio to the configured speech provider. A voice recording may identify a person even without a name; privacy review is required. Recording begins only after pressing Record.
+              </label>
+              {speechReady?(ambientAudioConsent?<AudioUpload maxSize={100}
                 onTranscribe={(transcript, meta) => {
                   if (meta?.cost) {
                     setCostPart('stt', meta.cost, 'add')
@@ -989,9 +994,9 @@ export default function ProtocolPage() {
                     ? `${conversationTranscriptText}\n\n${transcript}`
                     : transcript
                   setConversationTranscriptText(nextTranscript)
-                  void buildDraftFromConversation(nextTranscript)
+                  // Explicit action is required before any paid LLM draft.
                 }}
-              />:<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio-file transcription is not configured in this installation. Browser dictation may still be available.")}</p>}
+              />:<p role="status" className="text-xs text-gray-600">Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio-file transcription is not configured in this installation. Browser dictation may still be available.")}</p>}
               {draftFromConversationLoading && (
                 <p className="mt-2 text-xs text-indigo-600">⏳ {t.draftLoading}</p>
               )}
@@ -1028,6 +1033,11 @@ export default function ProtocolPage() {
                     </button>
                   </div>
                 </div>
+              )}
+              {conversationTranscriptText && (
+                <button type="button" className="mt-3 border border-indigo-500 px-3 py-2 text-xs text-indigo-800 disabled:opacity-50" disabled={loading||draftFromConversationLoading} onClick={()=>void buildDraftFromConversation(conversationTranscriptText)}>
+                  Prepare an editable draft from transcript (external LLM; charges may apply)
+                </button>
               )}
               {conversationTranscriptText && (
                 <details className="mt-3">
