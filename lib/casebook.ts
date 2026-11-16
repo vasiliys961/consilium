@@ -251,6 +251,30 @@ export async function persistRadiologyReport(
  });
 }
 
+/** The translation is a historical UNVERIFIED conversation note, not a diagnosis.
+ * Explicit clinician transfer, committed against the latest case under per-case write lock.
+ */
+export async function persistTranslationNote(caseId:string,transfer:import('./translator-case-bridge.ts').TranslationTransfer,now=new Date().toISOString()):Promise<ClinicalCase>{
+ const {translationTransferMessage,translationNoteText}=await import('./translator-case-bridge.ts');
+ const checked=translationTransferMessage({...transfer,type:'concilium.translator.transcript',session:'12345678-1234-1234-1234-123456789abc'},'12345678-1234-1234-1234-123456789abc');
+ if(!checked)throw Error('Неполная или неподтверждённая запись перевода. Ничего не сохранено.');
+ return serialCaseWrite(caseId,async()=>{
+  const value=await readVaultCaseById(caseId);
+  if(!value||value.deletedAt)throw Error('Случай не найден. Перевод остаётся в модуле.');
+  if(value.status==='closed')throw Error('Случай завершён. Верните его в работу перед добавлением перевода.');
+  const id='translation-'+checked.id;
+  const text=translationNoteText(checked);
+  const prior=value.events.find(event=>event.id===id);
+  if(prior){
+   if(prior.kind!=='note'||prior.text!==text)throw Error('Запись перевода с таким ID уже сохранена в другой редакции. Ничего не заменено.');
+   return value;
+  }
+  const updated:ClinicalCase={...value,updated:now,events:[...value.events,{id,at:now,kind:'note',text}]};
+  await writeVaultCase(updated);
+  return updated;
+ });
+}
+
 /** C11: complete an iframe handoff against the latest persisted case, not a stale React snapshot.
  * The per-case write queue serializes this with local autosave and other case writes.
  */
