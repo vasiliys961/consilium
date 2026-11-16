@@ -173,3 +173,18 @@ test('C14: both ambient recorders rotate complete three-minute audio files',()=>
  assert.match(ru,/!interruptedRef\.current&&<button/);
  for(const page of [ru,en])assert.match(page,/transcribeSegments\(\)/);
 });
+
+test('C14: changing Global UI language during STT cannot change the language of earlier recorded audio',()=>{
+ const recorder=repo('integrations/protocol/en/components/AudioUpload.tsx');
+ assert.match(recorder,/recordingLocaleRef\.current=getClientLocale\(\)/);
+ assert.match(recorder,/audioSession\?recordingLocaleRef\.current:getClientLocale\(\)/);
+ assert.match(recorder,/mountedRef\.current=false/);
+ assert.match(recorder,/if\(!mountedRef\.current\)throw Error/);
+});
+test('C14: revoking microphone consent or closing RU panel stops subsequent paid chunk requests',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ assert.match(recorder,/mountedRef\.current=false/);
+ assert.match(recorder,/if\(!mountedRef\.current\)throw Error/);
+ assert.match(recorder,/stream\.getTracks\(\)\.forEach\(track=>track\.stop\(\)\)/);
+ assert.match(recorder,/revokeAudioSession\(\)/);
+});
