@@ -1,3 +1,4 @@
+import {createHash} from 'node:crypto';
 export const PHONE_BYTE_LIMIT = 8_000_000;
 const FILE_LIMIT = 20;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -15,7 +16,7 @@ type Session = {
   lastSeen?:number;
   files: PhoneFile[];
   deliveredThrough: number;
-  requestIds: Map<string,{ id:number;name:string;size:number;mimeType:string }>;
+  requestIds: Map<string,{ id:number;name:string;size:number;mimeType:string;digest:string }>;
 };
 
 type Memory = { sessions: Map<string, Session> };
@@ -95,7 +96,8 @@ export function acceptPhoneFile(
   if(requestId){
    const previous=session.requestIds.get(requestId);
    if(previous){
-    if(previous.name!==cleanName||previous.size!==input.bytes.length||previous.mimeType!==mimeType)return {error:'conflict'};
+    if(previous.name!==cleanName||previous.size!==input.bytes.length||previous.mimeType!==mimeType||
+      previous.digest!==createHash('sha256').update(input.bytes).digest('hex'))return {error:'conflict'};
     return {id:previous.id,name:previous.name};
    }
   }
@@ -111,7 +113,8 @@ export function acceptPhoneFile(
   };
   session.nextId += 1;
   session.files.push(file);
-  if(requestId)session.requestIds.set(requestId,{id:file.id,name:file.name,size:file.bytes.length,mimeType:file.mimeType});
+  if(requestId)session.requestIds.set(requestId,{id:file.id,name:file.name,size:file.bytes.length,mimeType:file.mimeType,
+   digest:createHash('sha256').update(file.bytes).digest('hex')});
   return { id: file.id, name: file.name };
 }
 

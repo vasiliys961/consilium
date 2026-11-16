@@ -69,6 +69,7 @@ test('C4 retry after lost upload response is idempotent before and after receipt
  assert.deepEqual(first,retry);
  assert.equal(phoneFilesSince(session.token,0,20030)?.length,1);
  assert.deepEqual(acceptPhoneFile(session.token,{...input,bytes:Uint8Array.of(9)},20040),{error:'conflict'});
+ assert.deepEqual(acceptPhoneFile(session.token,{...input,bytes:Uint8Array.of(4,5,6)},20045),{error:'conflict'},'Same-size but different bytes must not be deduplicated');
  if('id' in first){
   assert.deepEqual(phoneFilesSince(session.token,first.id,20050),[]);
   assert.deepEqual(acceptPhoneFile(session.token,input,20060),first);

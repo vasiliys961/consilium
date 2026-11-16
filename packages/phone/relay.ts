@@ -16,7 +16,7 @@ export async function ensurePhoneRelay(backendPort:number):Promise<{url:string|n
  const server=createServer(async(req,res)=>{
   try{
    const path=new URL(req.url??'/',origin);
-   const allowed=(req.method==='GET'&&(path.pathname==='/phone/send'||path.pathname==='/api/phone/status'||path.pathname.startsWith('/_next/static/')))||(req.method==='POST'&&['/api/phone/upload','/api/phone/heartbeat'].includes(path.pathname));
+   const allowed=(req.method==='GET'&&(path.pathname==='/phone/send'||path.pathname.startsWith('/_next/static/')))||(req.method==='POST'&&['/api/phone/upload','/api/phone/heartbeat','/api/phone/status'].includes(path.pathname));
    if(!allowed){res.writeHead(404);res.end();return;}
    let body:Buffer|undefined;
    if(req.method==='POST'){const chunks:Buffer[]=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>11_000_000){res.writeHead(413);res.end();return;}chunks.push(chunk);}body=Buffer.concat(chunks);}

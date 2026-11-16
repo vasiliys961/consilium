@@ -68,7 +68,7 @@ export default function PhoneSendPage() {
     let active=true;
     const verify=async()=>{
       try{
-        const response=await fetch('/api/phone/status?token='+encodeURIComponent(token)+'&id='+pendingId,{cache:'no-store'});
+        const response=await fetch('/api/phone/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,id:pendingId}),cache:'no-store'});
         const received=await response.json() as {status?:string};
         if(!active)return;
         if(received.status==='delivered'){
@@ -173,7 +173,13 @@ export default function PhoneSendPage() {
     setStatus("");
     try {
       let requestId=uploadKeys.current.get(file);
-      if(!requestId){requestId=crypto.randomUUID();uploadKeys.current.set(file,requestId);}
+      if(!requestId){
+        // getRandomValues is available on the restricted HTTP LAN bridge; randomUUID needs HTTPS.
+        const nonce=new Uint8Array(16);
+        crypto.getRandomValues(nonce);
+        requestId=Array.from(nonce,byte=>byte.toString(16).padStart(2,'0')).join('');
+        uploadKeys.current.set(file,requestId);
+      }
       const dataUrl = await fileToDataUrl(file);
       const response = await fetch("/api/phone/upload", {
         method: "POST",
