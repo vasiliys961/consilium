@@ -319,6 +319,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
   const chunksRef = useRef<Blob[]>([])
   const segmentsRef = useRef<Blob[]>([])
   const segmentResultsRef = useRef<Record<number, {transcript:string;duration:number;cost:number;costKnown:boolean;model?:string}>>({})
+  const audioSessionRef = useRef('')
   const streamRef = useRef<MediaStream | null>(null)
   const mimeTypeRef = useRef('audio/webm')
   const rotatingRef = useRef(false)
@@ -348,6 +349,11 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
     }
   }
 
+  const revokeAudioSession = () => {
+    const session=audioSessionRef.current
+    if(session)window.dispatchEvent(new CustomEvent('concilium.audio-session-revoke',{detail:{session}}))
+    audioSessionRef.current=''
+  }
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
@@ -388,6 +394,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
           if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
         }
         segmentsRef.current = []
+        revokeAudioSession()
         stopTracks()
       }
     }
@@ -403,11 +410,12 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
         if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
       }
       segmentsRef.current = []
+      revokeAudioSession()
       stopTracks()
     }
   }, [])
 
-  const transcribeFile = async (file: File): Promise<{ transcript: string; duration: number; cost: number; costKnown: boolean; model?: string } | null> => {
+  const transcribeFile = async (file: File,audioSession?:string): Promise<{ transcript: string; duration: number; cost: number; costKnown: boolean; model?: string } | null> => {
     if (file.size > maxSize * 1024 * 1024) {
       setError(t.fileTooLarge(maxSize))
       return null
@@ -420,6 +428,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
     const formData = new FormData()
     formData.append('file', file)
     formData.append('language', mapLocaleToAssemblyAiLanguage(getClientLocale()))
+    if(audioSession)formData.append('conciliumAudioSession',audioSession)
 
     const response = await fetch('/api/transcribe', {
       method: 'POST',
@@ -470,7 +479,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
         let result = segmentResultsRef.current[index]
         if (!result) {
           const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
-          const received = await transcribeFile(file)
+          const received = await transcribeFile(file,audioSessionRef.current)
           if (!received) throw Error('Audio segment could not be transcribed. Recording retained for explicit retry.')
           result = received
           segmentResultsRef.current[index] = result
@@ -487,6 +496,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
       onTranscribe(texts.join('\n\n'), { duration, cost, costKnown, model:models.size===1?[...models][0]:'multiple' })
       segmentsRef.current = []
       segmentResultsRef.current = {}
+      revokeAudioSession()
     } catch (err: any) {
       // The untranscribed audio remains in browser memory, not on the server.
       setError(err?.message || t.genericError)
@@ -573,6 +583,8 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
       streamRef.current = stream
       segmentsRef.current = []
       segmentResultsRef.current = {}
+      revokeAudioSession()
+      audioSessionRef.current=crypto.randomUUID()
       rotatingRef.current = false
       elapsedRef.current = 0
       lastSegmentAtRef.current = 0
