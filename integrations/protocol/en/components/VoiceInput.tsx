@@ -9,6 +9,7 @@ interface VoiceInputProps {
   onTranscript: (text: string) => void
   /** Temporary hypothesis; never automatically saved. */
   onInterim?: (text: string) => void
+  continuous?: boolean
   disabled?: boolean
   className?: string
   placeholder?: string
@@ -27,7 +28,7 @@ const SPEECH_RECOGNITION_LANG_BY_LOCALE: Record<Locale, string> = {
   'zh-CN': 'zh-CN',
 }
 
-export default function VoiceInput({ onTranscript, onInterim, disabled = false, className = "", placeholder = "" }: VoiceInputProps) {
+export default function VoiceInput({ onTranscript, onInterim, continuous = false, disabled = false, className = "", placeholder = "" }: VoiceInputProps) {
   const [isListening, setIsListening] = useState(false)
   const [supported, setSupported] = useState(true)
   const recognitionRef = useRef<any | null>(null)
@@ -76,7 +77,7 @@ export default function VoiceInput({ onTranscript, onInterim, disabled = false, 
     recognition.lang = SPEECH_RECOGNITION_LANG_BY_LOCALE[locale] || 'en-US'
     recognition.interimResults = true // Показывать промежуточные результаты для "живого" эффекта
     recognition.maxAlternatives = 1
-    recognition.continuous = false // Останавливаться после фразы
+    recognition.continuous = continuous // Обычная диктовка по фразам, ambient — непрерывный ввод когда браузер позволяет
 
     recognition.onstart = () => {
       latestInterimRef.current = ''
