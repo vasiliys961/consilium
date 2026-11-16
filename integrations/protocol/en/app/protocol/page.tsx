@@ -27,6 +27,7 @@ import { finalizeStage2Note, isValidStage2Note } from '@/lib/protocol-stage2'
 import { getClientLocale,setClientLocale } from '@/lib/i18n/client'
 import { protocolMessages } from '@/lib/i18n/ui-client-messages'
 import { isLocale, type Locale } from '@/lib/i18n/config'
+import { ambientUi } from '@/lib/i18n/ambient-ui'
 import mammoth from 'mammoth'
 
 declare global {
@@ -952,18 +953,18 @@ export default function ProtocolPage() {
                 {t.conversationHint}
               </p>
               <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mb-2">
-                {speechProvider==='openrouter'?ui('Speech-to-text uses OpenRouter; actual charges depend on the selected model and provider receipt.'):t.conversationCostHint.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))}
+                {speechProvider==='openrouter'?ambientUi(locale,'cost'):t.conversationCostHint.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))}
               </p>
               <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                 {t.conversationStartHint}
               </p>
               {conversationStats.duration > 0 && (
                 <p className="text-[11px] font-semibold text-indigo-800 mb-3">
-                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ui("· STT billing not reported")}</p>
+                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ambientUi(locale,'unreported')}</p>
               )}
               <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
-                I confirm the required consent to record and transmit raw audio to the configured speech provider. A voice recording may identify a person even without a name; privacy review is required. Recording begins only after pressing Record.
+                {ambientUi(locale,'consent')}
               </label>
               {speechReady?(ambientAudioConsent?<AudioUpload maxSize={speechProvider==='openrouter'?24:100} openrouterOnly={speechProvider==='openrouter'}
                 onTranscribe={(transcript, meta) => {
@@ -985,7 +986,7 @@ export default function ProtocolPage() {
                   setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // Explicit action is required before any paid LLM draft.
                 }}
-              />:<p role="status" className="text-xs text-gray-600">{ui('Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.')}</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio transcription is not configured. Check OPENROUTER_API_KEY in the local application.")}</p>}
+              />:<p role="status" className="text-xs text-gray-600">{ui('Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.')}</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ambientUi(locale,'notConfigured')}</p>}
               {draftFromConversationLoading && (
                 <p className="mt-2 text-xs text-indigo-600">⏳ {t.draftLoading}</p>
               )}
@@ -997,7 +998,7 @@ export default function ProtocolPage() {
               )}
               {recordedDraftText && (
                 <div className="mt-3">
-                  {(draftSourceTranscript!==conversationTranscriptText.trim()||draftSourceLocale!==locale)&&<p role="alert" className="mb-2 text-xs text-amber-800">{ui('The conversation or document language changed after the draft was generated. Review and regenerate the draft before transferring it to the protocol.')}</p>}
+                  {(draftSourceTranscript!==conversationTranscriptText.trim()||draftSourceLocale!==locale)&&<p role="alert" className="mb-2 text-xs text-amber-800">{ambientUi(locale,'stale')}</p>}
                   <label className="block text-xs font-medium text-gray-700 mb-2">{t.draftLabel}</label>
                   <textarea dir="auto"
                     value={recordedDraftText}
@@ -1026,7 +1027,7 @@ export default function ProtocolPage() {
               )}
               {conversationTranscriptText && (
                 <button type="button" className="mt-3 border border-indigo-500 px-3 py-2 text-xs text-indigo-800 disabled:opacity-50" disabled={loading||draftFromConversationLoading} onClick={()=>void buildDraftFromConversation(conversationTranscriptText)}>
-                  Prepare an editable draft from transcript (external LLM; charges may apply)
+                  {ambientUi(locale,'draftAction')}
                 </button>
               )}
               {conversationTranscriptText && (
