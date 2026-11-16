@@ -51,9 +51,9 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   return {allowed:true,hint:'Наличие инструмента не означает выполненного анализа; результат нужно проверить и сохранить.'};
  }
  function propose(value:string){setText(value);setRequest(value);}
- return <section aria-label={t('Помощник Doctor Opus')} style={{padding:'16px 18px',margin:'16px 0',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12}}>
+ return <section id="doctor-opus-assistant" aria-label={t('Помощник Doctor Opus')} style={{padding:'22px 24px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
   <h2 style={{marginTop:0}}>{t('Чем Doctor Opus может вам помочь?')}</h2>
-  <p>{t('Опишите задачу словами. Я предложу последовательность уже существующих инструментов и объясню их назначение. Ничего не запускается автоматически.')}</p>
+  <p>{t('Опишите клиническую задачу своими словами. Помощник предложит уже доступные инструменты, объяснит шаги и откроет выбранный модуль только по вашему нажатию. Это навигатор, а не отдельная диагностическая модель.')}</p>
   {caseId?<p><small>{t('Выбран случай')} · {caseId.slice(0,8)}{caseClosed?' · '+t('Случай завершён, для новых результатов верните его в работу.'):''}</small></p>
    :<p><Link href="/workspace?new=1">{t('Создать случай, чтобы сохранить результаты')}</Link> · {t('Без случая результаты не будут связаны общей историей.')}</p>}
   <form onSubmit={event=>{event.preventDefault();setRequest(text.trim());}}>
@@ -61,10 +61,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    <textarea id="opus-physician-task" rows={3} maxLength={4000} value={text} onChange={event=>setText(event.target.value)} placeholder={t('Например: есть КТ и ЭКГ, нужен комплексный разбор и протокол')} style={{display:'block',width:'100%',boxSizing:'border-box',margin:'6px 0 10px'}}/>
    <button type="submit">{t('Предложить план')}</button>
   </form>
-  <details style={{marginTop:12}}><summary>{t('Примеры задач и возможности')}</summary><div style={{display:'flex',flexDirection:'column',alignItems:'start',gap:8,marginTop:8}}>
-    {examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{t(example)}</button>)}
-    <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')}>{t('Показать возможности Doctor Opus')}</button>
-  </div></details>
+  <div aria-label={t('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
+    <strong style={{width:'100%',fontSize:14}}>{t('С чего начать?')}</strong>
+    {examples.map(example=><button type="button" key={example} onClick={()=>propose(example)} style={{textAlign:'left',border:'1px solid #b0c8b9',background:'#fff',padding:'8px 12px',borderRadius:8}}>{t(example)}</button>)}
+    <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')} style={{border:'1px solid #6c9981',background:'#e8f4ed',padding:'8px 12px',borderRadius:8}}>{t('Показать все возможности')}</button>
+  </div>
   {request.trim()&&<section aria-label={t('План работы')} style={{marginTop:16}}>
    <h3>{t('Предлагаемый маршрут')}</h3>
    <p>{t(plan.message)}</p>

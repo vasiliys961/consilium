@@ -32,8 +32,8 @@ const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|д�
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
- if(/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те) помочь|возможност|покажи (?:все )?функции|help|what can you do)/i.test(value))
-  return {intent:'help',steps:[],message:'Doctor Opus объединяет разбор клинического случая, ЭКГ, Radiology, генетику, проверку лекарств, рекомендации и протоколы. Выберите задачу, чтобы увидеть маршрут.'};
+ if(/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?функции|help|what can you do)/i.test(value))
+  return {intent:'help',steps:(['clinical','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Вот реальные инструменты Doctor Opus. Выберите подходящий модуль или опишите задачу своими словами, чтобы получить маршрут. Запуск, платные запросы и сохранение — только по вашему подтверждению.'};
  const tools:PhysicianTool[]=[];
  const add=(tool:PhysicianTool)=>{if(!tools.includes(tool))tools.push(tool);};
  if(RAD.test(value))add('radiology');
