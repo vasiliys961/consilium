@@ -30,7 +30,6 @@ export default function ClinicalGuidelines(){
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<SearchResult|null>(null),[editing,setEditing]=useState(false);
  useEffect(()=>{if(matchInterface)setAnswerLanguage(language);},[language,matchInterface]);
  const policy=guidelineLocalePolicy(answerLanguage);
- const isArabic=answerLanguage==='ar';
  async function search(){
   if(busy||query.trim().length<3)return;
   setBusy(true);setNotice('');setResult(null);setEditing(false);
