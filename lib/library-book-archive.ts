@@ -54,6 +54,7 @@ function parseMeta(data:unknown):{meta:BookMeta;chunks:LibraryChunkInput[]}{
  ||typeof src.mimeType!=='string'||src.mimeType.length>120
  ||typeof src.bytes!=='number'||!Number.isSafeInteger(src.bytes)||src.bytes<0||src.bytes>SOURCE_LIMIT
  ||typeof src.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(src.sha256))throw Error('Некорректные данные исходной книги.');
+ if(!/\.(pdf|txt|md)$/i.test(src.name))throw Error('Архив содержит неподдерживаемый формат исходного файла.');
  if(doc.vectorized!==true&&doc.vectorized!==false)throw Error('Некорректный статус текстового индекса.');
  if(doc.pageCount!==undefined&&!countPage(doc.pageCount)||doc.textPages!==undefined&&(!Number.isSafeInteger(doc.textPages)||Number(doc.textPages)<0||Number(doc.textPages)>Number(doc.pageCount??1000000)))throw Error('Некорректное число страниц.');
  const chunks:LibraryChunkInput[]=data.chunks.map((raw:unknown)=>{
@@ -129,6 +130,8 @@ export async function restoreBookArchive(archive:Blob):Promise<BookRestoreResult
   vectorized:meta.document.vectorized&&chunks.length>0&&chunks.every(row=>Boolean(row.embedding)),
   imagesIndexed:false,imagesCount:0,visualPagesProcessed:0,ocrMissingPages:meta.document.ocrMissingPages};
  // The complete document, chunks (including OCR) and original Blob are committed in one IndexedDB transaction.
- await saveDocument(doc,chunks,original.slice(0,original.size,meta.original.mimeType));
+ // Never trust a MIME type supplied by an untrusted archive when later opening the original.
+ const safeMime=/\.pdf$/i.test(meta.original.name)?'application/pdf':'text/plain';
+ await saveDocument(doc,chunks,original.slice(0,original.size,safeMime));
  return {document:doc,alreadyPresent:false,visualIndexRebuildRequired:true};
 }
