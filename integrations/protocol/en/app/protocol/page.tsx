@@ -972,7 +972,7 @@ export default function ProtocolPage() {
               </label>
               <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
-                I confirm the required consent to record and transmit de-identified audio to the configured speech provider. Recording starts only after pressing Record.
+                I confirm the required consent to record and transmit raw audio to the configured speech provider. A voice recording may identify a person even without a name; privacy review is required. Recording begins only after pressing Record.
               </label>
               {speechReady?(ambientAudioConsent?<AudioUpload maxSize={100}
                 onTranscribe={(transcript, meta) => {
