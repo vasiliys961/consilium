@@ -1816,7 +1816,7 @@ export default function ProtocolPage() {
               disabled={loading}
             />
             <div className="mt-3 flex flex-wrap gap-2">
-              <button onClick={() => setShowConversationRecorder(!showConversationRecorder)} className="border border-[#9C4221] px-3 py-1.5 text-xs tracking-wide text-[#9C4221] hover:bg-[#F3E7D3] disabled:opacity-50" disabled={loading}>
+              <button onClick={() => { setShowConversationRecorder(!showConversationRecorder); setAmbientConsent(false); }} className="border border-[#9C4221] px-3 py-1.5 text-xs tracking-wide text-[#9C4221] hover:bg-[#F3E7D3] disabled:opacity-50" disabled={loading}>
                 {showConversationRecorder ? 'Скрыть запись беседы' : 'Запись беседы'}
               </button>
               <button onClick={() => setRawText('')} className={quietButton} disabled={!rawText || loading}>
@@ -1842,7 +1842,7 @@ export default function ProtocolPage() {
                 />
                 Сразу класть черновик в заметки
               </label>
-              <label className="my-3 flex items-start gap-2 text-xs text-[#5C4636]"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> Подтверждаю необходимое согласие на запись беседы и передачу обезличенного звука выбранному сервису распознавания. Запись включается только по отдельному нажатию.</label>
+              <label className="my-3 flex items-start gap-2 text-xs text-[#5C4636]"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> Подтверждаю необходимое согласие на запись беседы и возможную передачу звука внешнему сервису распознавания после проверки отсутствия персональных идентификаторов. Запись включается только по отдельному нажатию.</label>
               {ambientConsent ? <AudioUpload
                 autoStartOnMount={false}
                 variant="cabinet"
