@@ -35,7 +35,7 @@
 - [C8 дополнительный тест и post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43903672430) **успешны**.
 - [C9 PR #38 CI](https://github.com/vasiliys961/consilium/actions/runs/43905116305): **982 прошло / 0 ошибок / 1 пропущен**, TypeScript и Next.js build успешны. [Post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43905423814) **успешен**.
 - [C10 PR #40 CI](https://github.com/vasiliys961/consilium/actions/runs/43917791050): **988 пройдено / 0 ошибок / 1 пропущен**, TypeScript и Next.js build успешны. [Post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43918047771) — **успешен**.
-- [C11 PR #42 CI](https://github.com/vasiliys961/consilium/actions/runs/43919545833): **993 пройдено / 0 ошибок / 1 пропущен**, TypeScript и Next.js build успешны. [Post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43919901498) — проверить итог.
+- [C11 PR #42 CI](https://github.com/vasiliys961/consilium/actions/runs/43919545833): **993 пройдено / 0 ошибок / 1 пропущен**, TypeScript и Next.js build успешны. [Post-merge CI](https://github.com/vasiliys961/consilium/actions/runs/43919901498) — **успешен**.
 - Все тесты используют синтетические данные, платных медицинских API не вызывали. Сквозная проверка реальной библиотеки в Preview 3207 пока не выполнена.
 
 ## Дальнейшие приоритеты
