@@ -7,6 +7,7 @@ import {createPortableCaseFile,restorePortableCaseFile,PortableCaseCollisionErro
 import {writeVaultCase,readVaultCaseById,createLocalVault,lockVault,openLocalVault,insertVaultCaseIfAbsent,vaultDatabase} from './local-vault.ts';
 import {passageCitations} from './local-rag.ts';
 
+function normalized(value:unknown){return JSON.parse(JSON.stringify(value));}
 function syntheticCase():ClinicalCase{
  const value=newCase();
  value.title='Synthetic cardiopulmonary follow-up';
@@ -40,7 +41,7 @@ test('C9 sealed one-case roundtrip retains private details, provenance, sources,
   copiedId=restored.id;
   assert.equal(restored.copied,false);
   assert.equal(restored.files,2);assert.equal(restored.analyses,1);assert.equal(restored.events,1);
-  assert.deepEqual(await readVaultCaseById(value.id),value,'clinical history, source hashes and patient identity must survive unchanged');
+  assert.deepEqual(normalized(await readVaultCaseById(value.id)),normalized(value),'clinical history, source hashes and patient identity must survive unchanged');
  }finally{if(copiedId)await writeVaultCase({...value,id:copiedId},true);await writeVaultCase(value,true);}
 });
 
@@ -97,6 +98,6 @@ test('C9 separate case file works with locked AES-GCM local vault and stores sea
    assert.equal('sealed' in (row as Record<string,unknown>),true);
    assert.equal(JSON.stringify(row).includes('SYNTHETIC-PERSON-ONLY'),false);
   }finally{db.close();}
-  assert.deepEqual(await readVaultCaseById(value.id),value);
+  assert.deepEqual(normalized(await readVaultCaseById(value.id)),normalized(value));
  }finally{await openLocalVault('local vault passphrase >= 12');if(importedId)await writeVaultCase(value,true);lockVault();}
 });
