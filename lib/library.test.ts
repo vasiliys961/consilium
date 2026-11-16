@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
-import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,searchLibraryLocalWithMeta,checkLibraryFolderSource,deleteDocument} from './library-db.ts';
+import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,searchLibraryLocalWithMeta,checkLibraryFolderSource,libraryFolderFileState,deleteDocument} from './library-db.ts';
 import {chunkLibraryPages,importLibraryFile} from './library-import.ts';
 import {libraryHitFile} from './library-selection.ts';
 import {retrievePassages,passageCitations} from './local-rag.ts';
@@ -78,11 +78,13 @@ test('C8 changed and unavailable folder originals are not presented as current i
  const changed=new File(['Pneumonia guideline treatment B'],'folder-book.txt',{type:'text/plain',lastModified:200});
  const id1=crypto.randomUUID(),id2=crypto.randomUUID(),id3=crypto.randomUUID();
  try{
-  await saveDocument({id:id1,name:'Folder current',size:original.size,storage:'folder',sourceModifiedAt:original.lastModified,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment A']),original);
+  await saveDocument({id:id1,name:'Folder old version unverified',size:original.size,storage:'folder',uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment A']),original);
   await saveDocument({id:id2,name:'Folder changed',size:changed.size,storage:'folder',sourceModifiedAt:original.lastModified,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment B']),changed);
   await saveDocument({id:id3,name:'Folder unavailable',size:100,storage:'folder',sourceModifiedAt:100,uploaded_at:'2026',chunksCount:1},chunkLibraryPages(['Pneumonia guideline treatment C']));
   const docs=await getAllDocuments();
-  assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id1)!), 'current');
+  assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id1)!), 'unverified');
+  assert.equal(libraryFolderFileState({...docs.find(doc=>doc.id===id1)!,sourceModifiedAt:original.lastModified},original),'current','real file handle preserves source modification time');
+  assert.equal(libraryFolderFileState({...docs.find(doc=>doc.id===id1)!,sourceModifiedAt:original.lastModified},changed),'modified');
   assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id2)!), 'modified');
   assert.equal(await checkLibraryFolderSource(docs.find(doc=>doc.id===id3)!), 'unavailable');
   assert.deepEqual((await searchLibraryLocalWithMeta('Pneumonia guideline',8)).filter(hit=>[id1,id2,id3].includes(hit.documentId??'')).map(hit=>hit.documentId),[id1]);
