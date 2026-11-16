@@ -21,6 +21,7 @@ export function CaseResultsSummary({record}:{record:ClinicalCase}){
     <summary>{t('Протокол')} · {t(document.kind)} · {document.locale.toUpperCase()} · {document.created.slice(0,10)}</summary>
     <p><Link href={protocolEditorHref(record.id,document)}>{t('Открыть сохранённый протокол в редакторе')}</Link></p>
     <p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{protocolText(document)}</p>
+    {document.ambientTranscript&&<details><summary>{t('Сохранённая исходная расшифровка беседы')}</summary><p>{t('Роли говорящих и временные отметки не подтверждены. Сверьте назначения, дозы, числа и отрицания с исходной записью до подписания.')}</p><p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{document.ambientTranscript}</p></details>}
     {revisions.length>0&&<details><summary>{t('Предыдущие редакции')} · {revisions.length}</summary>
       {revisions.map((item,index)=><details key={item.savedAt+index}><summary>{item.savedAt}</summary><p style={{whiteSpace:'pre-wrap'}}>{protocolText(item.document)}</p></details>)}
     </details>}
