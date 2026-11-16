@@ -4,6 +4,7 @@ import type {ClinicalCase} from '@/lib/casebook';
 import {radiologyEvidenceText} from '@/lib/module-evidence';
 import {radiologySourceStatus,protocolEditorHref,earlierProtocolVersions} from '@/lib/c11-module-overview';
 import {protocolText} from '@/packages/protocol/document';
+import {ambientSourceFragments,ambientNumberReview} from '@/lib/ambient-transcript-review';
 import {useWorkspaceLanguage} from './workspace-language';
 
 /** C11: records remain readable after a module closes; no analysis or network call here. */
@@ -21,7 +22,12 @@ export function CaseResultsSummary({record}:{record:ClinicalCase}){
     <summary>{t('Протокол')} · {t(document.kind)} · {document.locale.toUpperCase()} · {document.created.slice(0,10)}</summary>
     <p><Link href={protocolEditorHref(record.id,document)}>{t('Открыть сохранённый протокол в редакторе')}</Link></p>
     <p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{protocolText(document)}</p>
-    {document.ambientTranscript&&<details><summary>{t('Сохранённая исходная расшифровка беседы')}</summary><p>{t('Роли говорящих и временные отметки не подтверждены. Сверьте назначения, дозы, числа и отрицания с исходной записью до подписания.')}</p><p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{document.ambientTranscript}</p></details>}
+    {document.ambientTranscript&&<details><summary>{t('Сохранённая исходная расшифровка беседы')}</summary><p>{t('Роли говорящих и временные отметки не подтверждены. Сверьте назначения, дозы, числа и отрицания с исходной записью до подписания.')}</p><p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{document.ambientTranscript}</p>
+      <details><summary>{t('Фрагменты для врачебной сверки')}</summary>
+       {ambientNumberReview(document.ambientTranscript,protocolText(document)).length>0&&<p>{t('В документе есть числа, не встречающиеся буквально в данной расшифровке; они могут происходить из других материалов случая. Проверьте их источник')}: {ambientNumberReview(document.ambientTranscript,protocolText(document)).slice(0,30).join(', ')}</p>}
+       <ol>{ambientSourceFragments(document.ambientTranscript).slice(0,30).map(fragment=><li key={fragment.id} style={{marginBottom:8}}><strong>{t('Роль говорящего не подтверждена')}</strong>: {fragment.text}<small style={{display:'block'}}>{fragment.reviewFlags.map(flag=>t(flag)).join(' · ')||t('Исходная фраза')}</small></li>)}</ol>
+       {ambientSourceFragments(document.ambientTranscript).length>30&&<p>{t('Показаны первые 30 фрагментов. Полный исходный текст находится выше.')}</p>}
+      </details></details>}
     {revisions.length>0&&<details><summary>{t('Предыдущие редакции')} · {revisions.length}</summary>
       {revisions.map((item,index)=><details key={item.savedAt+index}><summary>{item.savedAt}</summary><p style={{whiteSpace:'pre-wrap'}}>{protocolText(item.document)}</p></details>)}
     </details>}
