@@ -28,3 +28,15 @@ test('separate English, French and Russian saved protocols reopen only in their 
  assert.equal(protocolForEdition(docs,'en','es'),undefined);
  assert.equal(protocolForEdition(docs,'en')?.locale,'fr');
 });
+
+
+test('C14: raw transcript is separate from physician reviewed document and preserved only when supplied',()=>{
+ const transcript='Врач: Принимаете 5 мг?\nПациент: Нет, не принимаю.';
+ const doc=protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Жалобы: не сообщено.\nОбъективно: нет данных.',source:'Synthetic source',ambientTranscript:transcript},session,'ru');
+ assert.equal(doc?.ambientTranscript,transcript);
+ assert.equal(doc?.sections[0].text,'Жалобы: не сообщено.\nОбъективно: нет данных.');
+ assert.equal(protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Draft',source:'Synthetic',ambientTranscript:42},session,'ru'),null);
+ assert.equal(protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Draft',source:'Synthetic',ambientTranscript:'x'.repeat(100001)},session,'ru'),null);
+ const legacy=protocolDocumentMessage({type:'concilium.protocol.document',session,id,text:'Old note',source:'Synthetic'},session,'ru');
+ assert.equal(legacy?.ambientTranscript,undefined);
+});
