@@ -15,8 +15,12 @@ export type ClinicalSourceReview={
  earlierCount:number;
 };
 function citationKey(card:Citation):string{
- return card.passageId||card.doi&&'doi:'+card.doi.toLowerCase()||card.pmid&&'pmid:'+card.pmid||
-  card.url&&'url:'+card.url||card.shelf+':'+card.title.toLowerCase();
+ // A publication may contribute several separate passages; display it once,
+ // and keep the linked clinical statement from the most relevant record.
+ const normalizedTitle=card.title.replace(/\s+/g,' ').trim().toLocaleLowerCase();
+ if(normalizedTitle)return 'publication:'+normalizedTitle+':'+(card.year??'');
+ return card.doi&&'doi:'+card.doi.toLowerCase()||card.pmid&&'pmid:'+card.pmid||
+  card.url&&'url:'+card.url||card.passageId||card.shelf;
 }
 function matchesClaim(source:string|null,card:Citation):boolean{
  if(!source)return false;
