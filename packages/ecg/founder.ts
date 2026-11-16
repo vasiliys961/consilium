@@ -107,8 +107,11 @@ export function networkStatements(assessment: TracingAssessment, locale: Locale)
 
 export function networkObservation(assessment: TracingAssessment) {
   const measurements = assessment.measurements ? `\nDigital ECG measurements (${assessment.measurements.method}):\n${assessment.measurements.description}\n${assessment.measurements.lines.map(row => `${row.name}: ${row.value}`).join('\n')}\nMeasurement limits: ${assessment.measurements.note}` : '';
-  if (assessment.status !== "read" || !assessment.cleared.length) {
-    return `ECG network ${assessment.source}: no class cleared. No detector class is confirmed.${measurements}`;
+  if (assessment.status !== "read") {
+    return `ECG network ${assessment.source}: NOT ASSESSED. ${assessment.reason ?? 'The detector did not return a usable result.'} No detector class is confirmed; this does not imply a normal tracing.${measurements}`;
+  }
+  if (!assessment.cleared.length) {
+    return `ECG network ${assessment.source}: no class cleared the threshold. No detector class is confirmed; this does not imply a normal tracing.${measurements}`;
   }
   const cleared = assessment.cleared.map((item) => `${item.label} ${item.score.toFixed(2)}`).join("; ");
   return `ECG network ${assessment.source}: cleared ${cleared}. Do not change a score. Do not name a class that is absent from this list.${measurements}`;

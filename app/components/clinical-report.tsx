@@ -46,6 +46,12 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
         <h4>{t('Локальная проверка сочетаний')}</h4>
         <DrugInteractionAlerts alerts={item.localInteractions}/>
       </section>}
+      {item.stoppedMedications?.length ? <p><small>{t('Предложено отменить перед этой схемой (проверить врачу):')} {item.stoppedMedications.join(', ')}. {t('Не считать совместным приёмом после отмены; проверьте план перехода и мониторинг.')}</small></p>:null}
+      {item.localOrganAlerts?.length ? <section><h4>{t('Риски с учётом клинических данных')}</h4>{item.localOrganAlerts.map((alert,j)=><p key={j}><strong>{alert.severity==='contraindicated'?t('Противопоказание: '):t('Требует проверки: ')}{alert.risk}</strong> {alert.action} <a href={alert.url} target="_blank" rel="noopener noreferrer">DailyMed §{alert.section}</a></p>)}</section>:null}
+      {item.localSafetyGaps?.length ? <section><h4>{t('Недостающие данные для оценки безопасности')}</h4><ul>{item.localSafetyGaps.map((gap,j)=><li key={j}>{gap}</li>)}</ul></section>:null}
+      {item.medications?.length ? <p><small>{t('Локальная проверка препаратов, предложенных ИИ для этой схемы:')} {item.medications.join(', ')}. {t('Проверено только')} {item.localCoverage?.ruleCount??'—'} {t('локальных правил; отсутствие совпадения не доказывает совместимость.')}
+      {item.localCoverage?.unrecognized.length ? ' '+t('Не охвачены локальными правилами:')+' '+item.localCoverage.unrecognized.join(', '):''}
+      {item.localCoverage?.unverifiedPairCount ? ' '+t('Нет локально подтверждённого правила для')+' '+item.localCoverage.unverifiedPairCount+' '+t('сочетаний, например:')+' '+item.localCoverage.unverifiedPairs.join('; ')+'. '+t('Отсутствие правила не доказывает безопасность.') : ''}</small></p>:null}
       {medicationCheck && Boolean(item.medications?.length) && <>
         <button type="button" disabled={medicationCheck.disabled} aria-expanded={selectedOption===i} aria-controls={checkerId+i}
           onClick={()=>setSelectedOption(selectedOption===i?undefined:i)}>{t('Проверить препараты этой схемы')}</button>
