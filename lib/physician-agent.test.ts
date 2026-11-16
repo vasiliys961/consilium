@@ -41,7 +41,7 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
   assert.match(payload.messages[0].content,/Never claim to have run a module/);
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'Откройте анализ ЭКГ и затем клинический разбор.',question:'Есть ли запись ЭКГ?',tools:['ecg','clinical']})}}],usage:{prompt_tokens:180,completion_tokens:115}});
  };
- const result=await converseWithPhysician({text:'[PHYSICIAN]\nЕсть жалобы и ЭКГ, что делать?',locale:'ru'},{OPENROUTER_API_KEY:'synthetic-test'} as NodeJS.ProcessEnv,fakeFetch);
+ const result=await converseWithPhysician({text:'[PHYSICIAN]\nЕсть жалобы и ЭКГ, что делать?',locale:'ru'},{...process.env,OPENROUTER_API_KEY:'synthetic-test'},fakeFetch);
  assert.equal(calls,1);
  assert.equal(AGENT_MODEL,MODELS.flash);
  assert.equal(result.usedModel,true);
@@ -53,7 +53,7 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
 test('C13: provider or invalid output has local fallback, no silent retry or invented success',async()=>{
  let calls=0;
  const failFetch:typeof fetch=async()=>{calls++;return Response.json({error:{message:'model unavailable'}},{status:503});};
- const first=await converseWithPhysician({text:'[PHYSICIAN]\nНужен ЭКГ разбор',locale:'ru'},{OPENROUTER_API_KEY:'synthetic'} as NodeJS.ProcessEnv,failFetch);
+ const first=await converseWithPhysician({text:'[PHYSICIAN]\nНужен ЭКГ разбор',locale:'ru'},{...process.env,OPENROUTER_API_KEY:'synthetic'},failFetch);
  assert.equal(calls,1);
  assert.equal(first.usedModel,false);
  assert.equal(first.model,null);
