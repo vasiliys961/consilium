@@ -12,8 +12,9 @@ import { fidelityDisplayLines, fidelityLineText } from '@/lib/medical-translate/
 
 type Phase = LivePhase | 'ready' | 'error'
 type Turn = LiveTurn & { fidelity?: MedicalFidelityReport }
+export type CompletedDialogue={id:string;from:string;to:string;turns:Array<{source:string;translation:string}>;fidelityWarnings:number}
 
-export default function LiveAutoDialogue({ locale, onActiveChange }: { locale: Locale; onActiveChange: (active: boolean) => void }) {
+export default function LiveAutoDialogue({ locale, onActiveChange,onSaveTranscript }: { locale: Locale; onActiveChange: (active: boolean) => void;onSaveTranscript?:(value:CompletedDialogue)=>void }) {
   const ui = appUi[locale]
   const copy = translatorUi[locale]
   const [first, setFirst] = useState('ru')
@@ -23,6 +24,7 @@ export default function LiveAutoDialogue({ locale, onActiveChange }: { locale: L
   const [blocked, setBlocked] = useState(false)
   const [turns, setTurns] = useState<Turn[]>([])
   const client = useRef<DialogueRealtime | null>(null)
+  const transferId = useRef('')
   const active = phase !== 'ready' && phase !== 'error'
   const stop = () => { client.current?.stop(); setPhase('ready'); setBlocked(false) }
   useEffect(() => { onActiveChange(active) }, [active, onActiveChange])
@@ -56,6 +58,7 @@ export default function LiveAutoDialogue({ locale, onActiveChange }: { locale: L
     client.current?.stop()
     const connection = new DialogueRealtime()
     client.current = connection
+    transferId.current=crypto.randomUUID()
     setError(''); setTurns([]); setBlocked(false); setPhase('connecting')
     if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) {
       setError('browser'); setPhase('error'); return
@@ -112,5 +115,17 @@ export default function LiveAutoDialogue({ locale, onActiveChange }: { locale: L
       {turn.latencyMs !== undefined && <p className="mt-2 text-xs text-slate-500">{ui.live.latency}: {number.format(turn.latencyMs / 1000)} {ui.live.seconds}</p>}
       {turn.fidelity && turn.fidelity.findings.length > 0 && <div role="alert" className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-950"><p className="font-bold">{copy.fidelityReview}</p>{fidelityDisplayLines(turn.fidelity).map((line, i) => <p key={i}>{fidelityLineText(copy.fidelityCode[line.code] ?? copy.fidelityWarning, line.sourceFragment, line.translationFragment)}</p>)}<p>{copy.fidelityAskRepeat}</p></div>}
     </li>)}</ol>
+    {onSaveTranscript&&<div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-4">
+      <p className="mb-2 text-sm text-teal-950">{locale==='ru'?'Сохраняются только завершённые пары исходной речи и перевода. Врач должен проверить числа, отрицания и дозировки.':'Only completed speech/translation pairs are saved. Clinician verification of doses, numbers and negations is required.'}</p>
+      <button type="button" className="rounded-full bg-teal-800 px-4 py-3 font-semibold text-white disabled:opacity-50"
+        disabled={active||!turns.some(turn=>turn.done&&turn.source.trim()&&turn.translation.trim())}
+        onClick={()=>{
+         const complete=turns.filter(turn=>turn.done&&turn.source.trim()&&turn.translation.trim());
+         if(!complete.length)return;
+         onSaveTranscript({id:transferId.current||crypto.randomUUID(),from:first,to:second,
+          turns:complete.map(turn=>({source:turn.source,translation:turn.translation})),
+          fidelityWarnings:complete.reduce((count,turn)=>count+(turn.fidelity?.findings.length??0),0)});
+        }}>{locale==='ru'?'Сохранить перевод в выбранном клиническом случае':'Save translation in selected clinical case'}</button>
+    </div>}
   </section>
 }
