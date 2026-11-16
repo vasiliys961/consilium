@@ -1,9 +1,10 @@
 import type {Locale} from './config';
 
 /** The existing Global locale is also the selected language for a recorded encounter. */
-export type AmbientUiKey='cost'|'consent'|'notConfigured'|'draftAction'|'stale'|'unreported'|'retry'|'privacy';
+export type AmbientUiKey='audioSession'|'cost'|'consent'|'notConfigured'|'draftAction'|'stale'|'unreported'|'retry'|'privacy';
 const labels:Record<Locale,Record<AmbientUiKey,string>>={
  en:{
+  audioSession:'One confirmation covers the remaining audio segments of this recorded encounter only. Every file is checked separately.',
   cost:'OpenRouter speech recognition: the actual charge depends on the selected model.',
   consent:'I confirm the required consent to record and send this conversation for external speech recognition. The voice may identify a person. Recording starts only when I press Record.',
   notConfigured:'Audio transcription is unavailable. Check the local OpenRouter key.',
@@ -14,6 +15,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'The recording may contain identifying voice. Audio is sent through OpenRouter to a selected speech provider.',
  },
  es:{
+  audioSession:'Una confirmación cubre los demás fragmentos de esta consulta grabada. Cada archivo se verifica por separado.',
   cost:'Reconocimiento de voz con OpenRouter: el coste real depende del modelo seleccionado.',
   consent:'Confirmo el consentimiento para grabar y enviar esta conversación a un servicio externo. La voz puede identificar a una persona. La grabación comienza solo al pulsar Grabar.',
   notConfigured:'La transcripción no está disponible. Compruebe la clave local de OpenRouter.',
@@ -24,6 +26,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'La voz puede identificar a una persona. El audio se envía mediante OpenRouter.',
  },
  fr:{
+  audioSession:'Une seule confirmation couvre les autres segments de cet entretien enregistré. Chaque fichier est vérifié séparément.',
   cost:'Reconnaissance vocale OpenRouter : le coût réel dépend du modèle sélectionné.',
   consent:'Je confirme le consentement à enregistrer et transmettre cet entretien à un service externe. La voix peut identifier une personne. L’enregistrement ne commence qu’après un clic.',
   notConfigured:'Transcription indisponible. Vérifiez la clé OpenRouter locale.',
@@ -34,6 +37,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'La voix peut identifier une personne. L’audio est envoyé via OpenRouter.',
  },
  ar:{
+  audioSession:'تغطي موافقة واحدة الأجزاء المتبقية من هذه المقابلة المسجلة فقط. يتم التحقق من كل ملف على حدة.',
   cost:'التعرّف على الكلام عبر OpenRouter: تعتمد التكلفة الفعلية على النموذج المحدد.',
   consent:'أؤكد الحصول على الموافقة لتسجيل المحادثة وإرسالها لخدمة خارجية. قد يحدد الصوت هوية الشخص. يبدأ التسجيل فقط بعد الضغط على الزر.',
   notConfigured:'التفريغ الصوتي غير متاح. تحقق من مفتاح OpenRouter المحلي.',
@@ -44,6 +48,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'قد يحدد الصوت هوية الشخص. يُرسل الصوت عبر OpenRouter.',
  },
  hi:{
+  audioSession:'एक पुष्टि इस रिकॉर्ड किए गए परामर्श के शेष ऑडियो भागों के लिए है। प्रत्येक फ़ाइल की अलग जाँच होगी।',
   cost:'OpenRouter भाषण पहचान: वास्तविक शुल्क चुने गए मॉडल पर निर्भर है।',
   consent:'मैं बातचीत रिकॉर्ड करने और बाहरी सेवा को भेजने की सहमति की पुष्टि करता/करती हूँ। आवाज़ से पहचान हो सकती है। रिकॉर्डिंग केवल बटन दबाने पर शुरू होती है।',
   notConfigured:'ऑडियो प्रतिलेखन उपलब्ध नहीं है। स्थानीय OpenRouter कुंजी जाँचें।',
@@ -54,6 +59,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'आवाज़ से पहचान हो सकती है। ऑडियो OpenRouter के माध्यम से भेजा जाता है।',
  },
  'pt-BR':{
+  audioSession:'Uma confirmação abrange os demais trechos desta consulta gravada. Cada arquivo é verificado separadamente.',
   cost:'Reconhecimento de voz pelo OpenRouter: o custo real depende do modelo escolhido.',
   consent:'Confirmo o consentimento para gravar e enviar a conversa a um serviço externo. A voz pode identificar alguém. A gravação só começa ao clicar em Gravar.',
   notConfigured:'Transcrição indisponível. Verifique a chave local do OpenRouter.',
@@ -64,6 +70,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'A voz pode identificar alguém. O áudio é enviado via OpenRouter.',
  },
  id:{
+  audioSession:'Satu persetujuan berlaku untuk semua bagian rekaman konsultasi ini saja. Setiap berkas diperiksa terpisah.',
   cost:'Pengenalan suara OpenRouter: biaya aktual bergantung pada model yang dipilih.',
   consent:'Saya mengonfirmasi persetujuan untuk merekam dan mengirim percakapan ini ke layanan eksternal. Suara dapat mengungkap identitas. Perekaman dimulai hanya setelah tombol ditekan.',
   notConfigured:'Transkripsi tidak tersedia. Periksa kunci OpenRouter lokal.',
@@ -74,6 +81,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'Suara dapat mengungkap identitas. Audio dikirim melalui OpenRouter.',
  },
  ms:{
+  audioSession:'Satu persetujuan meliputi baki segmen perbualan ini sahaja. Setiap fail diperiksa secara berasingan.',
   cost:'Pengecaman suara OpenRouter: kos sebenar bergantung pada model yang dipilih.',
   consent:'Saya mengesahkan persetujuan untuk merakam dan menghantar perbualan kepada perkhidmatan luar. Suara boleh mengenal pasti seseorang. Rakaman hanya bermula selepas butang ditekan.',
   notConfigured:'Transkripsi tidak tersedia. Semak kunci OpenRouter setempat.',
@@ -84,6 +92,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'Suara boleh mengenal pasti seseorang. Audio dihantar melalui OpenRouter.',
  },
  tr:{
+  audioSession:'Tek onay yalnızca bu kaydedilen görüşmenin kalan ses parçalarını kapsar. Her dosya ayrı doğrulanır.',
   cost:'OpenRouter konuşma tanıma: gerçek ücret seçilen modele bağlıdır.',
   consent:'Görüşmenin kaydedilmesi ve harici hizmete gönderilmesi için gerekli onayı doğruluyorum. Ses kişiyi tanımlayabilir. Kayıt yalnızca düğmeye basınca başlar.',
   notConfigured:'Ses dökümü kullanılamıyor. Yerel OpenRouter anahtarını kontrol edin.',
@@ -94,6 +103,7 @@ const labels:Record<Locale,Record<AmbientUiKey,string>>={
   privacy:'Ses kişiyi tanımlayabilir. Ses kaydı OpenRouter üzerinden gönderilir.',
  },
  'zh-CN':{
+  audioSession:'一次确认仅适用于本次就诊录音的其余片段。每个文件仍须单独验证。',
   cost:'OpenRouter 语音识别：实际费用取决于所选模型。',
   consent:'我确认已取得录音及将对话发送至外部服务所需的同意。声音可能识别个人身份。只有点击录音按钮才会开始。',
   notConfigured:'语音转写不可用。请检查本地 OpenRouter 密钥。',
