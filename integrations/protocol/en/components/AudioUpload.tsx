@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR, calculateAudioTranscriptionCost } from '@/lib/cost-calculator'
 import { getClientLocale } from '@/lib/i18n/client'
 import { mapLocaleToAssemblyAiLanguage } from '@/lib/i18n/stt-language'
+import { nativeProtocolUi } from '@/lib/native-ui'
 import type { Locale } from '@/lib/i18n/config'
 
 const RECORDING_TIMESLICE_MS = 1000
@@ -23,7 +24,8 @@ function formatClock(seconds: number): string {
 }
 
 interface AudioUploadProps {
-  onTranscribe: (transcript: string, data?: { duration: number; cost: number }) => void
+  onTranscribe: (transcript: string, data?: { duration: number; cost: number; costKnown: boolean; model?: string }) => void
+  openrouterOnly?: boolean
   accept?: string
   maxSize?: number // в MB
 }
@@ -305,17 +307,18 @@ const AUDIO_UPLOAD_TEXT: Record<Locale, {
   },
 }
 
-export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize = 2000 }: AudioUploadProps) {
+export default function AudioUpload({ onTranscribe, openrouterOnly = false, accept = 'audio/*', maxSize = 2000 }: AudioUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [transcribing, setTranscribing] = useState(false)
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number } | null>(null)
+  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number; costKnown: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const segmentsRef = useRef<Blob[]>([])
+  const segmentResultsRef = useRef<Record<number, {transcript:string;duration:number;cost:number;costKnown:boolean;model?:string}>>({})
   const streamRef = useRef<MediaStream | null>(null)
   const mimeTypeRef = useRef('audio/webm')
   const rotatingRef = useRef(false)
@@ -327,6 +330,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const [locale, setLocale] = useState<Locale>('en')
   const t = AUDIO_UPLOAD_TEXT[locale] || AUDIO_UPLOAD_TEXT.en
   const costByDuration = t.costByDuration.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))
+  const sttCostHint = openrouterOnly ? nativeProtocolUi(locale,'OpenRouter: charges depend on the selected model; the actual charge is shown when reported by the provider.') : costByDuration
 
   const releaseWakeLock = () => {
     wakeLockRef.current?.release().catch(() => undefined)
@@ -403,7 +407,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     }
   }, [])
 
-  const transcribeFile = async (file: File): Promise<{ transcript: string; duration: number; cost: number } | null> => {
+  const transcribeFile = async (file: File): Promise<{ transcript: string; duration: number; cost: number; costKnown: boolean; model?: string } | null> => {
     if (file.size > maxSize * 1024 * 1024) {
       setError(t.fileTooLarge(maxSize))
       return null
@@ -429,6 +433,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       transcript: String(data.transcript || ''),
       duration: Number(data.duration) || 0,
       cost: Number(data.cost) || 0,
+      costKnown: data.costKnown === true,
+      model: String(data.model || ''),
     }
   }
 
@@ -438,8 +444,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     try {
       const result = await transcribeFile(file)
       if (!result) return
-      setLastAnalysis({ duration: result.duration, cost: result.cost })
-      onTranscribe(result.transcript, { duration: result.duration, cost: result.cost })
+      setLastAnalysis({ duration: result.duration, cost: result.cost, costKnown: result.costKnown })
+      onTranscribe(result.transcript, result)
     } catch (err: any) {
       setError(err?.message || t.genericError)
     } finally {
@@ -450,7 +456,6 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const transcribeSegments = async () => {
     const mimeType = mimeTypeRef.current
     const segments = segmentsRef.current.filter((blob) => blob.size > 0)
-    segmentsRef.current = []
     if (!segments.length) return
 
     setTranscribing(true)
@@ -459,21 +464,29 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       const texts: string[] = []
       let duration = 0
       let cost = 0
+      let costKnown = true
       for (const [index, blob] of segments.entries()) {
-        const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
-        const result = await transcribeFile(file)
-        if (!result) continue
-        if (result.transcript.trim()) texts.push(result.transcript.trim())
+        let result = segmentResultsRef.current[index]
+        if (!result) {
+          const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
+          const received = await transcribeFile(file)
+          if (!received) throw Error('Audio segment could not be transcribed. Recording retained for explicit retry.')
+          result = received
+          segmentResultsRef.current[index] = result
+        }
+        if (!result.transcript.trim()) throw Error('Empty audio segment; review it before continuing.')
+        texts.push(result.transcript.trim())
         duration += result.duration
         cost += result.cost
+        costKnown = costKnown && result.costKnown
       }
-      if (!texts.length) {
-        setError(t.genericError)
-        return
-      }
-      setLastAnalysis({ duration, cost })
-      onTranscribe(texts.join('\n\n'), { duration, cost })
+      // No partial transcript may masquerade as a complete consultation.
+      setLastAnalysis({ duration, cost, costKnown })
+      onTranscribe(texts.join('\n\n'), { duration, cost, costKnown })
+      segmentsRef.current = []
+      segmentResultsRef.current = {}
     } catch (err: any) {
+      // The untranscribed audio remains in browser memory, not on the server.
       setError(err?.message || t.genericError)
     } finally {
       setTranscribing(false)
@@ -557,6 +570,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       mimeTypeRef.current = mimeType || 'audio/webm'
       streamRef.current = stream
       segmentsRef.current = []
+      segmentResultsRef.current = {}
       rotatingRef.current = false
       elapsedRef.current = 0
       lastSegmentAtRef.current = 0
@@ -672,10 +686,10 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
                 {t.recording} {formatClock(recordingTime)}
               </div>
               <p className="text-sm text-indigo-700 font-medium">
-                {t.estimatedStt(calculateAudioTranscriptionCost(recordingTime))}
+                {openrouterOnly ? sttCostHint : t.estimatedStt(calculateAudioTranscriptionCost(recordingTime))}
               </p>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
-                {costByDuration}
+                {sttCostHint}
               </p>
               <button
                 onClick={stopRecording}
@@ -730,12 +744,13 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         </div>
       )}
       
+      {segmentsRef.current.length>0 && !transcribing && !recording && <button type="button" onClick={()=>void transcribeSegments()} className="mt-3 rounded border border-indigo-500 px-3 py-2 text-sm text-indigo-800">{nativeProtocolUi(locale,'Retry unfinished audio transcription (completed segments will not be billed twice)')}</button>}
       {lastAnalysis && !transcribing && !recording && (
         <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg">
           <div className="flex items-center justify-between text-sm">
             <div className="flex flex-wrap items-center gap-4">
               <span>⏱️ {t.duration}: <b>{formatClock(lastAnalysis.duration)}</b></span>
-              <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span>
+              {lastAnalysis.costKnown ? <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span> : <span>{nativeProtocolUi(locale,'Actual STT charge not reported by provider')}</span>}
             </div>
             <button
               onClick={() => setLastAnalysis(null)}
