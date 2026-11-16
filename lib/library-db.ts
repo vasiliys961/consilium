@@ -16,6 +16,10 @@ export interface LibraryDocument {
   pageCount?: number;
   textPages?: number;
   storage?: 'folder' | 'browser';
+  /** SHA-256 of the complete file bytes. Not a clinical edition identifier. */
+  fileSha256?: string;
+  /** Last-modified timestamp of a connected local file at import (metadata check). */
+  sourceModifiedAt?: number;
   /** Все текстовые фрагменты документа векторизованы (готовы к семантическому поиску). */
   vectorized?: boolean;
   /** Страницы документа проиндексированы как изображения (визуальный поиск, атлас). */
@@ -253,6 +257,19 @@ export async function deleteDocument(id: string): Promise<void> {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
   });
+}
+
+/** Quick local check for a connected folder file. Size/date are indicators, not a cryptographic recheck. */
+export type LibraryFolderSourceState='current'|'modified'|'unavailable'|'unverified';
+export async function checkLibraryFolderSource(doc:LibraryDocument):Promise<LibraryFolderSourceState>{
+  if(doc.storage!=='folder')return 'current';
+  try{
+    const file=await getDocumentSourceFile(doc.id);
+    if(!file)return 'unavailable';
+    if(doc.sourceModifiedAt===undefined)return 'unverified';
+    const modified='lastModified' in file && typeof file.lastModified==='number' ? file.lastModified : null;
+    return file.size!==doc.size || modified===null || modified!==doc.sourceModifiedAt ? 'modified' : 'current';
+  }catch{return 'unavailable';}
 }
 
 /**
@@ -713,7 +730,7 @@ export async function searchLibraryLocalWithMeta(query: string, limit: number = 
   let results = scoredChunks
     .filter((item,index) => item.score >= MIN_RELEVANCE_SCORE && (maxKeyword === 0 || keywordScores[index] > 0))
     .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+    .slice(0, Math.max(limit*3,limit));
 
   // Fallback: грубое совпадение по подстроке, но только в "настоящих" чанках
   // с привязкой к странице документа.
@@ -724,12 +741,25 @@ export async function searchLibraryLocalWithMeta(query: string, limit: number = 
         return Number.isFinite(Number(chunk.pageId)) && keywords.some((word) => contentLower.includes(word));
       })
       .sort((a, b) => b.content.length - a.content.length)
-      .slice(0, limit)
+      .slice(0, Math.max(limit*3,limit))
       .map((chunk) => ({ content: chunk.content, score: 0.1, chunk }));
   }
 
+  // A changed or inaccessible folder book must not silently supply an old indexed excerpt.
+  // Check only candidate documents, not every book in a potentially large library.
+  const folderStates=new Map<string,LibraryFolderSourceState>();
+  const current=[] as typeof results;
+  for(const result of results){
+    const doc=docsById.get(result.chunk.documentId);
+    if(doc?.storage==='folder'){
+      let state=folderStates.get(doc.id);
+      if(!state){state=await checkLibraryFolderSource(doc);folderStates.set(doc.id,state);}
+      if(state==='modified'||state==='unavailable')continue;
+    }
+    current.push(result);
+  }
   const seen = new Set<string>();
-  return results
+  return current
     .filter((item) => {
       const key = item.content.replace(/\s+/g, ' ').trim().toLowerCase();
       if (!key || seen.has(key)) return false;
