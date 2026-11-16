@@ -50,7 +50,7 @@ function validPageList(raw:unknown):number[]|undefined{
 function parseMeta(data:unknown):{meta:BookMeta;chunks:LibraryChunkInput[]}{
  if(!isRecord(data)||data.version!==1||data.model!==EMBEDDING_MODEL||!isRecord(data.original)||!isRecord(data.document)||!Array.isArray(data.chunks)||data.chunks.length>MAX_CHUNKS)throw Error('Неподдерживаемый или повреждённый архив книги.');
  const src=data.original,doc=data.document;
- if(typeof src.name!=='string'||!src.name.trim()||src.name.length>300||/[/\\\u0000-\u001f]/u.test(src.name)
+ if(typeof src.name!=='string'||!src.name.trim()||src.name.length>300||Array.from(src.name).some(char=>char==='/'||char==='\\'||char.charCodeAt(0)<32)
  ||typeof src.mimeType!=='string'||src.mimeType.length>120
  ||typeof src.bytes!=='number'||!Number.isSafeInteger(src.bytes)||src.bytes<0||src.bytes>SOURCE_LIMIT
  ||typeof src.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(src.sha256))throw Error('Некорректные данные исходной книги.');
