@@ -7,6 +7,7 @@ export type ClinicalSourceEntry={
  analysisId:string;
  question:string;
  matchedStatements:string[];
+ passages:Array<{citation:Citation;matchedStatements:string[]}>;
 };
 export type ClinicalSourceReview={
  current:ClinicalSourceEntry[];
@@ -33,20 +34,33 @@ function score(entry:ClinicalSourceEntry):number{
   +(card.url&&/^https:\/\//i.test(card.url)?3:0);
 }
 function entries(analysis:Analysis):ClinicalSourceEntry[]{
- return (analysis.result.citations??[]).map(citation=>({
-  citation,analysisId:analysis.id,question:analysis.question||'Клинический разбор',
-  matchedStatements:(analysis.result.draft.statements??[]).filter(statement=>
+ return (analysis.result.citations??[]).map(citation=>{
+  const matchedStatements=(analysis.result.draft.statements??[]).filter(statement=>
    !statement.held&&matchesClaim(statement.source,citation)
-  ).map(statement=>statement.text)
- }));
+  ).map(statement=>statement.text);
+  return {citation,analysisId:analysis.id,question:analysis.question||'Клинический разбор',
+   matchedStatements,passages:[{citation,matchedStatements}]};
+ });
 }
 function dedup(raw:ClinicalSourceEntry[]):ClinicalSourceEntry[]{
- const seen=new Set<string>();
- return raw.filter(entry=>{
-  const key=citationKey(entry.citation);
-  if(seen.has(key))return false;
-  seen.add(key);return true;
- });
+ // One publication card, but retain distinct excerpts and their OWN linked claims.
+ // Otherwise a deduplicated paper can silently lose the passage actually cited.
+ const grouped=new Map<string,ClinicalSourceEntry>();
+ for(const entry of raw){
+  const key=citationKey(entry.citation),existing=grouped.get(key);
+  if(!existing){grouped.set(key,{...entry,passages:entry.passages.slice()});continue;}
+  existing.matchedStatements=[...new Set([...existing.matchedStatements,...entry.matchedStatements])];
+  for(const passage of entry.passages){
+   if(!existing.passages.some(item=>
+    item.citation.passageId&&item.citation.passageId===passage.citation.passageId||
+    item.citation.excerpt&&item.citation.excerpt===passage.citation.excerpt||
+    !item.citation.excerpt&&!passage.citation.excerpt&&item.citation.url===passage.citation.url)){
+    existing.passages.push(passage);
+   }
+  }
+  if(score(entry)>score({...existing,matchedStatements:[]}))existing.citation=entry.citation;
+ }
+ return [...grouped.values()];
 }
 
 /** A summary may have zero newly retrieved citations while earlier stages had real source records.
