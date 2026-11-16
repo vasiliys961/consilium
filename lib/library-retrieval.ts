@@ -1,5 +1,5 @@
 import {dequantizedDot} from './embeddings.ts';
-import {getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,searchLibraryLocalWithMeta,type LibrarySearchHit} from './library-db.ts';
+import {getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,checkLibraryFolderSource,searchLibraryLocalWithMeta,type LibrarySearchHit} from './library-db.ts';
 import {getBookVisualRegions,visualThumbnails,type VisualBookRegion} from './library-visual-db.ts';
 import {embedBookVisualQuery} from './visual-embeddings.ts';
 import {renderLibraryPdfPage} from './library-import.ts';
@@ -24,11 +24,24 @@ export async function retrieveLibraryEvidence(query:string,options:{context?:str
  let visual:ReturnType<typeof rankVisualRegions>=[];
  if(regions.length){try{const vector=await (options.visualQuery??embedBookVisualQuery)([query,...textHits.slice(0,2).map(hit=>hit.content.slice(0,450))].join('\n'));if(vector)visual=rankVisualRegions(regions,vector,12);}catch{warnings.push('Визуальный поиск недоступен; использован текстовый индекс.');}}
  const documents=new Map(docs.map(doc=>[doc.id,doc]));
+ const checked=new Map<string,Awaited<ReturnType<typeof checkLibraryFolderSource>>>();
+ async function usable(id:string):Promise<boolean>{
+  const doc=documents.get(id);if(!doc)return false;
+  if(doc.storage!=='folder')return true;
+  let state=checked.get(id);
+  if(!state){state=await checkLibraryFolderSource(doc);checked.set(id,state);}
+  if(state==='modified'||state==='unavailable'){
+   warnings.push(`Книга «${doc.name}» изменена или недоступна. Сохранённый индекс исключён; переподключите или переимпортируйте файл.`);
+   return false;
+  }
+  if(state==='unverified')warnings.push(`Для «${doc.name}» не проверена версия исходного файла. При необходимости переимпортируйте книгу.`);
+  return true;
+ }
  const candidates=new Map<string,{hit:LibrarySearchHit;rank:number;visual:boolean}>();
  textHits.forEach((hit,index)=>{const key=`${hit.documentId}:${hit.pageId}`;if(!candidates.has(key))candidates.set(key,{hit,rank:1/(index+1),visual:false});});
  for(const [index,item] of visual.entries()){
   const row=item.region,key=`${row.documentId}:${row.pageId}`,previous=candidates.get(key),doc=documents.get(row.documentId);
-  if(!doc)continue;
+  if(!doc||!(await usable(row.documentId)))continue;
   if(previous){previous.rank+=.35/(index+1);previous.visual=true;}
   else candidates.set(key,{hit:{documentId:row.documentId,documentName:doc.name,pageId:row.pageId,chunkId:row.id,content:row.caption||'Visual reference page; inspect the original before using it.',mode:'hybrid',score:item.score},rank:.35/(index+1),visual:true});
  }
@@ -37,7 +50,7 @@ export async function retrieveLibraryEvidence(query:string,options:{context?:str
  const hits:LibrarySearchHit[]=[],files:CaseFile[]=[];
  const thumbnails=await visualThumbnails(ranked.flatMap(item=>visual.filter(v=>v.region.documentId===item.hit.documentId&&v.region.pageId===item.hit.pageId).slice(0,1).map(v=>v.region.id)));
  for(const candidate of ranked){
-  signal?.throwIfAborted();const {hit}=candidate;if(!hit.documentId||!hit.pageId)continue;
+  signal?.throwIfAborted();const {hit}=candidate;if(!hit.documentId||!hit.pageId||!(await usable(hit.documentId)))continue;
   let records=byBook.get(hit.documentId);if(!records){records=await getDocumentChunkRecords(hit.documentId);byBook.set(hit.documentId,records);}
   const pageRecords=records.filter(row=>row.pageId===hit.pageId);
   const text=mergeBookPageText(pageRecords)||hit.content;

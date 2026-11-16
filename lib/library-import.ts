@@ -1,5 +1,5 @@
 import {extractBookLayout,pageVisualRegions,embeddedImageRegions,type PdfTextItem} from './library-layout.ts';
-import {saveDocument,getDocumentChunkRecords,saveChunkEmbeddings,type LibraryChunkInput,type LibraryDocument,type LibraryFileHandle} from './library-db.ts';
+import {saveDocument,getAllDocuments,checkLibraryFolderSource,getDocumentChunkRecords,saveChunkEmbeddings,type LibraryChunkInput,type LibraryDocument,type LibraryFileHandle} from './library-db.ts';
 import {embedTexts,quantizeInt8} from './embeddings.ts';
 
 export function chunkLibraryPages(pages:readonly string[]):LibraryChunkInput[]{
@@ -13,19 +13,31 @@ function pdfJs():Promise<PdfJs>{
  if(!pdfPromise)pdfPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='/pdfjs/pdf.min.js';script.onload=()=>{const pdf=(window as Window&{pdfjsLib?:PdfJs}).pdfjsLib;if(!pdf){reject(Error('Не удалось открыть PDF.'));return;}pdf.GlobalWorkerOptions.workerSrc='/pdfjs/pdf.worker.min.js';resolve(pdf);};script.onerror=()=>reject(Error('Не удалось загрузить просмотрщик PDF.'));document.head.append(script);}).catch(error=>{pdfPromise=undefined;throw error;}) as Promise<PdfJs>;
  return pdfPromise;
 }
-export async function importLibraryFile(file:File,onProgress:(message:string)=>void,handle?:LibraryFileHandle):Promise<LibraryDocument>{
+/** Deduplicate only when the full original bytes match. Avoid hashing giant files in a low-RAM browser. */
+export const LIBRARY_HASH_LIMIT=64*1024*1024;
+export type LibraryImportResult={document:LibraryDocument;alreadyPresent:boolean;fingerprintChecked:boolean};
+export async function importLibraryFile(file:File,onProgress:(message:string)=>void,handle?:LibraryFileHandle):Promise<LibraryImportResult>{
  if(file.size>250*1024*1024)throw Error('До 250 МБ на книгу. Разделите более крупный файл на тома.');
+ // The PDF bytes are reused for parsing; this does not add an extra full-sized download.
+ const bytes=file.size<=LIBRARY_HASH_LIMIT?await file.arrayBuffer():undefined;
+ const fingerprint=bytes&&crypto.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(byte=>byte.toString(16).padStart(2,'0')).join(''):undefined;
+ if(fingerprint){
+  const previous=(await getAllDocuments()).find(doc=>doc.fileSha256===fingerprint);
+  if(previous&&(['current','unverified'].includes(await checkLibraryFolderSource(previous))))return {document:previous,alreadyPresent:true,fingerprintChecked:true};
+ }
  let pages:string[];
  if(/\.pdf$/i.test(file.name)){
-  const pdf=await (await pdfJs()).getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const pdf=await (await pdfJs()).getDocument({data:new Uint8Array(bytes??await file.arrayBuffer()),isEvalSupported:false}).promise;
   try{pages=[];for(let page=1;page<=pdf.numPages;page++){onProgress(`${file.name}: страница ${page} из ${pdf.numPages}`);const source=await pdf.getPage(page),text=await source.getTextContent(),viewport=source.getViewport({scale:1});pages.push(extractBookLayout(text.items,viewport.width,viewport.height).text);if(page%10===0)await new Promise(resolve=>setTimeout(resolve,0));}}finally{await pdf.destroy();}
- }else if(/\.(txt|md)$/i.test(file.name)){pages=(await file.text()).split('\f');}
+ }else if(/\.(txt|md)$/i.test(file.name)){pages=(bytes?new TextDecoder().decode(bytes):await file.text()).split('\f');}
  else throw Error('Для библиотеки выберите PDF с текстовым слоем, TXT или Markdown.');
  const chunks=chunkLibraryPages(pages);
  if(!pages.length)throw Error('В книге нет страниц.');
- const doc:LibraryDocument={id:crypto.randomUUID(),name:file.name,size:file.size,uploaded_at:new Date().toISOString(),chunksCount:chunks.length,pageCount:pages.length,textPages:pages.filter(page=>page.replace(/\s/g,'').length>=80).length,vectorized:false,storage:handle?'folder':'browser'};
- await saveDocument(doc,chunks,handle?undefined:file,handle);return doc;
+ const doc:LibraryDocument={id:crypto.randomUUID(),name:file.name,size:file.size,uploaded_at:new Date().toISOString(),chunksCount:chunks.length,pageCount:pages.length,textPages:pages.filter(page=>page.replace(/\s/g,'').length>=80).length,vectorized:false,storage:handle?'folder':'browser',...(fingerprint?{fileSha256:fingerprint}:{}),...(handle?{sourceModifiedAt:file.lastModified}:{})};
+ await saveDocument(doc,chunks,handle?undefined:file,handle);
+ return {document:doc,alreadyPresent:false,fingerprintChecked:Boolean(fingerprint)};
 }
+
 export async function vectorizeLibraryDocument(id:string,onProgress:(message:string)=>void,signal:AbortSignal):Promise<void>{
  const chunks=await getDocumentChunkRecords(id);if(!chunks.length)throw Error('Текстовый индекс пуст: откройте страницы и выполните OCR.');const pending=chunks.filter(chunk=>!chunk.embedding?.length);
  for(let i=0;i<pending.length;i+=8){if(signal.aborted)throw Error('Индексация приостановлена. Её можно продолжить.');onProgress(`Смысловой индекс: ${Math.min(i+8,pending.length)} из ${pending.length}`);const batch=pending.slice(i,i+8);const vectors=await embedTexts(batch.map(chunk=>chunk.content));await saveChunkEmbeddings(id,new Map(batch.map((chunk,index)=>[chunk.id,quantizeInt8(vectors[index])])),false);await new Promise(resolve=>setTimeout(resolve,0));}
