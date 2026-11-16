@@ -25,6 +25,8 @@ export type ClinicalCase = {
   imageProfile?:import("../packages/medical-images/profiles").ImageProfile;
   id: string; number?: number; title: string; created: string; updated: string;
   protocols?:import("../packages/protocol/document").ProtocolDocument[];
+  /** Earlier edited versions of the same native protocol; never treated as the current physician note. */
+  protocolRevisions?:Array<{savedAt:string;document:import('../packages/protocol/document').ProtocolDocument}>;
   context: string; question: string; files: CaseFile[]; library?: CaseFile[];
   events: Event[]; analyses: Analysis[]; status: 'active' | 'closed';
 };
@@ -197,6 +199,40 @@ export async function persistCaseDraft(
   return true;
  });
 }
+/** C11: complete an iframe handoff against the latest persisted case, not a stale React snapshot.
+ * The per-case write queue serializes this with local autosave and other case writes.
+ */
+export async function persistNativeProtocol(
+ caseId:string,
+ document:import('../packages/protocol/document').ProtocolDocument,
+ edition:'ru'|'en',
+ locale:import('./locale.ts').Locale,
+ now=new Date().toISOString(),
+):Promise<ClinicalCase>{
+ if(document.locale!==locale || (edition==='ru'&&document.edition!=='ru') ||
+   (edition==='en'&&document.edition!=='global') ||
+   (edition==='ru'&&locale!=='ru') || (edition==='en'&&locale==='ru'))
+  throw Error('Язык или версия возвращённого протокола не совпадают с выбранным режимом. Ничего не сохранено.');
+ if(!document.id||!document.sections.length||document.sections.every(section=>!section.text.trim()))
+  throw Error('Пустой или неподтверждённый протокол не сохранён.');
+ return serialCaseWrite(caseId,async()=>{
+  const value=await readVaultCaseById(caseId);
+  if(!value||value.deletedAt)throw Error('Случай не найден или удалён. Протокол остался в отдельном модуле.');
+  if(value.status==='closed')throw Error('Случай завершён. Верните его в работу перед сохранением протокола.');
+  const previous=(value.protocols??[]).find(item=>item.id===document.id);
+  const comparable=(item:typeof document)=>JSON.stringify([item.edition,item.format,item.locale,item.sourceSnapshot,item.sections,item.nativeState]);
+  if(previous&&comparable(previous)===comparable(document))return value;
+  const updated:ClinicalCase={
+   ...value,updated:now,
+   protocols:[document,...(value.protocols??[]).filter(item=>item.id!==document.id)],
+   protocolScratch:{...value.protocolScratch,[edition]:undefined},
+   protocolScratchByLocale:{...value.protocolScratchByLocale,[locale]:undefined},
+   ...(previous?{protocolRevisions:[...(value.protocolRevisions??[]),{savedAt:now,document:previous}]}:{}),
+  };
+  await writeVaultCase(updated);
+  return updated;
+ });
+}
 export function exportCase(value: ClinicalCase): string {
   const editor=value.workspaceDraft;
   const unfinished=[
@@ -209,6 +245,7 @@ export function exportCase(value: ClinicalCase): string {
     ...(unfinished.length?['\n## Незавершённый редактор врача · не является заключением',...unfinished]:[]),
     '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
+    ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
     ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
