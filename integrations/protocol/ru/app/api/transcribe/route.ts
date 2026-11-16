@@ -78,7 +78,12 @@ async function transcribeAudio(formData: FormData) {
 
     // Расчет стоимости
     const durationMinutes = duration / 60;
-    const cost = typeof costUsd==='number'?costUsd*100:process.env.CONCILIUM_OPENROUTER_ONLY==='1'?0:Math.max(0.1, durationMinutes * AUDIO_TRANSCRIPTION_PRICE_PER_MINUTE);
+    const actualCostKnown = typeof costUsd === 'number' && Number.isFinite(costUsd) && costUsd >= 0;
+    const cost = actualCostKnown
+      ? costUsd! * 100
+      : process.env.CONCILIUM_OPENROUTER_ONLY === '1'
+        ? null
+        : Math.max(0.1, durationMinutes * AUDIO_TRANSCRIPTION_PRICE_PER_MINUTE);
 
     console.log(`✅ Транскрипция завершена (${provider.name})`, { duration, cost })
 
@@ -87,6 +92,7 @@ async function transcribeAudio(formData: FormData) {
       transcript: diarizedText,
       duration: duration,
       cost: cost,
+      costKnown: actualCostKnown,
       provider: provider.name
     });
   } catch (error: any) {
