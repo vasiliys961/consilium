@@ -2,6 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react'
 
+// Recording is segmented without cloud calls until the physician stops the conversation.
+// Each segment is a complete MediaRecorder file, not a potentially undecodable WebM slice.
+const SEGMENT_SECONDS = 3 * 60
+const TIMESLICE_MS = 1000
+type TranscriptionData={transcript:string;duration:number;cost:number;costKnown:boolean}
+
+
 interface AudioUploadProps {
   onTranscribe: (transcript: string, data?: { duration: number; cost: number }) => void
   accept?: string
@@ -16,82 +23,160 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const [transcribing, setTranscribing] = useState(false)
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number } | null>(null)
+  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number; costKnown: boolean } | null>(null)
+  const [hasPendingSegments, setHasPendingSegments] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const activeStreamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const segmentsRef = useRef<File[]>([])
+  const segmentResultsRef = useRef<Record<number,TranscriptionData>>({})
+  const rotatingRef = useRef(false)
+  const recordingRef = useRef(false)
+  const elapsedRef = useRef(0)
+  const lastSegmentAtRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const clearTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = null
+  }
+
+  const stopTracks = () => {
+    activeStreamRef.current?.getTracks().forEach(track => track.stop())
+    activeStreamRef.current = null
+  }
+
   useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-      // Unmount/consent withdrawal cancels the recording; never upload on cleanup.
+    const cancelOnLeave = () => {
+      recordingRef.current = false
+      rotatingRef.current = false
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.onstop = null
         if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
       }
-      activeStreamRef.current?.getTracks().forEach(track => track.stop())
-      activeStreamRef.current = null
+      clearTimer()
+      stopTracks()
+      segmentsRef.current = []
+      segmentResultsRef.current = {}
+    }
+    window.addEventListener('pagehide', cancelOnLeave)
+    return () => {
+      window.removeEventListener('pagehide', cancelOnLeave)
+      // Leaving the panel or withdrawing consent is cancellation, never an audio upload.
+      cancelOnLeave()
     }
   }, [])
 
+  const transcribeFile = async (file: File): Promise<TranscriptionData> => {
+    if (!file.size || file.size > maxSize * 1024 * 1024)
+      throw Error(`Аудио пустое или превышает ${maxSize} МБ. Разделите запись на части.`)
+    if (!file.type.startsWith('audio/') && !file.type.includes('webm') && !file.type.includes('octet-stream'))
+      throw Error('Пожалуйста, выберите аудиофайл.')
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('provider', provider)
+    const response = await fetch('/api/transcribe', { method: 'POST', body: formData })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || !data?.success) throw Error(String(data?.error || 'Сервис не распознал запись.'))
+    const transcript = String(data.transcript || '').trim()
+    if (!transcript) throw Error('Получена пустая расшифровка. Проверьте аудио.')
+    return {
+      transcript,
+      duration: Number(data.duration) || 0,
+      cost: typeof data.cost==='number'&&Number.isFinite(data.cost)?data.cost:0,
+      costKnown: data.costKnown === true,
+    }
+  }
+
   const handleFile = async (file: File) => {
+    if (transcribing || recordingRef.current || hasPendingSegments) return
     setError(null)
-    
-    console.log('📄 Обработка файла:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      sizeInMB: (file.size / 1024 / 1024).toFixed(2)
-    })
-    
-    // Проверка размера
-    if (file.size > maxSize * 1024 * 1024) {
-      setError(`Файл слишком большой. Максимальный размер: ${maxSize}MB`)
-      return
-    }
-
-    // Проверка типа
-    if (!file.type.startsWith('audio/') && !file.type.includes('webm') && !file.type.includes('octet-stream')) {
-      setError('Пожалуйста, загрузите аудиофайл')
-      return
-    }
-
     setTranscribing(true)
-
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('provider', provider)
-      
-      console.log('🚀 Отправка на транскрипцию...')
-
-      const response = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await response.json()
-      
-      console.log('📥 Ответ от API:', data)
-
-      if (data.success) {
-        console.log('✅ Транскрипция успешна')
-        setLastAnalysis({ duration: data.duration, cost: data.cost })
-        onTranscribe(data.transcript, { duration: data.duration, cost: data.cost })
-      } else {
-        console.error('❌ Ошибка транскрипции:', data.error)
-        setError(data.error || 'Ошибка транскрипции')
-      }
-    } catch (err: any) {
-      console.error('❌ Исключение при транскрипции:', err)
-      setError(err.message || 'Произошла ошибка при транскрипции')
+      const result=await transcribeFile(file)
+      setLastAnalysis({duration:result.duration,cost:result.cost,costKnown:result.costKnown})
+      onTranscribe(result.transcript, {duration:result.duration,cost:result.cost})
+    } catch (error:any) {
+      setError(error?.message||'Не удалось расшифровать запись.')
     } finally {
       setTranscribing(false)
     }
+  }
+
+  const transcribeSegments = async () => {
+    const segments=segmentsRef.current
+    if (!segments.length) {
+      setError('Аудиозапись пустая. Попробуйте сделать новую запись.')
+      setHasPendingSegments(false)
+      return
+    }
+    setTranscribing(true)
+    setError(null)
+    try {
+      const texts:string[]=[]
+      let duration=0, cost=0, costKnown=true
+      for(let index=0;index<segments.length;index++){
+        let result=segmentResultsRef.current[index]
+        if(!result){
+          // A failed/uncertain request is never automatically retried: the physician
+          // must click retry, because the provider may have already charged for it.
+          result=await transcribeFile(segments[index])
+          segmentResultsRef.current[index]=result
+        }
+        texts.push(result.transcript)
+        duration+=result.duration
+        cost+=result.cost
+        costKnown=costKnown&&result.costKnown
+      }
+      // Only the full ordered transcript reaches the clinical draft.
+      setLastAnalysis({duration,cost,costKnown})
+      onTranscribe(texts.join('\n\n'),{duration,cost})
+      segmentsRef.current=[]
+      segmentResultsRef.current={}
+      setHasPendingSegments(false)
+    }catch(error:any){
+      setHasPendingSegments(true)
+      setError((error?.message||'Ошибка расшифровки')+' Запись сохранена только в текущей вкладке; можно повторить неготовую часть вручную, возможна повторная оплата.')
+    }finally{
+      setTranscribing(false)
+    }
+  }
+
+  const attachRecorder = (stream:MediaStream,mimeType:string) => {
+    let recorder:MediaRecorder
+    try{recorder=mimeType?new MediaRecorder(stream,{mimeType}):new MediaRecorder(stream)}
+    catch{recorder=new MediaRecorder(stream)}
+    mediaRecorderRef.current=recorder
+    chunksRef.current=[]
+    recorder.ondataavailable=(event)=>{
+      if(event.data.size)chunksRef.current.push(event.data)
+    }
+    recorder.onerror=()=>{setError('Ошибка записи микрофона. Проверьте полученные фрагменты.')}
+    recorder.onstop=()=>{
+      const actualMime=recorder.mimeType||mimeType||'audio/webm'
+      const blob=new Blob(chunksRef.current,{type:actualMime})
+      if(blob.size){
+        const ext=actualMime.includes('mp4')?'m4a':actualMime.includes('ogg')?'ogg':'webm'
+        segmentsRef.current.push(new File([blob],`encounter-${segmentsRef.current.length+1}.${ext}`,{type:actualMime}))
+      }
+      chunksRef.current=[]
+      if(rotatingRef.current&&recordingRef.current&&activeStreamRef.current){
+        rotatingRef.current=false
+        lastSegmentAtRef.current=elapsedRef.current
+        try{attachRecorder(activeStreamRef.current,mimeType).start(TIMESLICE_MS)}
+        catch{recordingRef.current=false;setError('Не удалось продолжить запись после разделения. Проверьте сохранённые части.');stopTracks();clearTimer();setHasPendingSegments(segmentsRef.current.length>0)}
+        return
+      }
+      recordingRef.current=false
+      setRecording(false)
+      stopTracks()
+      clearTimer()
+      setRecordingTime(0)
+      setHasPendingSegments(segmentsRef.current.length>0)
+      void transcribeSegments()
+    }
+    return recorder
   }
 
   const startRecording = async () => {
@@ -127,64 +212,31 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       ]
       const mimeType = candidateMimeTypes.find((t) => MediaRecorder.isTypeSupported(t)) || ''
 
-      let mediaRecorder: MediaRecorder
-      try {
-        mediaRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream)
-      } catch {
-        // Fallback для браузеров/драйверов, где options с mimeType могут падать.
-        mediaRecorder = new MediaRecorder(stream)
+      if (hasPendingSegments||segmentsRef.current.length) {
+        setError('Сначала завершите или удалите прежнюю неготовую запись.')
+        stream.getTracks().forEach(track=>track.stop())
+        return
       }
-      mediaRecorderRef.current = mediaRecorder
-      chunksRef.current = []
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data)
-        }
-      }
-
-      mediaRecorder.onstop = async () => {
-        const finalMimeType = mimeType || mediaRecorder.mimeType || 'audio/webm'
-        const blob = new Blob(chunksRef.current, { type: finalMimeType })
-        
-        // Создаем файл из blob с правильным MIME типом
-        const extension = finalMimeType.includes('webm') ? 'webm' : 
-                         finalMimeType.includes('mp4') ? 'mp4' : 
-                         finalMimeType.includes('ogg') ? 'ogg' : 'webm'
-        const file = new File([blob], `recording.${extension}`, { type: finalMimeType })
-        
-        console.log('📁 Создан файл для транскрипции:', {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          mimeType: finalMimeType
-        })
-        
-        // Останавливаем все треки
-        stream.getTracks().forEach(track => track.stop())
-        activeStreamRef.current = null
-        
-        // Отправляем на транскрипцию
-        await handleFile(file)
-        
-        // Сброс таймера
-        setRecordingTime(0)
-        if (timerRef.current) {
-          clearInterval(timerRef.current)
-        }
-      }
-
-      mediaRecorder.start()
-      setRecording(true)
+      segmentsRef.current=[]
+      segmentResultsRef.current={}
+      rotatingRef.current=false
+      recordingRef.current=true
+      elapsedRef.current=0
+      lastSegmentAtRef.current=0
       setError(null)
-      
-      // Запускаем таймер
       setRecordingTime(0)
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1)
-      }, 1000)
+      setRecording(true)
+      const recorder=attachRecorder(stream,mimeType)
+      recorder.start(TIMESLICE_MS)
+      clearTimer()
+      timerRef.current=setInterval(()=>{
+        elapsedRef.current+=1
+        setRecordingTime(elapsedRef.current)
+        if(elapsedRef.current-lastSegmentAtRef.current>=SEGMENT_SECONDS&&mediaRecorderRef.current?.state==='recording'){
+          rotatingRef.current=true
+          mediaRecorderRef.current.stop()
+        }
+      },1000)
     } catch (err: any) {
       const code = String(err?.name || '')
       if (code === 'NotAllowedError' || code === 'SecurityError') {
@@ -204,10 +256,11 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   }
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop()
-      setRecording(false)
-    }
+    // Stop is explicit: no cloud transcription happens until the recorder has closed.
+    recordingRef.current=false
+    rotatingRef.current=false
+    if (mediaRecorderRef.current?.state==='recording') mediaRecorderRef.current.stop()
+    setRecording(false)
   }
 
   const formatTime = (seconds: number) => {
@@ -268,7 +321,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
           accept={accept}
           onChange={handleChange}
           className="hidden"
-          disabled={transcribing || recording}
+          disabled={transcribing || recording || hasPendingSegments}
         />
         <div className="space-y-4">
           {transcribing ? (
@@ -339,11 +392,18 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         </div>
       )}
       
+      {hasPendingSegments&&!transcribing&&!recording&&(
+        <div className="mt-3 flex flex-wrap items-center gap-2" role="alert">
+          <p className="w-full text-sm text-amber-900">Часть беседы ещё не распознана. Неполный текст не передан в протокол. Запись временно хранится в этой вкладке.</p>
+          <button type="button" className="border border-[#9C4221] px-3 py-2 text-sm" onClick={()=>void transcribeSegments()}>Повторить оставшуюся расшифровку (возможна повторная оплата)</button>
+          <button type="button" className="border border-gray-400 px-3 py-2 text-sm" onClick={()=>{segmentsRef.current=[];segmentResultsRef.current={};setHasPendingSegments(false);setError(null)}}>Удалить неготовую запись</button>
+        </div>
+      )}
       {lastAnalysis && !transcribing && !recording && (
         <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg flex items-center justify-between text-sm">
           <div className="flex items-center gap-4">
             <span>⏱️ Длительность: <b>{formatTime(Math.round(lastAnalysis.duration))}</b></span>
-            <span>💰 Стоимость сервиса: <b>{lastAnalysis.cost.toFixed(2)} у.е.</b></span>
+            {lastAnalysis.costKnown?<span>💰 Стоимость сервиса: <b>{lastAnalysis.cost.toFixed(2)} у.е.</b></span>:<span>Фактическая стоимость не сообщена провайдером</span>}
           </div>
           <button 
             onClick={() => setLastAnalysis(null)}
