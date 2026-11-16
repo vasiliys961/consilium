@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect,useRef,useState} from 'react';
-import {readCases,type ClinicalCase} from '@/lib/casebook';
-import {proposedPrescriptionRegimens} from '@/lib/prescription-draft';
+import {useRef,useState} from 'react';
 import {DrugInteractionChecker} from '@/app/components/drug-interaction-checker';
 import {LanguageSwitcher} from '@/app/components/language-switcher';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
@@ -18,10 +16,7 @@ export default function StandaloneDrugChecker(){
  const {t,language}=useWorkspaceLanguage();
  const [current,setCurrent]=useState(''),[proposed,setProposed]=useState(''),[context,setContext]=useState('');
  const [result,setResult]=useState<Result|null>(null),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
- const [linked,setLinked]=useState<ClinicalCase|null>(null),[optionIndex,setOptionIndex]=useState(-1);
  const abort=useRef<AbortController|null>(null);
- const options=proposedPrescriptionRegimens(linked??undefined);
- useEffect(()=>{const caseId=new URLSearchParams(location.search).get('case');if(!caseId)return;void readCases().then(cases=>{const entry=cases.find(c=>c.id===caseId);if(entry){setLinked(entry);setCurrent(entry.currentMedications??'');setContext(entry.context.slice(0,3500));}}).catch(()=>{});},[]);
  function invalidate(){setResult(null);setNotice('');}
  async function review(active:string,next:string,details:Details){
   const request=new AbortController();abort.current=request;setBusy(true);invalidate();
@@ -49,16 +44,6 @@ export default function StandaloneDrugChecker(){
  return <main className="module-page" style={{maxWidth:1100,margin:'auto',padding:28,fontSize:18,lineHeight:1.6}}>
   <Link href="/workspace">← {t('Клинические случаи')}</Link><LanguageSwitcher/>
   <h1>{t('Проверка лекарственных взаимодействий')}</h1>
-  {linked&&<section>
-   <p>{t('Загружен клинический случай')}: <strong>{linked.title||linked.id.slice(0,8)}</strong>. {t('Текущие препараты перенесены отдельно от возможных назначений.')}</p>
-   {options.length>0&&<label>{t('Выберите ОДИН вариант лечения для проверки сочетаний')}
-    <select value={optionIndex} onChange={e=>{const n=Number(e.target.value);setOptionIndex(n);setProposed(n<0?'':options[n].medications.map(m=>m.drug).join('\n'));invalidate();}}>
-     <option value="-1">{t('Никакая схема не выбрана')}</option>
-     {options.map((option,i)=><option key={i} value={i}>{String(i+1)+'. '+option.option.slice(0,110)}</option>)}
-    </select>
-   </label>}
-   {optionIndex>=0&&options[optionIndex]&&<p><small>{t('ИИ предложил вариант, но врач ещё не утвердил его. Отдельные альтернативы не считаются одновременно назначенными.')}: {options[optionIndex].option}</small></p>}
-  </section>}
   <p>{t('Введите любое количество препаратов на любом языке. Локальные правила проверяются бесплатно. Для более широкого предварительного анализа можно запустить один недорогой ИИ-запрос.')}</p>
   <label>{t('Клинический контекст (необязательно)')}<textarea rows={3} disabled={busy} maxLength={3500} value={context} onChange={e=>{setContext(e.target.value);invalidate();}} placeholder={t('Возраст, диагнозы, функция почек, печени, аллергии, ЭКГ, дозировки — только известные сведения')}/></label>
   <DrugInteractionChecker current={current} proposed={proposed}
