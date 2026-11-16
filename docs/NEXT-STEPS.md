@@ -26,4 +26,4 @@
 
 - C11 PR #42 [CI #43919545833](https://github.com/vasiliys961/consilium/actions/runs/43919545833) — успешен: 993/994 (1 skipped), 0 fail; [post-merge #43919901498](https://github.com/vasiliys961/consilium/actions/runs/43919901498) — **успешен**.
 
-- C11 RU/Global PR #44 [CI #43923991921](https://github.com/vasiliys961/consilium/actions/runs/43923991921) — 998/999 (1 skipped), 0 fail, TypeScript и build успешны; [post-merge #43924271243](https://github.com/vasiliys961/consilium/actions/runs/43924271243) — проверить итог.
+- C11 RU/Global PR #44 [CI #43923991921](https://github.com/vasiliys961/consilium/actions/runs/43923991921) — 998/999 (1 skipped), 0 fail, TypeScript и build успешны; [post-merge #43924271243](https://github.com/vasiliys961/consilium/actions/runs/43924271243) — **успешен**.
