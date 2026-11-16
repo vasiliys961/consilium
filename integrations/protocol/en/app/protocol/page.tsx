@@ -100,6 +100,7 @@ export default function ProtocolPage() {
   const [rawText, setRawText] = useState('')
   const [showConversationRecorder, setShowConversationRecorder] = useState(false)
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
+  const [ambientConsent, setAmbientConsent] = useState(false)
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
@@ -781,7 +782,7 @@ export default function ProtocolPage() {
   const restoreGlobal=(saved:Record<string,string>)=>{setProtocol(saved.reasoningDraft);setFinalNote(saved.finalNote);setPhysicianAdditions(saved.physicianAdditions);setSelectedTemplateId(saved.templateId);setSpecialistName(saved.specialistName);setCustomTemplate(saved.customTemplate);setUniversalPrompt(saved.universalPrompt);}
   useEffect(()=>{document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';},[locale]);
   return (
-    <><GlobalCaseBridge locale={locale} rawText={rawText} state={{reasoningDraft:protocol,finalNote,physicianAdditions,templateId:selectedTemplateId,specialistName,customTemplate,universalPrompt}} diagnostic={isDiagnosticProtocol} busy={loading||finalNoteLoading||draftFromConversationLoading} onImport={setRawText} onRestore={restoreGlobal} onLocale={chooseLocale}/><GlobalProtocolChrome locale={locale} onLocale={chooseLocale} busy={loading||finalNoteLoading||draftFromConversationLoading}>
+    <><GlobalCaseBridge locale={locale} rawText={rawText} ambientTranscript={conversationTranscriptText} onTranscriptImport={setConversationTranscriptText} state={{reasoningDraft:protocol,finalNote,physicianAdditions,templateId:selectedTemplateId,specialistName,customTemplate,universalPrompt}} diagnostic={isDiagnosticProtocol} busy={loading||finalNoteLoading||draftFromConversationLoading} onImport={setRawText} onRestore={restoreGlobal} onLocale={chooseLocale}/><GlobalProtocolChrome locale={locale} onLocale={chooseLocale} busy={loading||finalNoteLoading||draftFromConversationLoading}>
     <div className="mx-auto max-w-[1240px] px-5 py-6 sm:px-8">
       <h1 className="mb-6 border-b border-[#CDBFAE] pb-6 font-serif text-4xl font-medium text-[#1C1612]">
         {isDiagnosticProtocol
@@ -969,7 +970,8 @@ export default function ProtocolPage() {
                 />
                 {t.autoInsertDraft}
               </label>
-              {speechReady?<AudioUpload maxSize={100}
+              <label className="flex items-start gap-2 text-xs text-gray-700 my-3"><input type="checkbox" checked={ambientConsent} onChange={e=>setAmbientConsent(e.target.checked)}/> {ui('I confirm the required consent to record this consultation and send de-identified audio to the configured external transcription service. Recording begins only by a separate action.')}</label>
+              {!ambientConsent?<p role="status" className="text-sm text-gray-600">{ui('Confirm consent before microphone recording or audio upload.')}</p>:speechReady?<AudioUpload maxSize={100}
                 onTranscribe={(transcript, meta) => {
                   if (meta?.cost) {
                     setCostPart('stt', meta.cost, 'add')
@@ -989,7 +991,6 @@ export default function ProtocolPage() {
                     ? `${conversationTranscriptText}\n\n${transcript}`
                     : transcript
                   setConversationTranscriptText(nextTranscript)
-                  void buildDraftFromConversation(nextTranscript)
                 }}
               />:<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio-file transcription is not configured in this installation. Browser dictation may still be available.")}</p>}
               {draftFromConversationLoading && (
@@ -1029,6 +1030,7 @@ export default function ProtocolPage() {
                   </div>
                 </div>
               )}
+              {conversationTranscriptText.trim() && <><p className="text-xs text-amber-800 mt-3">{ui('Review medicines, doses, numbers, negations and speaker attribution against original speech. Roles are not acoustically verified.')}</p><button type="button" disabled={draftFromConversationLoading||loading||!ambientConsent} onClick={()=>void buildDraftFromConversation(conversationTranscriptText)} className="border border-indigo-500 rounded px-3 py-2 text-xs">{ui('Prepare draft from transcript · external model request')}</button></>}
               {conversationTranscriptText && (
                 <details className="mt-3">
                   <summary className="text-xs text-gray-500 cursor-pointer">{t.showRawTranscript}</summary>
