@@ -36,3 +36,12 @@ test('guideline handoff is browser-only, bounded, rejects unsafe links and does 
  assert.equal(parseGuidelineTopicHandoff(JSON.stringify({...payload,sources:[{title:'Unsafe',url:'javascript:alert(1)'}]})),null);
  assert.ok(GUIDELINE_HANDOFF_KEY);assert.equal(JSON.stringify(payload).includes('patientId='),false);
 });
+
+test('same publication with multiple passage IDs occupies only one clinical source slot',()=>{
+ const one=citation('Same clinical guideline','https://guidelines.example.org/v1','world');
+ one.passageId='pmc:PMC123:1';
+ const two={...one,passageId:'pmc:PMC123:2'};
+ const list=clinicalSourcesForStage([stage('summary','summary',[]),stage('earlier','analysis',[one,two])],0);
+ assert.equal(list.earlierCount,1);
+ assert.equal(list.earlier.length,1);
+});
