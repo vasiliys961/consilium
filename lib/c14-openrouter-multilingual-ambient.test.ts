@@ -16,8 +16,8 @@ function withMock<T>(request:(url:string,init:RequestInit)=>Promise<Response>,ac
 test('C14: only two approved STT models, same priority for RU and Global',()=>{
  assert.deepEqual(ambientModelSelection({} as NodeJS.ProcessEnv),[AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT]);
  assert.deepEqual(ruModels({} as NodeJS.ProcessEnv),[AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT]);
- assert.deepEqual(ambientModelSelection({CONCILIUM_AMBIENT_STT_MODEL:AMBIENT_FALLBACK_STT} as NodeJS.ProcessEnv),[AMBIENT_FALLBACK_STT,AMBIENT_PRIMARY_STT]);
- assert.throws(()=>ambientModelSelection({CONCILIUM_AMBIENT_STT_MODEL:'unapproved/custom'} as NodeJS.ProcessEnv),/Unsupported/);
+ assert.deepEqual(ambientModelSelection({...process.env,CONCILIUM_AMBIENT_STT_MODEL:AMBIENT_FALLBACK_STT}),[AMBIENT_FALLBACK_STT,AMBIENT_PRIMARY_STT]);
+ assert.throws(()=>ambientModelSelection({...process.env,CONCILIUM_AMBIENT_STT_MODEL:'unapproved/custom'}),/Unsupported/);
 });
 
 test('C14: all 11 encounter languages use the existing OpenRouter key and dedicated STT API',async()=>{
