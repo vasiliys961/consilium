@@ -292,3 +292,39 @@ test("an open-access listing alone cannot authorize quoting full text", async ()
     assert.equal(result.excerpt, undefined);
   }
 });
+
+test('C7: several different full-text sections retain distinct citation keys with one network fetch', async()=>{
+ const {withEuropeExcerpt}=await import('./europe-full-text.ts');
+ const {citationPassages}=await import('./literature.ts');
+ const {sourceKeys}=await import('./draft.ts');
+ const synthetic=[
+  ['Recommendations','Atrial fibrillation treatment should follow an assessment of thromboembolic and bleeding risks before clinical decisions are made.'],
+  ['Safety','Atrial fibrillation management in patients with renal impairment requires assessment of renal function and monitoring during treatment.'],
+  ['Monitoring','For atrial fibrillation, follow-up after treatment includes evaluation of symptoms, adverse events, and treatment effectiveness.']
+ ];
+ const xml=`<article xmlns:xlink="http://www.w3.org/1999/xlink"><front><article-meta>
+  <article-id pub-id-type="pmid">901</article-id>
+  <permissions><license xlink:href="https://creativecommons.org/licenses/by/4.0/"/></permissions>
+  </article-meta></front><body>${synthetic.map(([section,body])=>`<sec><title>${section}</title><p>${body}</p></sec>`).join('')}</body></article>`;
+ const original={...card('europepmc','Synthetic atrial fibrillation guideline'),pmid:'901',pmcid:'PMC901',license:'open access'};
+ let requests=0;
+ const extracted=await withEuropeExcerpt(original,['atrial','fibrillation'],async()=>{
+  requests++;return new Response(xml);
+ },true);
+ assert.equal(requests,1);
+ const locations=citationPassages(extracted);
+ assert.equal(locations.length,3);
+ assert.equal(new Set(locations.map(item=>item.chapter)).size,3);
+ assert.equal(new Set(locations.map(item=>item.passageId)).size,3);
+ const allowed=sourceKeys([extracted]);
+ assert.equal(allowed.size,3);
+ for(const passage of locations)assert.ok(allowed.has(passage.passageId!));
+ assert.ok(locations.every(item=>item.excerpt?.includes('atrial fibrillation')||item.excerpt?.includes('Atrial fibrillation')));
+});
+test('C7: multiple sections are not inferred from an abstract-only publication',async()=>{
+ const {citationPassages}=await import('./literature.ts');
+ const {sourceKeys}=await import('./draft.ts');
+ const only={...card('europepmc','Atrial fibrillation'),pmid:'902',abstract:'An abstract about atrial fibrillation.'};
+ assert.equal(citationPassages(only).length,1);
+ assert.deepEqual([...sourceKeys([only])],['pmid:902']);
+});
