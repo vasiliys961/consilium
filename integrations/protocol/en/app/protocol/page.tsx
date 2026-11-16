@@ -6,6 +6,8 @@ import GlobalProtocolChrome from '@/components/GlobalProtocolChrome'
 import GlobalCaseBridge from '@/components/GlobalCaseBridge'
 import {nativeProtocolUi} from '@/lib/native-ui'
 import AudioUpload from '@/components/AudioUpload'
+import {auditAmbientDraft} from '@/lib/ambient-draft-audit'
+import {ambientAuditUi} from '@/lib/i18n/ambient-audit-ui'
 
 const VoiceInput = dynamic(() => import('@/components/VoiceInput'), { ssr: false })
 
@@ -108,6 +110,7 @@ export default function ProtocolPage() {
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftSourceTranscript, setDraftSourceTranscript] = useState('')
   const [draftSourceLocale, setDraftSourceLocale] = useState<Locale>('en')
+  const [ambientAuditConfirmed,setAmbientAuditConfirmed]=useState(false)
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
@@ -740,6 +743,7 @@ export default function ProtocolPage() {
     if (!safeTranscript) return
 
     setDraftFromConversationLoading(true)
+    setAmbientAuditConfirmed(false)
     setDraftFromConversationError('')
     try {
       const response = await fetch('/api/protocol/dialogue-draft', {
@@ -780,6 +784,7 @@ export default function ProtocolPage() {
     }
   }
 
+  const ambientIssues=auditAmbientDraft(conversationTranscriptText,recordedDraftText)
   const restoreGlobal=(saved:Record<string,string>)=>{setProtocol(saved.reasoningDraft);setFinalNote(saved.finalNote);setPhysicianAdditions(saved.physicianAdditions);setSelectedTemplateId(saved.templateId);setSpecialistName(saved.specialistName);setCustomTemplate(saved.customTemplate);setUniversalPrompt(saved.universalPrompt);}
   useEffect(()=>{document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';},[locale]);
   return (
@@ -983,6 +988,7 @@ export default function ProtocolPage() {
                       costKnown: prev.costKnown && meta.costKnown === true,
                     }))
                   }
+                  setAmbientAuditConfirmed(false)
                   setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // Explicit action is required before any paid LLM draft.
                 }}
@@ -1002,21 +1008,27 @@ export default function ProtocolPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-2">{t.draftLabel}</label>
                   <textarea dir="auto"
                     value={recordedDraftText}
-                    onChange={(e) => setRecordedDraftText(e.target.value)}
+                    onChange={(e) => {setRecordedDraftText(e.target.value);setAmbientAuditConfirmed(false)}}
                     className="w-full px-3 py-2 border border-indigo-200 rounded-lg text-xs min-h-[140px] focus:ring-2 focus:ring-indigo-500 outline-none"
                     placeholder={t.draftPlaceholder}
                     disabled={loading}
                   />
+                  {ambientIssues.length>0&&<div role="alert" dir="auto" className="mt-3 border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                    <strong>{ambientAuditUi(locale,'title')}</strong>
+                    <p className="my-2">{ambientAuditUi(locale,'note')}</p>
+                    <ul className="list-disc space-y-1 pl-5">{ambientIssues.map((issue,i)=><li key={i}>{ambientAuditUi(locale,issue.code)}: {issue.detail}</li>)}</ul>
+                    <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={ambientAuditConfirmed} onChange={e=>setAmbientAuditConfirmed(e.target.checked)}/><span>{ambientAuditUi(locale,'approve')}</span></label>
+                  </div>}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       onClick={() => setRawText(prev => prev ? `${prev}\n\n${recordedDraftText}` : recordedDraftText)}
                       className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors"
-                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim() || draftSourceLocale!==locale}
+                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim() || draftSourceLocale!==locale || (ambientIssues.length>0&&!ambientAuditConfirmed)}
                     >
                       ➕ {t.insertDraft}
                     </button>
                     <button
-                      onClick={() => setRecordedDraftText('')}
+                      onClick={() => {setRecordedDraftText('');setAmbientAuditConfirmed(false)}}
                       className="px-3 py-1.5 bg-gray-500 text-white rounded-lg text-xs font-semibold hover:bg-gray-600 transition-colors"
                       disabled={loading}
                     >
@@ -1035,7 +1047,7 @@ export default function ProtocolPage() {
                   <summary className="text-xs text-gray-500 cursor-pointer">{t.showRawTranscript}</summary>
                   <textarea dir="auto"
                     value={conversationTranscriptText}
-                    onChange={(e) => setConversationTranscriptText(e.target.value)}
+                    onChange={(e) => {setConversationTranscriptText(e.target.value);setAmbientAuditConfirmed(false)}}
                     className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-xs min-h-[100px] focus:ring-2 focus:ring-gray-400 outline-none"
                     disabled={loading}
                   />
