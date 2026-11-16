@@ -101,8 +101,9 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   }finally{if(requestController.current===controller){requestController.current=null;setAgentBusy(false);}}
  }
  function resetAi(){requestController.current?.abort();setDialogue([]);setAgentReply(null);setAgentError('');setText('');setRequest('');}
- return <section id="doctor-opus-assistant" aria-label={t('Помощник Doctor Opus')} style={{padding:'22px 24px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
-  <h2 style={{marginTop:0}}>{t('Чем Doctor Opus может вам помочь?')}</h2>
+ return <section id="doctor-opus-assistant" aria-label={t('Opus Copilot — помощник врача')} style={{padding:'22px 24px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
+  <h2 style={{marginTop:0}}>{t('Opus Copilot')} <small style={{fontWeight:400,fontSize:13}}>{t('Помощник врача')}</small></h2>
+  <p><strong>{t('Чем Doctor Opus может вам помочь?')}</strong></p>
   <p>{t('Опишите клиническую задачу своими словами. Помощник предложит уже доступные инструменты, объяснит шаги и откроет выбранный модуль только по вашему нажатию. Это навигатор, а не отдельная диагностическая модель.')}</p>
   {caseId?<p><small>{t('Выбран случай')} · {caseId.slice(0,8)}{caseClosed?' · '+t('Случай завершён, для новых результатов верните его в работу.'):''}</small></p>
    :<p><Link href="/workspace?new=1">{t('Создать случай, чтобы сохранить результаты')}</Link> · {t('Без случая результаты не будут связаны общей историей.')}</p>}
@@ -112,14 +113,14 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
     <button type="submit" disabled={agentBusy||!text.trim()}>{t('Бесплатный план по правилам')}</button>
     <button type="button" disabled={agentBusy||!text.trim()} onClick={()=>void askAi()} style={{background:'#174a35',color:'#fff',borderRadius:8,padding:'8px 12px'}}>
-     {agentBusy?t('Помощник думает…'):t('Обсудить с ИИ · OpenRouter')}
+     {agentBusy?t('Opus Copilot готовит ответ…'):t('Спросить Opus Copilot')}
     </button>
     {dialogue.length>0&&<button type="button" disabled={agentBusy} onClick={resetAi}>{t('Новый разговор')}</button>}
    </div>
-   <p style={{fontSize:12,marginTop:8,color:'#52665b'}}>{t('Локальный план бесплатен. ИИ-диалог делает платный запрос только после нажатия кнопки и проверки отправляемого текста. Данные случая, файлы и микрофон не передаются автоматически.')}</p>
+   <p style={{fontSize:12,marginTop:8,color:'#52665b'}}>{t('Бесплатный маршрут доступен без ИИ. Opus Copilot уточняет задачу и предлагает шаги; для ответа обращается к внешней модели только после вашего подтверждения. Выполнение действий в модулях пока требует отдельных нажатий. Данные случая, файлы и микрофон не передаются автоматически.')}</p>
   </form>
-  {dialogue.length>0&&<section aria-label={t('Диалог с помощником')} aria-live="polite" style={{margin:'14px 0',maxHeight:280,overflowY:'auto',background:'#fff',border:'1px solid #cbd8d0',borderRadius:9,padding:12}}>
-    {dialogue.map((turn,index)=><p key={index} style={{whiteSpace:'pre-wrap',margin:'8px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Помощник')}:</strong> {turn.text}</p>)}
+  {dialogue.length>0&&<section aria-label={t('Диалог с Opus Copilot')} aria-live="polite" style={{margin:'14px 0',maxHeight:280,overflowY:'auto',background:'#fff',border:'1px solid #cbd8d0',borderRadius:9,padding:12}}>
+    {dialogue.map((turn,index)=><p key={index} style={{whiteSpace:'pre-wrap',margin:'8px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Opus Copilot')}:</strong> {turn.text}</p>)}
   </section>}
   {agentError&&<p role="alert" style={{color:'#8a2b17'}}>{t(agentError)}</p>}
   {agentReply&&<p role="status" style={{fontSize:12,color:'#52665b'}}>{agentReply.usedModel?
