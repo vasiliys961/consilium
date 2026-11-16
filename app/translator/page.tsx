@@ -1,2 +1,2 @@
-import {StandaloneTool} from '@/app/components/standalone-tool';
-export default function TranslatorPage(){return <StandaloneTool tool="translator"/>;}
+import TranslatorCaseModule from '@/app/components/translator-case-module';
+export default function TranslatorPage(){return <TranslatorCaseModule/>;}
