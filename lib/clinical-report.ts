@@ -1,5 +1,5 @@
 /** Shared contract for physician-facing reasoning; every entry remains an unsigned proposal. */
-import type { DrugInteractionAlert } from './drug-interaction-rules.ts';
+import type { DrugInteractionAlert, localDrugCoverage } from './drug-interaction-rules.ts';
 import type { CaseTask } from './case-plan.ts';
 import { separateMissingFromOpposing } from './clinical-integrity.ts';
 
@@ -8,7 +8,7 @@ export interface ClinicalReport {
   facts: string[];
   differential: Array<{ hypothesis: string; supporting: string[]; opposing: string[]; missing: string[]; dangerous: boolean }>;
   investigations: Array<{ test: string; rationale: string; priority: string }>;
-  management: Array<{ option: string; conditions: string[]; safetyChecks: string[]; monitoring: string[]; sources?: string[]; medications?: string[]; localInteractions?: DrugInteractionAlert[] }>;
+  management: Array<{ option: string; conditions: string[]; safetyChecks: string[]; monitoring: string[]; sources?: string[]; medications?: string[]; localInteractions?: DrugInteractionAlert[]; localCoverage?: ReturnType<typeof localDrugCoverage> }>;
   medicationSafety?: { gaps: string[]; alerts: Array<{ combination: string; risk: string; patientFactor: string; mitigation: string; sources: string[] }> };
   tactics?: { nextStep: string; timing: string; reassess: string; escalate: string };
   questions: string[];

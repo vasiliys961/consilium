@@ -9,7 +9,7 @@ export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert
   return <>{alerts.map(item => <article key={`${item.url}:${item.first}:${item.second}`}>
     <strong>{item.first} + {item.second}</strong>
     <p><strong>{t(item.severity==='contraindicated'?'Противопоказано':item.severity==='major'?'Значимый риск':'Требуется контроль')}</strong> · {t(item.relation==='current-current'?'Принимаемые':item.relation==='current-proposed'?'Принимаемый + предлагаемый':'Два предлагаемых')}</p>
-    <p>{t(item.risk)}</p>
+    <p>{t(item.risk)}</p><p><strong>{t('Механизм:')}</strong> {t(item.mechanism)}</p><p><strong>{t('Применимость:')}</strong> {t(item.conditions)}</p>
     <p>{t(item.action)}</p><p>{t('Мониторинг:')} {t(item.monitoring)}</p><small>{item.source} · {item.section}</small>
     <a href={item.url} target="_blank" rel="noreferrer">DailyMed ↗</a>
   </article>)}</>;
@@ -19,9 +19,9 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
   const {t}=useWorkspaceLanguage();
   const [standalone,setStandalone]=useState(''),[localProposed,setProposed]=useState(initialProposed);
   const [stopped,setStopped]=useState(''),[alternatives,setAlternatives]=useState('');
-  const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState('');
+  const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState(''),[ageText,setAgeText]=useState(''),[qtcText,setQtcText]=useState('');
   const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false);
-  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,decompensatedCirrhosis,severeHepaticImpairment};
+  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,ageYears:ageText.trim()?Number(ageText):null,qtcMs:qtcText.trim()?Number(qtcText):null,decompensatedCirrhosis,severeHepaticImpairment};
   const proposed=controlledProposed??localProposed;
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
@@ -36,6 +36,8 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
       <label>{t('Взаимоисключающие альтернативы, каждая на отдельной строке')}<textarea rows={2} disabled={disabled} value={alternatives} onChange={e=>{setAlternatives(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('СКФ, мл/мин/1,73 м² (если известна)')}<input type="number" min="0" max="200" step="0.1" disabled={disabled} value={egfrText} onChange={e=>{setEgfrText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="0" max="15" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{t('Возраст, годы (если известен)')}<input type="number" min="0" max="120" step="1" disabled={disabled} value={ageText} onChange={e=>{setAgeText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{t('QTc, мс (если известен)')}<input type="number" min="200" max="900" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
       <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
       <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
     </details>

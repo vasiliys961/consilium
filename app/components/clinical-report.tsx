@@ -46,6 +46,8 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
         <h4>{t('Локальная проверка сочетаний')}</h4>
         <DrugInteractionAlerts alerts={item.localInteractions}/>
       </section>}
+      {item.medications?.length ? <p><small>{t('Локальная проверка препаратов, предложенных ИИ для этой схемы:')} {item.medications.join(', ')}. {t('Проверено только')} {item.localCoverage?.ruleCount??'—'} {t('локальных правил; отсутствие совпадения не доказывает совместимость.')}
+      {item.localCoverage?.unrecognized.length ? ' '+t('Не охвачены локальными правилами:')+' '+item.localCoverage.unrecognized.join(', '):''}</small></p>:null}
       {medicationCheck && Boolean(item.medications?.length) && <>
         <button type="button" disabled={medicationCheck.disabled} aria-expanded={selectedOption===i} aria-controls={checkerId+i}
           onClick={()=>setSelectedOption(selectedOption===i?undefined:i)}>{t('Проверить препараты этой схемы')}</button>
