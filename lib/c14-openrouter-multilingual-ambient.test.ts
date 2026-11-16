@@ -203,3 +203,10 @@ test('C14: repeated acoustic speaker IDs in separate audio files are never prese
   assert.match(repo('integrations/protocol/'+edition+'/components/AudioUpload.tsx'),/scopeAmbientSpeakers\(result\.transcript/);
  }
 });
+
+test('C14: RU server does not mislabel missing OpenRouter STT charges as free',()=>{
+ const route=repo('integrations/protocol/ru/app/api/transcribe/route.ts');
+ assert.match(route,/const actualCostKnown = typeof costUsd/);
+ assert.match(route,/costKnown: actualCostKnown/);
+ assert.match(route,/CONCILIUM_OPENROUTER_ONLY === '1'\s*\? null/);
+});
