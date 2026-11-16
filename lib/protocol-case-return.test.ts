@@ -117,3 +117,23 @@ test('C11 protocol return serializes with pending case draft writes instead of l
   assert.equal(stored.analyses.length,1);
  }finally{await cleanup(value.id);}
 });
+
+
+test('C14: raw native transcript persists independently of note and changes retain source history',async()=>{
+ const value=fixture();await persistCase(value);
+ try{
+  const raw='Врач: Есть одышка?\nПациент: Нет одышки. Приём препарата обсуждается.';
+  const first={...protocol(ruId,'Жалобы: одышка отрицается','ru','ru'),ambientTranscript:raw};
+  const saved=await persistNativeProtocol(value.id,first,'ru','ru');
+  assert.equal(saved.protocols?.[0].ambientTranscript,raw);
+  assert.deepEqual(saved.events,value.events);
+  const reopened=(await readCases()).find(c=>c.id===value.id)!;
+  assert.equal(reopened.protocols?.[0].ambientTranscript,raw);
+  const revised={...first,ambientTranscript:raw+'\nВрач: Уточнить дозу.'};
+  const saved2=await persistNativeProtocol(value.id,revised,'ru','ru');
+  assert.equal(saved2.protocolRevisions?.length,1);
+  assert.equal(saved2.protocolRevisions?.[0].document.ambientTranscript,raw);
+  assert.equal(saved2.protocols?.[0].sections[0].text,first.sections[0].text);
+  assert.deepEqual(saved2.files,value.files);
+ }finally{await cleanup(value.id);}
+});
