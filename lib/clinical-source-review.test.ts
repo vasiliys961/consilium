@@ -45,3 +45,27 @@ test('same publication with multiple passage IDs occupies only one clinical sour
  assert.equal(list.earlierCount,1);
  assert.equal(list.earlier.length,1);
 });
+
+test('C7: distinct paragraphs of the same publication preserve the claim-to-passage mapping',()=>{
+ const first=citation('Shared guideline','https://pubmed.ncbi.nlm.nih.gov/500/','world');
+ first.passageId='pmc:PMC500:4';first.excerpt='Study population A for treatment A.';first.paragraph=4;
+ const second={...first,passageId:'pmc:PMC500:11',excerpt:'Study population B for treatment B.',paragraph:11};
+ const a=stage('a','analysis',[first,second]);
+ a.result.draft.statements=[
+  {text:'Treatment A in population A',source:'pmc:PMC500:4',held:false},
+  {text:'Treatment B in population B',source:'pmc:PMC500:11',held:false},
+ ] as typeof a.result.draft.statements;
+ const [entry]=clinicalSourcesForStage([a],0).current;
+ assert.equal(entry.passages.length,2);
+ assert.deepEqual(entry.passages.map(p=>p.matchedStatements),[
+  ['Treatment A in population A'],['Treatment B in population B']]);
+ assert.equal(entry.matchedStatements.length,2);
+});
+test('C7: citation with abstract only remains available but has no invented claim mapping',()=>{
+ const one=citation('A review','https://pubmed.ncbi.nlm.nih.gov/505/');
+ one.abstract='Abstract-only material about a disease.';
+ const stageOne=stage('s','analysis',[one]);
+ const [entry]=clinicalSourcesForStage([stageOne],0).current;
+ assert.equal(entry.passages[0].matchedStatements.length,0);
+ assert.equal(entry.passages[0].citation.excerpt,undefined);
+});
