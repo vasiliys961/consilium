@@ -18,9 +18,9 @@ export type ClinicalCase = {
   decisionDraft?:{analysisId:string;text:string;at:string};
   drugLabels?: import('./drug-labels.ts').DrugLabelSelection[];
   currentMedications?: string;
-  protocolScratch?:Partial<Record<'ru'|'en',{source:string;text:string;state?:Record<string,string>;at:string}>>;
+  protocolScratch?:Partial<Record<'ru'|'en',{source:string;text:string;ambientTranscript?:string;state?:Record<string,string>;at:string}>>;
   /** Independent drafts: changing a global protocol language must not reuse another language's text. */
-  protocolScratchByLocale?:Partial<Record<import('./locale.ts').Locale,{source:string;text:string;state?:Record<string,string>;at:string}>>;
+  protocolScratchByLocale?:Partial<Record<import('./locale.ts').Locale,{source:string;text:string;ambientTranscript?:string;state?:Record<string,string>;at:string}>>;
   privatePatient?:{name:string;birthDate:string;identifiers:string;dates:string};
   imageProfile?:import("../packages/medical-images/profiles").ImageProfile;
   id: string; number?: number; title: string; created: string; updated: string;
