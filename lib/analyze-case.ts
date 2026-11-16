@@ -5,9 +5,10 @@ import {collectChatStream,previewText} from "./analysis-stream.ts";
 import {enrichGenomicReview,genomicRecord} from "../packages/genomics/review.ts";
 import {terminalEvent,writeTerminalEvent,type RunEvent} from "./telemetry.ts";
 import { attachEquipment } from "../packages/attachments/attach.ts";
-import { consiliumFocus, runConsilium } from "./consilium.ts";
+import { consiliumFocus, runConsilium, unavailableConsilium } from "./consilium.ts";
 import { conduct, gatewayOf, type CaseResult, type CaseFile, type ConductInput } from "./conductor.ts";
-import { MODELS,creditsFor, priceUsd, totalUsd, type CostStep } from "./cost.ts";
+import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep, type CostCallStage } from "./cost.ts";
+import { guardGeneratedClinicalText } from "./clinical-integrity.ts";
 import { imageDataUrl, settleAction, writeLightDraft } from "./draft.ts";
 import { GENETIC_CONSULTATION_INSTRUCTION } from '../packages/genomics/clinical-context.ts';
 import { geneticsCaution } from "../packages/genomics/inspect.ts";
@@ -22,6 +23,7 @@ import { interpretSpeech } from "../packages/translator/speech.ts";
 import { writeSpecialistReadings } from "../packages/specialists/read.ts";
 import { comprehendFrames, statementsOf } from "../packages/vision/comprehend.ts";
 import { assessTracing, networkObservation, networkStatements } from "../packages/ecg/founder.ts";
+import { ecgModuleEvidence } from './module-evidence.ts';
 import { isEcgSheet, sheetCaution } from "../packages/ecg/inspect.ts";
 import { bytesFromBase64 } from "../packages/ecg/open.ts";
 import { inspectPhoto } from "../packages/radiology/tiff.ts";
@@ -40,7 +42,8 @@ import { parseLocale } from "./locale.ts";
 
 import { retrievePassages, passageCitations } from "./local-rag.ts";
 import { drugLabelCitations, reviewDrugLabels } from './drug-labels.ts';
-import { checkProposedMedications, reportedMedications } from './drug-interaction-rules.ts';
+import { checkMedicationRegimen, reportedMedications } from './drug-interaction-rules.ts';
+import {extractMedicationSafetyContext} from './medication-context.ts';
 import { extractPdfText } from "../packages/docs/pdf-pages.ts";
 import { prepareServerFiles } from "./intake-server.ts";
 import { normalizeFiles, evidenceIndex } from "./module-catalog.ts";
@@ -57,6 +60,10 @@ export interface AnalysisDependencies {
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
   readWords?: (bytes: Buffer, ext: "png" | "jpg") => Promise<WordBox[] | null>;
+  /** Test-only injection: the normal path invokes the installed local ECGFounder. */
+  assessDigitalTracing?: typeof assessTracing;
+  /** Test-only injection for an unexpected coordinator failure; normal path uses runConsilium. */
+  runCouncil?: typeof runConsilium;
 }
 
 function settle(
@@ -116,13 +123,13 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   emit("run.started",{files:body.files?.length??0,referenceFiles:body.referenceFiles?.length??0,requestedTask:body.task??"auto"});
   const transport = deps.fetch ?? fetch;
   const modelCalls: NonNullable<CaseResult["cost"]["calls"]> = [];
-  const fetchImpl: typeof fetch = async (input,init) => {
+  const fetchImpl = async (input: Parameters<typeof fetch>[0],init?:RequestInit,stage?:CostCallStage):Promise<Response> => {
     const started=Date.now();const isModel=String(input).includes("/chat/completions");
     const request=isModel?JSON.parse(String(init?.body??"{}")):{};
     const provider=String(input).includes("polza.ai")?"polza":"openrouter";
-    if(isModel){emit("model.started",{model:request.model,provider});if(deps.streaming)deps.onPreview?.("");}
+    if(isModel){emit("model.started",{model:request.model,provider,stage:stage??"unclassified"});if(deps.streaming)deps.onPreview?.("");}
     let response:Response;
-    try{response=await transport(input,{...init,...(isModel&&deps.streaming?{body:JSON.stringify({...request,stream:true,stream_options:{include_usage:true}})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
+    try{response=await transport(input,{...init,...(isModel?{body:JSON.stringify({...request,usage:{include:true},...(deps.streaming?{stream:true,stream_options:{include_usage:true}}:{})})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
       if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value);}});}}
     catch(error){if(isModel)emit("model.failed",{model:request.model,provider,durationMs:Date.now()-started,reason:error instanceof Error?error.name:"transport_error"});throw error;}
     if(String(input).includes("/chat/completions")){
@@ -130,13 +137,15 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       const data=await response.clone().json().catch(()=>null);
       const usageAvailable=typeof data?.usage?.prompt_tokens==="number"&&typeof data?.usage?.completion_tokens==="number";
       const inputTokens=Number(data?.usage?.prompt_tokens)||0,outputTokens=Number(data?.usage?.completion_tokens)||0;
-      emit("model.responded",{model:request.model,provider,httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens)});
-      modelCalls.push({model:String(data?.model??request.model??"unknown"),inputTokens,outputTokens,durationMs:Date.now()-started,
+      const charged=chargeForCall(String(data?.model??request.model??"unknown"),data?.usage);
+      emit("model.responded",{model:request.model,provider,stage:stage??"unclassified",httpStatus:response.status,finishReason:data?.choices?.[0]?.finish_reason??null,usageAvailable,inputTokens,outputTokens,durationMs:Date.now()-started,estimatedUsd:priceUsd(String(request.model),inputTokens,outputTokens),...(charged.source==="openrouter"?{billedUsd:charged.usd}:{})});
+      modelCalls.push({model:String(data?.model??request.model??"unknown"),stage,inputTokens,outputTokens,durationMs:Date.now()-started,
         status:!response.ok||data?.error||data?.choices?.[0]?.finish_reason==='error'?"failed":data?.choices?.[0]?.finish_reason==="length"?"truncated":"received",
-        usageAvailable,usd:priceUsd(String(request.model),inputTokens,outputTokens)});
+        usageAvailable,usd:charged.usd,billingSource:charged.source});
     }
     return response;
   };
+  const stageFetch = (stage:CostCallStage):typeof fetch => (input,init) => fetchImpl(input,init,stage);
   const sheetFiles = await withVcf(await withDocuments(await withSpreadsheets(await prepareServerFiles(normalizeFiles((body.files ?? []).map(file=>({...file,...(!file.imageProfile&&body.imageProfile?{imageProfile:body.imageProfile}:{})})))))));
   for(const file of sheetFiles??[]){if(file.image&&!file.plane){const raster=decodeDataUrl(file.image);if(raster)file.plane=samplePlane(raster);}}
   emit("stage.completed",{stage:"intake",files:sheetFiles?.length??0});
@@ -157,7 +166,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   const speechAudio=body.speech?.audio ?? audioFile?.audio;
   const heard = typedSpeech.trim() || !speechAudio
     ? null
-    : await hearClip(env, speechAudio!,fetchImpl).catch(() => null);
+    : await hearClip(env, speechAudio!,stageFetch("speech")).catch(() => null);
   const cleanedSpeech = (heard?automaticRedactText:redactText)(speechSource(typedSpeech, heard?.text ?? null));
   let redactions = cleanedNote.removed + cleanedSpeech.removed;
   const note = [cleanedNote.text.trim(), cleanedSpeech.text.trim() ? `Visit transcript: ${cleanedSpeech.text.trim()}` : ""].filter(Boolean).join("\n\n");
@@ -185,7 +194,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     result.ledger.map(async (entry) => {
       const file = prepared.find((item) => item.name === entry.source);
       if (entry.modality !== "genetics" || !entry.genetics || !file?.text) return entry;
-      if(entry.genetics.review)return {...entry,genetics:await enrichGenomicReview(entry.genetics,result.locale==="ru"?"ru":"en",fetchImpl,body.externalSearch!==false)};
+      if(entry.genetics.review)return {...entry,genetics:await enrichGenomicReview(entry.genetics,result.locale==="ru"?"ru":"en",stageFetch("genetics"),body.externalSearch!==false)};
       const genetics = await applyFrequency(entry.genetics, file.text, result.locale === "ru" ? "ru" : "en");
       return { ...entry, genetics: await applyClinvar(genetics, file.text, result.locale === "ru" ? "ru" : "en") };
     }),
@@ -197,7 +206,18 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     });
     if(!file?.name)return Promise.resolve(null);
     const started=Date.now();emit('module.started',{module:'ECGFounder',provider:'local'});
-    return assessTracing({name:file.name,text:file.text,binary:file.binary},result.locale).then(value=>{emit('module.completed',{module:'ECGFounder',provider:'local',status:value?.status??'not_assessed',durationMs:Date.now()-started,estimatedUsd:0});return value;});
+    return Promise.resolve()
+      .then(()=>(deps.assessDigitalTracing??assessTracing)({name:file.name,text:file.text,binary:file.binary},result.locale))
+      .then(value=>{emit('module.completed',{module:'ECGFounder',provider:'local',status:value?.status??'not_assessed',durationMs:Date.now()-started,estimatedUsd:0});return value;})
+      .catch(()=>{
+        // A local module exception must not destroy completed imaging, source, or clinical work.
+        // Do not leak exception text, and never treat an unsuccessful classifier as normal.
+        emit('module.failed',{module:'ECGFounder',provider:'local',status:'not_assessed',durationMs:Date.now()-started});
+        return {source:file.name,status:'not_assessed' as const,cleared:[],top:null,names:[],
+          reason:result.locale==='ru'
+            ? 'ECGFounder не выполнил анализ из-за технического сбоя; запись не оценена.'
+            : 'ECGFounder failed technically; this tracing was not assessed.'};
+      });
   })();
   let ledger = await frequencyPromise;
   ledger = ledger.map((entry) => {
@@ -232,7 +252,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     entries: ledger,
     files,
     caution: pixelCaution || null,secondOpinion:body.secondOpinion===true,
-  }, fetchImpl).catch(() => ({ readings: [], inputTokens: 0, outputTokens: 0, durationMs: 0, model: null,reviewUsage:[],primaryUsage:[] }));
+  }, stageFetch("imaging")).catch(() => ({ readings: [], inputTokens: 0, outputTokens: 0, durationMs: 0, model: null,reviewUsage:[],primaryUsage:[] }));
   let frameUsage = specialist.model
     ? { model: specialist.model, inputTokens: specialist.inputTokens, outputTokens: specialist.outputTokens, durationMs: specialist.durationMs }
     : null;
@@ -259,7 +279,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     .filter(Boolean)
     .join(" ");
   const frame = pictured.length
-    ? await comprehendFrames(env, { note, frames: pictured, locale: result.locale, caution: eyeCaution,secondOpinion:body.secondOpinion===true,evidenceContext:tracing?networkObservation(tracing):undefined }, fetchImpl).catch(() => null)
+    ? await comprehendFrames(env, { note, frames: pictured, locale: result.locale, caution: eyeCaution,secondOpinion:body.secondOpinion===true,evidenceContext:tracing?networkObservation(tracing):undefined }, stageFetch("imaging")).catch(() => null)
     : null;
   if (frame?.model) {
     frameUsage = {
@@ -311,14 +331,14 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   emit('stage.started',{stage:'sources'});
   const [gathered, medicationReview] = await Promise.all([
     subject ? gatherCitations(subject, {
-      fetch: fetchImpl, now: new Date(), locale: result.locale, clinical: plan.task === 'management' || plan.task === 'evidence',
-      translate: query => translateForSearch(env, query, fetchImpl, result.locale),
+      fetch: stageFetch("evidence"), now: new Date(), locale: result.locale, clinical: plan.task === 'management' || plan.task === 'evidence',
+      translate: query => translateForSearch(env, query, stageFetch("evidence"), result.locale),
       ...(sourceLocale ? {
         sourceLocale,
-        planTopics: (query: string) => planSearchTopics(env, query, sourceLocale, fetchImpl),
+        planTopics: (query: string) => planSearchTopics(env, query, sourceLocale, stageFetch("evidence")),
       } : {}),
     }).catch(() => ({citations: [], usage: null})) : {citations: [], usage: null},
-    body.drugLabels?.length ? reviewDrugLabels(body.drugLabels, body.externalSearch !== false, fetchImpl, deps.signal) : undefined,
+    body.drugLabels?.length ? reviewDrugLabels(body.drugLabels, body.externalSearch !== false, stageFetch("evidence"), deps.signal) : undefined,
   ]);
   const medicationCitations = drugLabelCitations(medicationReview?.labels ?? [], new Date().toISOString().slice(0,10));
   const geneticCitations:import('./literature.ts').Citation[]=ledger.flatMap(entry=>(entry.genetics?.review?.variants??[]).flatMap(variant=>{
@@ -359,13 +379,24 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       caution: [eyeCaution, failedFiles ? `Files not assessed (never describe as normal):\n${failedFiles}` : "",
         medicationReview?.unavailable.length ? 'One or more selected medication labels could not be retrieved. Do not imply those labels were checked.' : '',
       ].filter(Boolean).join("\n"),
-    }, fetchImpl).catch(() => null);
+    }, stageFetch("synthesis")).catch(() => null);
     if (written) {
-      if (plan.task === 'management' && written.report) {
+      if ((plan.task === 'management' || plan.task === 'clinical') && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
+        const clinicalSafety=extractMedicationSafetyContext(cleanedNote.text);
         for (const option of written.report.management) {
-          const localInteractions = checkProposedMedications(currentMedications, option.medications ?? []);
-          if (localInteractions.length) option.localInteractions = localInteractions;
+          const checked = checkMedicationRegimen({
+            current: currentMedications,
+            proposed: (option.medications??[]).join('\n'),
+            stopped: (option.stoppedMedications??[]).join('\n'),
+            context: clinicalSafety.context,
+          });
+          const localInteractions=checked.alerts.filter(alert=>alert.relation!=='current-current');
+          if (localInteractions.length) option.localInteractions=localInteractions;
+          if (option.medications?.length) option.localCoverage=checked.coverage;
+          if (checked.organAlerts.length) option.localOrganAlerts=checked.organAlerts;
+          const gaps=[...clinicalSafety.issues,...checked.missing];
+          if (gaps.length) option.localSafetyGaps=[...new Set(gaps)].slice(0,8);
         }
       }
       draft = { status: "unsigned", summary: written.summary, statements: written.statements, ...(written.report ? { report: written.report } : {}), ...(written.studyReports?.length ? { studyReports: written.studyReports } : {}) };
@@ -464,7 +495,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
         locale: result.locale,
         audience: body.speech?.audience,
         target: body.speech?.target,
-      }, fetchImpl).catch(() => null)
+      }, stageFetch("speech")).catch(() => null)
     : null;
   if (interpretation?.model) {
     const interpreter: CostStep = {
@@ -480,14 +511,18 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     called = true;
   }
 
+  const checkedDraft=guardGeneratedClinicalText(draft,note);
+  if(checkedDraft.changed){draft=checkedDraft.value;validationWarnings.push("В черновике утверждалась одышка в покое, хотя в исходных данных она не документирована. Формулировка заменена на неопределённую.");}
+
   if ((body.consilium === true || /консилиум|several opinions|second opinions/i.test(note)) && note && !blockedInterpretation && clinicalDraft === "generated") {
     emit('stage.started',{stage:'consilium'});
     const limit = AbortSignal.timeout(Math.max(1, Math.min(95000, (body.deadlineMs ?? 300000) - (Date.now() - startedAt) - 4000)));
     const councilFetch: typeof fetch = (url, init) => {
       limit.throwIfAborted();
-      return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])});
+      return fetchImpl(url, {...init, signal: AbortSignal.any([limit, ...(init?.signal ? [init.signal] : [])])}, "consilium");
     };
-    const spoken = await runConsilium(env, {
+    let coordinatorFailed = false;
+    const spoken = await (deps.runCouncil??runConsilium)(env, {
       note,
       locale: result.locale,
       draft: draft.summary,
@@ -495,8 +530,12 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       citations,
       record: observation || null,
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
-    }, councilFetch).catch(() => []);
-    const guarded = spoken;
+    }, councilFetch).catch(() => {
+      coordinatorFailed = true;
+      emit('stage.failed',{stage:'consilium'});
+      return unavailableConsilium('provider_error');
+    });
+    const guarded = spoken.map(voice=>{const checked=guardGeneratedClinicalText(voice.text,note);if(checked.changed)validationWarnings.push(`Мнение ${voice.id}: утверждение об одышке в покое не подтверждено исходными данными.`);return {...voice,text:checked.value};});
     for (const voice of spoken) {
       if (voice.status === "done" && voice.model) {
         steps = settle(steps, voice.id, { ...voice, model: voice.model });
@@ -504,7 +543,10 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       }
     }
     voices = guarded;
-    emit('stage.completed',{stage:'consilium'});
+    if(!coordinatorFailed)emit('stage.completed',{
+      stage:'consilium',
+      status: spoken.some(voice=>voice.status==='done')?'done':'not_assessed',
+    });
   }
 
   const id = body.caseId?.trim() || crypto.randomUUID();
@@ -533,6 +575,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     id,
     draft,
     voices,
+    ...(tracing ? {ecgEvidence:ecgModuleEvidence(tracing,ledger.find(entry=>entry.source===tracing.source)?.sha256)} : {}),
     readings: specialist.readings,
     interpretation,
     citations,
@@ -544,7 +587,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       ...ledger.filter(entry => entry.status !== "read").map(entry => entry.source),
 
     ],
-    cost: { usageComplete:modelCalls.every(call=>call.usageAvailable!==false),totalUsd: modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps), credits: creditsFor(modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps)), steps, calls:modelCalls },
+    cost: { usageComplete:modelCalls.every(call=>call.usageAvailable!==false),billingComplete:modelCalls.length>0&&modelCalls.every(call=>call.billingSource==="openrouter"),totalUsd: modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps), credits: creditsFor(modelCalls.length ? modelCalls.reduce((sum,call)=>sum+call.usd,0) : totalUsd(steps)), steps, calls:modelCalls },
     gateway: { ...result.gateway, called:called || modelCalls.length>0 },
     redactions,
     pixelCovers,

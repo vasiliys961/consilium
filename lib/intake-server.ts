@@ -32,7 +32,7 @@ export async function prepareServerFiles(files:readonly CaseFile[]):Promise<Case
   if(lower.endsWith('.pdf') && bytes) {
    const scanner=/^scan-/i.test(file.name)||new TextDecoder().decode(bytes.slice(0,100)).includes('Concilium Scanner');
    const text=await extractPdfText(bytes).catch(()=>null) || file.text || await textFromPdf(bytes).catch(()=>null) || (scanner?await ocrScannedPdf(bytes).catch(()=>null):null);
-   if(scanner&&!text?.trim()){prepared.push({...file,binary:undefined,text:undefined,intakeNote:'OCR сканера не выполнен. Передача документа заблокирована; добавьте проверенный текст или повторите сканирование.'});continue;}
+   if(scanner&&!text?.trim()){prepared.push({...file,binary:undefined,text:undefined,intakeNote:'OCR сканера не выполнен или отсутствует хотя бы одна страница. Передача неполного документа заблокирована; проверьте все страницы и повторите сканирование или добавьте сверенный текст.'});continue;}
    if(scanner&&text?.trim()){prepared.push({...file,text,intakeNote:'Документ сканера: локальный OCR. Проверьте распознавание чисел, единиц и отрицаний. Исходные страницы не передаются модели.'});continue;}
    // ECG PDF may have header text but still needs the tracing pixels.
    if((!text?.trim()||/ecg|ekg|экг/i.test(lower)) && !/^# doctor-opus-pdf-closed/.test(text??'')) {

@@ -11,9 +11,10 @@ export async function POST(request: Request) {
   const dataUrl = typeof body.dataUrl === "string" ? body.dataUrl : "";
   const decoded = bytesFromDataUrl(dataUrl);
   if (!decoded) return NextResponse.json({ error: "empty" }, { status: 400 });
-  const result = acceptPhoneFile(token, { name, mimeType: decoded.mimeType, bytes: decoded.bytes });
+  const requestId=typeof body.requestId==='string'?body.requestId:'';
+  const result = acceptPhoneFile(token, { name, mimeType: decoded.mimeType, bytes: decoded.bytes, requestId });
   if ("error" in result) {
-    const status = result.error === "unknown" ? 404 : result.error === "large" ? 413 : 400;
+    const status = result.error === "unknown" ? 404 : result.error === "large" ? 413 : result.error === "conflict" ? 409 : 400;
     return NextResponse.json(result, { status });
   }
   return NextResponse.json(result);

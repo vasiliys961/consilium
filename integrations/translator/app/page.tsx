@@ -22,7 +22,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
           <div>
             <a
-              href="http://127.0.0.1:3107/"
+              href={process.env.NEXT_PUBLIC_CONCILIUM_PREVIEW==='1'?'http://127.0.0.1:3207/':'http://127.0.0.1:3107/'}
               className="inline-flex items-center gap-2 text-lg font-bold tracking-tight text-white hover:text-primary-100"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-base" aria-hidden>🩺</span>

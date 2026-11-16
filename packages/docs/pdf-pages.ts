@@ -28,9 +28,29 @@ export async function extractPdfText(bytes:Uint8Array):Promise<string|null>{
  try{const input=join(dir,'input.pdf');const output=join(dir,'text.txt');await writeFile(input,bytes);for(const bin of ['pdftotext','/opt/homebrew/bin/pdftotext','/usr/local/bin/pdftotext']){if(await run(bin,['-layout',input,output])){const text=await readFile(output,'utf8');return text.trim()?text.slice(0,500000):null;}}return null;}finally{await rm(dir,{recursive:true,force:true});}
 }
 
+/**
+ * Generated Concilium scanner PDFs have an exact page count in the page tree.
+ * A lost, oversized or undecodable page must NEVER be mistaken for a complete
+ * clinical document just because OCR succeeded on its other pages.
+ */
+export function scannerPdfPageCoverage(bytes:Uint8Array,rendered:ReadonlyArray<{page:number}>){
+ const head=new TextDecoder('latin1').decode(bytes.slice(0,8192));
+ const validScanner=head.startsWith('%PDF-')&&head.includes('% Concilium Scanner');
+ const count=validScanner?Number(/\/Type\s*\/Pages\s*\/Count\s+(\d+)\b/.exec(head)?.[1]):NaN;
+ if(!Number.isSafeInteger(count)||count<1||count>10)
+  return {expected:null as number|null,received:rendered.map(p=>p.page),missing:[] as number[],complete:false};
+ const ids=rendered.map(page=>page.page);
+ const seen=new Set(ids);
+ const missing=Array.from({length:count},(_,i)=>i+1).filter(id=>!seen.has(id));
+ return {expected:count,received:ids,missing,complete:ids.length===count&&ids.every((id,i)=>id===i+1)};
+}
+
 /** OCR for scanner-produced documents; raw page pixels remain local. */
 export async function ocrScannedPdf(bytes:Uint8Array):Promise<string|null>{
- const pages=await renderPdfPages(bytes,10);if(!pages.length)return null;const text:string[]=[];
+ const pages=await renderPdfPages(bytes,10);
+ const coverage=scannerPdfPageCoverage(bytes,pages);
+ if(!coverage.complete)return null; // fail closed: no partial clinical evidence
+ const text:string[]=[];
  for(const page of pages){const words=await recognizeWords(Buffer.from(page.image.split(',')[1],'base64'),'jpg');if(words===null)return null;
   const lines:Array<{y:number;h:number;words:typeof words}>=[];
   for(const word of words.slice().sort((a,b)=>a.y-b.y||a.x-b.x)){const line=lines.find(line=>Math.abs(line.y-word.y)<Math.max(line.h,word.height)*.65);if(line)line.words.push(word);else lines.push({y:word.y,h:word.height,words:[word]});}

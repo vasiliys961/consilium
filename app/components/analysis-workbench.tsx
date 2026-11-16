@@ -22,6 +22,7 @@ import {requestAnalysis,requestStreamedJson,type AnalysisProgressEvent} from '@/
 import {ReferenceInstructions} from '@/app/components/product-guide';
 import {PhysicianHelp,CaseTabHint} from "@/app/components/physician-help";
 import {downloadDocx} from "@/lib/download-docx";
+import {summarizeModelCosts} from '@/lib/cost-audit';
 
 import { prepareFile } from "@/lib/case-intake";
 import {prepareImage,prepareVideo} from "@/lib/media-intake";
@@ -576,6 +577,7 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
   const maskUndo = useRef<Record<string, number[]>>({});
   const ecgRef = useRef<HTMLCanvasElement>(null);
   const copy = text(locale);
+  const costAudit = result ? summarizeModelCosts(result.cost) : null;
 
   useEffect(() => () => listenRef.current?.(), []);
 
@@ -968,7 +970,7 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
             : {}),
           ...(spoken ? { speech: spoken } : {}),
         },{onProgress:event=>setProgress(old=>[...old.slice(-20),event]),onPreview:setPreview});if(!body.draft||!body.gateway)throw new Error('Сервис не вернул завершённый результат.');}
-    catch(error){setCaseError(true);setCaseErrorMessage(error instanceof Error?error.message:'Разбор не выполнен.');setAnalyzing(false);return;}
+    catch(error){setPreview('');setCaseError(true);setCaseErrorMessage(error instanceof Error?error.message:'Разбор не выполнен.');setAnalyzing(false);return;}
     setCaseError(false);
     setResult(body);
     setHistory(current => [body, ...current].slice(0, 8));setRevision(0);
@@ -1470,12 +1472,15 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
             ) : null}
             <details><summary>{t("Обработка и стоимость")}</summary><p>
               {result.cost.usageComplete===false&&t('Не все модели передали данные о токенах; расчётная стоимость неполная.')}
+              {result.cost.billingComplete===true ? t('По начислениям OpenRouter, полученным в ответах моделей. ') : t('Расчётная сумма: не все ответы содержали фактическое начисление OpenRouter. Проверьте OpenRouter Activity. ')}
               {copy.cost}: ${money(result.cost.totalUsd)}
               {" · "}
               {money(result.cost.credits)}
               {" "}
               {copy.credits}
             </p>
+            <p>{t("Разбивка по этапам рассчитана по тарифам и может отличаться от фактической суммы выше.")}</p>
+            {costAudit?.rows.length ? <><p>{t("Ответы моделей по этапам. Это метаданные запросов; тексты пациентов и ответы здесь не сохраняются дополнительно.")}</p><ul className="tape">{costAudit.rows.map(row=><li key={row.stage+":"+row.model}>{t("Этап")}: {row.stage} · {row.model} · {t("Ответы")}: {row.calls} ({t("получено")} {row.received}, {t("обрезано")} {row.truncated}, {t("ошибка")} {row.failed}) · {t("Токены")}: {row.inputTokens} → {row.outputTokens} · {t("Начисление OpenRouter")}: ${money(row.billedUsd)} · {t("Оценка")}: ${money(row.estimatedUsd)} · {row.durationMs} ms</li>)}</ul><p>{t("Из полученных ответов: фактическая стоимость")}: ${money(costAudit.rows.reduce((sum,row)=>sum+row.billedUsd,0))}; {t("расчётная часть")}: ${money(costAudit.rows.reduce((sum,row)=>sum+row.estimatedUsd,0))}. {t("Ответы без данных о токенах")}: {costAudit.missingUsageResponses}.</p>{costAudit.differenceUsd!==0&&<p role="status">{t("Сумма сохранённого анализа отличается от суммы зарегистрированных ответов")}: ${money(costAudit.differenceUsd)}. {t("Проверьте журналы и OpenRouter Activity.")}</p>}<p>{t("Запросы, завершившиеся сетевым отказом без ответа провайдера, могут не иметь данных о начислении. Окончательную сверку выполняйте с OpenRouter Activity.")}</p></> : <p>{t("Для этого результата детализация ответов моделей недоступна; разбивку по фактическим начислениям проверить невозможно.")}</p>}
             <ul className="tape">
               {result.cost.steps.map((step,index) => (
                 <li key={step.id+":"+step.model+":"+index}>

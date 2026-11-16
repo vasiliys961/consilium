@@ -211,3 +211,63 @@ test('management survives payment and streamed schema errors and accounts for fa
  assert.deepEqual(events.filter(event=>event.event==='model.rejected').map(event=>event.reason),['schema_rejected']);
  assert.ok(events.some(event=>event.event==='stage.completed'&&event.stage==='synthesis'));
 });
+
+test('synthetic clinical analysis uses actual OpenRouter usage.cost and guards invented rest dyspnea',async()=>{
+ const result=await analyzeCase({text:'Progressive dyspnea on exertion; orthopnea; creatinine elevated.',task:'clinical',locale:'ru',externalSearch:false},{env,fetch:async(_input,init)=>{
+  const request=JSON.parse(String(init?.body));
+  assert.deepEqual(request.usage,{include:true});
+  return Response.json({
+   model:request.model,
+   choices:[{finish_reason:'stop',message:{content:JSON.stringify({
+    summary:'Пациент с одышкой в покое — требуется дообследование.',
+    statements:[],
+    report:{problem:'Progressive dyspnea',facts:['одышка в покое'],differential:[{hypothesis:'СН',supporting:['ортопноэ'],opposing:['Фракция выброса и данные визуализации отсутствуют'],missing:[],dangerous:false}],tactics:{timing:'одышка в покое',nextStep:'ЭКГ',reassess:'',escalate:''}}
+   })}}],
+   usage:{prompt_tokens:250,completion_tokens:750,cost:0.214}
+  });
+ }});
+ assert.equal(result.cost.totalUsd,0.214);
+ assert.equal(result.cost.billingComplete,true);
+ assert.equal(result.cost.calls?.[0].billingSource,'openrouter');
+ assert.equal(result.draft.report?.differential[0]?.opposing.length,0);
+ assert.ok(result.draft.report?.differential[0]?.missing.includes('Фракция выброса и данные визуализации отсутствуют'));
+ assert.match(result.draft.summary,/в покое не уточнено/);
+ assert.ok(result.validationWarnings?.some(s=>s.includes('одышка в покое')));
+});
+
+test('when provider cost is omitted, price fallback is explicitly marked approximate',async()=>{
+ const result=await analyzeCase({text:'Simple clinical reasoning test',task:'clinical',locale:'en',externalSearch:false},{env,fetch:async()=>Response.json({
+  choices:[{finish_reason:'stop',message:{content:JSON.stringify({summary:'Unsigned draft',statements:[],report:{problem:'Synthetic case'}})}}],
+  usage:{prompt_tokens:100,completion_tokens:200}
+ })});
+ assert.equal(result.cost.billingComplete,false);
+ assert.equal(result.cost.calls?.[0].billingSource,'estimate');
+ assert.ok((result.cost.totalUsd??0)>0);
+});
+
+test('C3 automatically applies typed clinical facts to separately proposed management options',async()=>{
+ const note=['Вопрос врача: Оценить варианты лечения ХБП и сердечной недостаточности',
+ 'Current medications reported by the physician:\nлозартан\nметформин',
+ 'Возраст: 76 лет\nСКФ: 24 мл/мин/1,73 м²\nКалий: 5,8 ммоль/л'].join('\n\n');
+ let calls=0;
+ const result=await analyzeCase({task:'management',text:note,locale:'ru',externalSearch:false},{env,fetch:async(_url,init)=>{
+  calls++;
+  const body=JSON.parse(String(init?.body));
+  if(body.messages[0].content.includes('unsigned clinical reasoning draft'))return response({
+   summary:'Синтетический план терапии',statements:[],
+   report:{problem:'СН, ХБП, гиперкалиемия',management:[
+    {option:'Предложение А',medications:['spironolactone'],conditions:[],safetyChecks:[],monitoring:[]},
+    {option:'Предложение Б',medications:['amlodipine'],conditions:[],safetyChecks:[],monitoring:[]},
+   ]}});
+  return response({text:'Synthetic planning information',source:null});
+ }});
+ const options=result.draft.report?.management??[];
+ assert.equal(options.length,2);
+ assert.ok(options[0].localInteractions?.some(a=>a.risk.includes('гиперкалиемии')));
+ assert.ok(options[0].localOrganAlerts?.some(a=>a.severity==='contraindicated'));
+ assert.ok(options[0].localOrganAlerts?.some(a=>a.risk.includes('Метформин: СКФ')));
+ assert.ok(options[1].localOrganAlerts?.some(a=>a.risk.includes('Метформин: СКФ')),'Existing drug safety must not be silently dropped from alternative');
+ assert.ok(options[0].localCoverage?.unverifiedPairCount);
+ assert.equal(options[1].localInteractions,undefined,'Alternative B must not be combined with A');
+ assert.ok(calls>=1);
+});
