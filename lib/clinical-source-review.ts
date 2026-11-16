@@ -63,7 +63,7 @@ export function clinicalSourcesForStage(
  return {current:rawCurrent.slice(0,limit),earlier:rawEarlier.slice(0,limit),
   currentCount:rawCurrent.length,earlierCount:rawEarlier.length};
 }
-export type GuidelineTopicHandoff={version:1;topic:string;sourceTitles:string[];preparedAt:string};
+export type GuidelineTopicHandoff={version:1;topic:string;sources:Array<{title:string;url:string|null}>;preparedAt:string};
 /** This transfer stays in sessionStorage, never in an URL or a network request.
  * The physician must inspect and approve it in /guidelines before external searching.
  */
@@ -71,16 +71,23 @@ export function makeGuidelineTopicHandoff(
  value:ClinicalCase,analysis:Analysis,review:ClinicalSourceReview
 ):GuidelineTopicHandoff{
  const text=(analysis.result.draft.report?.problem||analysis.question||value.question||'').replace(/\s+/g,' ').trim().slice(0,350);
- const titles=[...review.current,...review.earlier].map(entry=>entry.citation.title.trim()).filter(Boolean).slice(0,6);
- return {version:1,topic:text,sourceTitles:[...new Set(titles)],preparedAt:new Date().toISOString()};
+ const seen=new Set<string>();
+ const sources=[...review.current,...review.earlier].flatMap(entry=>{
+  const title=entry.citation.title.trim().slice(0,250),url=entry.citation.url;
+  if(!title||seen.has(title.toLowerCase()))return [];
+  seen.add(title.toLowerCase());
+  return [{title,url:url&&/^https:\/\//i.test(url)&&url.length<900?url:null}];
+ }).slice(0,6);
+ return {version:1,topic:text,sources,preparedAt:new Date().toISOString()};
 }
 export function parseGuidelineTopicHandoff(raw:string|null):GuidelineTopicHandoff|null{
  if(!raw||raw.length>3000)return null;
  try{
   const value=JSON.parse(raw) as GuidelineTopicHandoff;
   if(value?.version!==1||typeof value.topic!=='string'||value.topic.length>350||typeof value.preparedAt!=='string'
-    ||!Array.isArray(value.sourceTitles)||value.sourceTitles.length>6
-    ||value.sourceTitles.some(x=>typeof x!=='string'||x.length>250))return null;
+    ||!Array.isArray(value.sources)||value.sources.length>6
+    ||value.sources.some(x=>!x||typeof x.title!=='string'||x.title.length>250
+     ||!(x.url===null||typeof x.url==='string'&&x.url.length<900&&/^https:\/\//i.test(x.url))))return null;
   return value;
  }catch{return null;}
 }
