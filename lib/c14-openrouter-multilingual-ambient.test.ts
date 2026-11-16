@@ -144,3 +144,32 @@ test('C14: incomplete RU ambient transcript cannot be silently inserted as a com
  assert.match(recorder,/Запись временно хранится в этой вкладке/);
  assert.match(recorder,/возможна повторная оплата/);
 });
+
+test('C14: one consent for encounter chunks, but signed SHA-256 approval for each file',()=>{
+ for(const edition of ['ru','en']){
+  const privacy=repo('integrations/protocol/'+edition+'/components/ConciliumPrivacy.tsx');
+  const recorder=repo('integrations/protocol/'+edition+'/components/AudioUpload.tsx');
+  const route=repo('integrations/protocol/'+edition+'/app/api/transcribe/route.ts');
+  assert.match(privacy,/AUDIO_SESSION_TTL_MS=60\*60\*1000/);
+  assert.match(privacy,/audioConsents\.current\.get\(session\)/);
+  assert.match(privacy,/crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(privacy,/x-concilium-privacy-audio/);
+  assert.match(privacy,/concilium\.audio-session-revoke/);
+  assert.match(recorder,/conciliumAudioSession/);
+  assert.match(recorder,/audioSessionRef\.current=crypto\.randomUUID\(\)/);
+  assert.match(recorder,/revokeAudioSession\(\)/);
+  assert.match(route,/nativeAudioGuard\(request\)/);
+  assert.doesNotMatch(privacy,/localStorage\.setItem\(.+audioConsent/);
+ }
+});
+test('C14: both ambient recorders rotate complete three-minute audio files',()=>{
+ const ru=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ const en=repo('integrations/protocol/en/components/AudioUpload.tsx');
+ assert.match(ru,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(en,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(ru,/mountedRef\.current/);
+ assert.match(ru,/if\(interruptedRef\.current\)/);
+ assert.match(ru,/Запись прервана/);
+ assert.match(ru,/!interruptedRef\.current&&<button/);
+ for(const page of [ru,en])assert.match(page,/transcribeSegments\(\)/);
+});
