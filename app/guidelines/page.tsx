@@ -11,6 +11,7 @@ import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {guidelineUi} from '@/lib/guideline-ui';
 import {guidelineLocalePolicy} from '@/lib/guideline-locale-policy';
 import type {GuidelineMode} from '@/lib/parent-guideline-search';
+import {GUIDELINE_HANDOFF_KEY,parseGuidelineTopicHandoff,type GuidelineTopicHandoff} from '@/lib/clinical-source-review';
 
 type SearchResult={text:string;model:string;estimatedUsd:number;inputTokens:number;outputTokens:number;searchMode:GuidelineMode;language:WorkspaceLanguage};
 const specialtyChoices:readonly [string,string][]=[
@@ -28,6 +29,14 @@ export default function ClinicalGuidelines(){
  const [query,setQuery]=useState(''),[specialty,setSpecialty]=useState(''),[mode,setMode]=useState<GuidelineMode>('standard');
  const [answerLanguage,setAnswerLanguage]=useState<WorkspaceLanguage>(language),[matchInterface,setMatchInterface]=useState(true);
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<SearchResult|null>(null),[editing,setEditing]=useState(false);
+ const [handoff,setHandoff]=useState<GuidelineTopicHandoff|null>(null);
+ useEffect(()=>{
+  const raw=sessionStorage.getItem(GUIDELINE_HANDOFF_KEY);
+  if(!raw)return;
+  sessionStorage.removeItem(GUIDELINE_HANDOFF_KEY);
+  const selected=parseGuidelineTopicHandoff(raw);
+  if(selected){setQuery(selected.topic);setHandoff(selected);}
+ },[]);
  useEffect(()=>{if(matchInterface)setAnswerLanguage(language);},[language,matchInterface]);
  const policy=guidelineLocalePolicy(answerLanguage);
  async function search(){
@@ -71,6 +80,12 @@ export default function ClinicalGuidelines(){
   <LanguageSwitcher disabled={busy}/>
   <h1>📚 {t('title')}</h1>
   <p>{t('intro')}</p>
+  {handoff&&<section aria-label={legacy('Источники из клинического разбора','Sources from case review')} style={{padding:14,border:'1px solid #c4d1c7',borderRadius:8}}>
+   <h2>{legacy('Тема и источники из предыдущего разбора','Topic and sources from case review')}</h2>
+   <p>{legacy('Тема заполнена локально. Проверьте и обезличьте её перед поиском; ссылки ниже только для просмотра, автоматически в запрос модели не отправляются.','Topic is filled locally. Review and de-identify it before searching; references below are for review only and are not automatically sent to the model.')}</p>
+   {handoff.sources.length>0?<ul>{handoff.sources.map((s,i)=><li key={i}>{s.url?<a href={s.url} target="_blank" rel="noopener noreferrer">{s.title}</a>:s.title}</li>)}</ul>:<p>{legacy('Сохранённых ссылок нет.','No saved links.')}</p>}
+   <button type="button" onClick={()=>{setHandoff(null);setQuery('');}}>{legacy('Очистить переданную тему','Clear imported topic')}</button>
+  </section>}
   <section style={{padding:20,background:'#fcfdfb',border:'1px solid #c4d1c7',borderRadius:10,margin:'18px 0'}}>
    <label>{t('specialty')}
     <select disabled={busy} value={specialty} onChange={e=>setSpecialty(e.target.value)}>

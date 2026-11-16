@@ -60,7 +60,9 @@ export function clinicalSourcesForStage(
     !rawCurrent.some(item=>citationKey(item.citation)===citationKey(entry.citation))
    ).sort((a,b)=>score(b)-score(a))
   :[];
- return {current:rawCurrent.slice(0,limit),earlier:rawEarlier.slice(0,limit),
+ const shownCurrent=rawCurrent.slice(0,limit);
+ const shownEarlier=rawEarlier.slice(0,Math.max(0,limit-shownCurrent.length));
+ return {current:shownCurrent,earlier:shownEarlier,
   currentCount:rawCurrent.length,earlierCount:rawEarlier.length};
 }
 export type GuidelineTopicHandoff={version:1;topic:string;sources:Array<{title:string;url:string|null}>;preparedAt:string};
