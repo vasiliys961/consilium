@@ -105,6 +105,8 @@ export default function ProtocolPage() {
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
+  const [draftSourceTranscript, setDraftSourceTranscript] = useState('')
+  const [draftSourceLocale, setDraftSourceLocale] = useState<Locale>('en')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
@@ -756,6 +758,8 @@ export default function ProtocolPage() {
         throw new Error(t.draftError)
       }
       setRecordedDraftText(draft)
+      setDraftSourceTranscript(safeTranscript)
+      setDraftSourceLocale(locale)
       setDraftFromConversationModel(typeof data?.modelUsed === 'string' ? data.modelUsed : null)
       const usage = readApiUsage(data)
       if (usage) {
@@ -978,10 +982,7 @@ export default function ProtocolPage() {
                       costKnown: prev.costKnown && meta.costKnown === true,
                     }))
                   }
-                  const nextTranscript = conversationTranscriptText
-                    ? `${conversationTranscriptText}\n\n${transcript}`
-                    : transcript
-                  setConversationTranscriptText(nextTranscript)
+                  setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // Explicit action is required before any paid LLM draft.
                 }}
               />:<p role="status" className="text-xs text-gray-600">{ui('Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.')}</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio transcription is not configured. Check OPENROUTER_API_KEY in the local application.")}</p>}
@@ -996,6 +997,7 @@ export default function ProtocolPage() {
               )}
               {recordedDraftText && (
                 <div className="mt-3">
+                  {(draftSourceTranscript!==conversationTranscriptText.trim()||draftSourceLocale!==locale)&&<p role="alert" className="mb-2 text-xs text-amber-800">{ui('The conversation or document language changed after the draft was generated. Review and regenerate the draft before transferring it to the protocol.')}</p>}
                   <label className="block text-xs font-medium text-gray-700 mb-2">{t.draftLabel}</label>
                   <textarea dir="auto"
                     value={recordedDraftText}
@@ -1008,7 +1010,7 @@ export default function ProtocolPage() {
                     <button
                       onClick={() => setRawText(prev => prev ? `${prev}\n\n${recordedDraftText}` : recordedDraftText)}
                       className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors"
-                      disabled={loading || !recordedDraftText.trim()}
+                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim() || draftSourceLocale!==locale}
                     >
                       ➕ {t.insertDraft}
                     </button>
