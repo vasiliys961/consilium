@@ -3,6 +3,7 @@ import type { Citation } from "./literature.ts";
 
 const MAX_XML_BYTES = 2_000_000;
 const MAX_EXCERPT = 1400;
+const MAX_PASSAGES = 3;
 const REUSABLE_LICENSE = /^https?:\/\/creativecommons\.org\/(?:licenses\/by\/(?:[1-4]\.0)|publicdomain\/zero\/1\.0)\/?$/i;
 
 async function readXml(response: Response): Promise<string> {
@@ -50,7 +51,7 @@ function selectPassage(xml: string, card: Citation, queryTerms: string[], clinic
   let pmid = "";
   let paragraph = 0;
   let capture: { depth: number; text: string; kind: "pmid" | "title" | "paragraph" } | undefined;
-  let best: { excerpt: string; chapter: string; paragraph: number; score: number } | undefined;
+  const matchesFound: Array<{ excerpt: string; chapter: string; paragraph: number; score: number }> = [];
 
   parser.on("opentag", ({ name, attributes }) => {
     if (stack.length >= 80) throw new Error("Article XML nesting limit exceeded");
@@ -87,8 +88,8 @@ function selectPassage(xml: string, card: Citation, queryTerms: string[], clinic
         const matches = queryTerms.filter(term => terms.has(term)).length;
         const clinicalContent = clinical && /recommend|treat|manag|therap|dos|monitor|contraindicat|safety/i.test(sections.join(' ') + ' ' + excerpt);
         const score = matches + (clinicalContent ? 1 : 0);
-        if (excerpt.length >= 80 && matches >= Math.min(2, queryTerms.length) && score > (best?.score ?? 0)) {
-          best = { excerpt, chapter: sections.filter(Boolean).join(" / ") || "Body", paragraph, score };
+        if (excerpt.length >= 80 && matches >= Math.min(2, queryTerms.length)) {
+          matchesFound.push({excerpt,chapter:sections.filter(Boolean).join(" / ") || "Body",paragraph,score});
         }
       }
       capture = undefined;
@@ -98,6 +99,17 @@ function selectPassage(xml: string, card: Citation, queryTerms: string[], clinic
   });
   parser.write(xml).close();
 
-  if (!article || !licenseUrl || pmid !== card.pmid || !best) return null;
-  return { excerpt: best.excerpt, chapter: best.chapter, paragraph: best.paragraph, licenseUrl };
+  if (!article || !licenseUrl || pmid !== card.pmid || !matchesFound.length) return null;
+  // Prefer the most relevant paragraph, then distinct sections when available.
+  // A selected secondary paragraph is a new location, not independent evidence.
+  const ranked=matchesFound.sort((a,b)=>b.score-a.score||a.paragraph-b.paragraph);
+  const first=ranked[0];
+  const selected=[first];
+  const remaining=ranked.slice(1);
+  for(const candidate of [...remaining.filter(c=>c.chapter!==first.chapter),...remaining.filter(c=>c.chapter===first.chapter)]){
+    if(selected.length>=MAX_PASSAGES)break;
+    if(!selected.some(entry=>entry.paragraph===candidate.paragraph))selected.push(candidate);
+  }
+  return {excerpt:first.excerpt,chapter:first.chapter,paragraph:first.paragraph,licenseUrl,
+   relatedPassages:selected.slice(1).map(({excerpt,chapter,paragraph})=>({excerpt,chapter,paragraph}))};
 }

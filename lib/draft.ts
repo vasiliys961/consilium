@@ -2,7 +2,7 @@ import { clinicalDraftSchema, readClinicalReport, REPORT_INSTRUCTION, type Clini
 import { MODELS } from "./cost.ts";
 import { complete, type ModelFailure, type ModelTurn } from "./gateway.ts";
 import { languageName, type Locale } from "./locale.ts";
-import type { Citation } from "./literature.ts";
+import {citationPassages,type Citation} from "./literature.ts";
 import { readStudyReports, STUDY_REPORT_INSTRUCTION, type StudyReport } from './study-report.ts';
 
 export type ActionTag = "now" | "only-if" | "avoid" | "defer" | "information";
@@ -60,7 +60,7 @@ export function imageDataUrl(value: unknown): string | null {
 
 export function sourceKeys(citations: Citation[], files: string[] = []): Set<string> {
   const keys = new Set<string>();
-  for (const citation of citations) {
+  for (const citation of citations.flatMap(citationPassages)) {
     if (!citation.excerpt?.trim() && !citation.abstract?.trim()) continue;
     if (citation.passageId) keys.add(citation.passageId);
     if (citation.paragraph && citation.passageId) continue;
@@ -102,7 +102,7 @@ export function readDraft(raw: string, allowed: Set<string>): { summary: string;
 
 function sourceLines(citations: Citation[], files: string[]): string {
   const lines = [
-    ...citations.map((citation) => {
+    ...citations.flatMap(citationPassages).map((citation) => {
       const key = citation.passageId ?? (citation.pmid ? `pmid:${citation.pmid}` : citation.url);
       return key ? `${key} | ${citation.title} | Location: ${citation.chapter ?? "not provided"} | ${citation.paragraph ? "Full-text excerpt" : citation.excerpt ? "Excerpt" : citation.abstract ? "Abstract" : "Bibliographic record only"}: ${citation.excerpt ?? citation.abstract ?? "search lead only"}` : "";
     }),

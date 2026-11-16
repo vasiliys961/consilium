@@ -69,3 +69,20 @@ test('C7: citation with abstract only remains available but has no invented clai
  assert.equal(entry.passages[0].matchedStatements.length,0);
  assert.equal(entry.passages[0].citation.excerpt,undefined);
 });
+
+test('C7: the second excerpt of one retrieved article links only to its own claim',()=>{
+ const guide=citation('Atrial fibrillation guideline','https://pubmed.ncbi.nlm.nih.gov/901/');
+ guide.pmid='901';guide.pmcid='PMC901';guide.passageId='pmc:PMC901:1';
+ guide.excerpt='This guideline recommends assessments before choosing therapy.';
+ guide.paragraph=1;guide.chapter='Recommendations';
+ guide.relatedPassages=[
+  {excerpt:'Renal impairment requires additional safety monitoring.',chapter:'Safety',paragraph:3}
+ ];
+ const a=stage('a','analysis',[guide]);
+ a.result.draft.statements=[{text:'Renal safety check',source:'pmc:PMC901:3',held:false}] as typeof a.result.draft.statements;
+ const [source]=clinicalSourcesForStage([a],0).current;
+ assert.equal(source.passages.length,2);
+ assert.deepEqual(source.passages.map(p=>p.matchedStatements),[[],['Renal safety check']]);
+ assert.equal(source.passages[1].citation.chapter,'Safety');
+ assert.equal(source.passages[1].citation.paragraph,3);
+});
