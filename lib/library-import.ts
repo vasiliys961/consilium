@@ -1,5 +1,5 @@
 import {extractBookLayout,pageVisualRegions,embeddedImageRegions,type PdfTextItem} from './library-layout.ts';
-import {saveDocument,getAllDocuments,getDocumentChunkRecords,saveChunkEmbeddings,type LibraryChunkInput,type LibraryDocument,type LibraryFileHandle} from './library-db.ts';
+import {saveDocument,getAllDocuments,checkLibraryFolderSource,getDocumentChunkRecords,saveChunkEmbeddings,type LibraryChunkInput,type LibraryDocument,type LibraryFileHandle} from './library-db.ts';
 import {embedTexts,quantizeInt8} from './embeddings.ts';
 
 export function chunkLibraryPages(pages:readonly string[]):LibraryChunkInput[]{
@@ -23,17 +23,17 @@ export async function importLibraryFile(file:File,onProgress:(message:string)=>v
  const fingerprint=bytes&&crypto.subtle?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(byte=>byte.toString(16).padStart(2,'0')).join(''):undefined;
  if(fingerprint){
   const previous=(await getAllDocuments()).find(doc=>doc.fileSha256===fingerprint);
-  if(previous)return {document:previous,alreadyPresent:true,fingerprintChecked:true};
+  if(previous&&(['current','unverified'].includes(await checkLibraryFolderSource(previous))))return {document:previous,alreadyPresent:true,fingerprintChecked:true};
  }
  let pages:string[];
- if(/\\.pdf$/i.test(file.name)){
+ if(/\.pdf$/i.test(file.name)){
   const pdf=await (await pdfJs()).getDocument({data:new Uint8Array(bytes??await file.arrayBuffer()),isEvalSupported:false}).promise;
   try{pages=[];for(let page=1;page<=pdf.numPages;page++){onProgress(`${file.name}: страница ${page} из ${pdf.numPages}`);const source=await pdf.getPage(page),text=await source.getTextContent(),viewport=source.getViewport({scale:1});pages.push(extractBookLayout(text.items,viewport.width,viewport.height).text);if(page%10===0)await new Promise(resolve=>setTimeout(resolve,0));}}finally{await pdf.destroy();}
- }else if(/\\.(txt|md)$/i.test(file.name)){pages=(bytes?new TextDecoder().decode(bytes):await file.text()).split('\\f');}
+ }else if(/\.(txt|md)$/i.test(file.name)){pages=(bytes?new TextDecoder().decode(bytes):await file.text()).split('\f');}
  else throw Error('Для библиотеки выберите PDF с текстовым слоем, TXT или Markdown.');
  const chunks=chunkLibraryPages(pages);
  if(!pages.length)throw Error('В книге нет страниц.');
- const doc:LibraryDocument={id:crypto.randomUUID(),name:file.name,size:file.size,uploaded_at:new Date().toISOString(),chunksCount:chunks.length,pageCount:pages.length,textPages:pages.filter(page=>page.replace(/\\s/g,'').length>=80).length,vectorized:false,storage:handle?'folder':'browser',...(fingerprint?{fileSha256:fingerprint}:{}),...(handle?{sourceModifiedAt:file.lastModified}:{})};
+ const doc:LibraryDocument={id:crypto.randomUUID(),name:file.name,size:file.size,uploaded_at:new Date().toISOString(),chunksCount:chunks.length,pageCount:pages.length,textPages:pages.filter(page=>page.replace(/\s/g,'').length>=80).length,vectorized:false,storage:handle?'folder':'browser',...(fingerprint?{fileSha256:fingerprint}:{}),...(handle?{sourceModifiedAt:file.lastModified}:{})};
  await saveDocument(doc,chunks,handle?undefined:file,handle);
  return {document:doc,alreadyPresent:false,fingerprintChecked:Boolean(fingerprint)};
 }
