@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import {scopeAmbientSpeakers} from '@/lib/ambient-chunk-speakers'
 import { AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR, calculateAudioTranscriptionCost } from '@/lib/cost-calculator'
 import { getClientLocale } from '@/lib/i18n/client'
 import { mapLocaleToAssemblyAiLanguage } from '@/lib/i18n/stt-language'
+import { ambientUi } from '@/lib/i18n/ambient-ui'
 import type { Locale } from '@/lib/i18n/config'
 
 const RECORDING_TIMESLICE_MS = 1000
-const SEGMENT_SECONDS = 5 * 60
+const SEGMENT_SECONDS = 3 * 60
 
 function extensionForMime(mimeType: string): string {
   if (mimeType.includes('mp4')) return 'mp4'
@@ -23,7 +25,8 @@ function formatClock(seconds: number): string {
 }
 
 interface AudioUploadProps {
-  onTranscribe: (transcript: string, data?: { duration: number; cost: number }) => void
+  onTranscribe: (transcript: string, data?: { duration: number; cost: number; costKnown: boolean; model?: string }) => void
+  openrouterOnly?: boolean
   accept?: string
   maxSize?: number // в MB
 }
@@ -305,17 +308,21 @@ const AUDIO_UPLOAD_TEXT: Record<Locale, {
   },
 }
 
-export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize = 2000 }: AudioUploadProps) {
+export default function AudioUpload({ onTranscribe, openrouterOnly = false, accept = 'audio/*', maxSize = 2000 }: AudioUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [transcribing, setTranscribing] = useState(false)
   const [recording, setRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number } | null>(null)
+  const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number; costKnown: boolean } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const segmentsRef = useRef<Blob[]>([])
+  const segmentResultsRef = useRef<Record<number, {transcript:string;duration:number;cost:number;costKnown:boolean;model?:string}>>({})
+  const audioSessionRef = useRef('')
+  const recordingLocaleRef=useRef<Locale>('en')
+  const mountedRef=useRef(false)
   const streamRef = useRef<MediaStream | null>(null)
   const mimeTypeRef = useRef('audio/webm')
   const rotatingRef = useRef(false)
@@ -327,6 +334,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const [locale, setLocale] = useState<Locale>('en')
   const t = AUDIO_UPLOAD_TEXT[locale] || AUDIO_UPLOAD_TEXT.en
   const costByDuration = t.costByDuration.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))
+  const sttCostHint = openrouterOnly ? ambientUi(locale,'cost') : costByDuration
 
   const releaseWakeLock = () => {
     wakeLockRef.current?.release().catch(() => undefined)
@@ -344,6 +352,11 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     }
   }
 
+  const revokeAudioSession = () => {
+    const session=audioSessionRef.current
+    if(session)window.dispatchEvent(new CustomEvent('concilium.audio-session-revoke',{detail:{session}}))
+    audioSessionRef.current=''
+  }
   const stopTracks = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
     streamRef.current = null
@@ -364,6 +377,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   }
 
   useEffect(() => {
+    mountedRef.current=true
     const update=()=>setLocale(getClientLocale());update();window.addEventListener('protocol-locale',update);return()=>window.removeEventListener('protocol-locale',update)
   }, [])
 
@@ -376,6 +390,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       }
     }
     const onPageHide = () => {
+      mountedRef.current=false
       if (recordingRef.current) {
         rotatingRef.current = false
         // Leaving the page is cancellation, not consent to transcribe remaining audio.
@@ -384,12 +399,14 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
           if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
         }
         segmentsRef.current = []
+        revokeAudioSession()
         stopTracks()
       }
     }
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pagehide', onPageHide)
     return () => {
+      mountedRef.current=false
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onPageHide)
       clearTimer()
@@ -399,11 +416,12 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
       }
       segmentsRef.current = []
+      revokeAudioSession()
       stopTracks()
     }
   }, [])
 
-  const transcribeFile = async (file: File): Promise<{ transcript: string; duration: number; cost: number } | null> => {
+  const transcribeFile = async (file: File,audioSession?:string): Promise<{ transcript: string; duration: number; cost: number; costKnown: boolean; model?: string } | null> => {
     if (file.size > maxSize * 1024 * 1024) {
       setError(t.fileTooLarge(maxSize))
       return null
@@ -415,7 +433,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
 
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('language', mapLocaleToAssemblyAiLanguage(getClientLocale()))
+    formData.append('language', mapLocaleToAssemblyAiLanguage(audioSession?recordingLocaleRef.current:getClientLocale()))
+    if(audioSession)formData.append('conciliumAudioSession',audioSession)
 
     const response = await fetch('/api/transcribe', {
       method: 'POST',
@@ -429,6 +448,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       transcript: String(data.transcript || ''),
       duration: Number(data.duration) || 0,
       cost: Number(data.cost) || 0,
+      costKnown: data.costKnown === true,
+      model: String(data.model || ''),
     }
   }
 
@@ -438,8 +459,8 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     try {
       const result = await transcribeFile(file)
       if (!result) return
-      setLastAnalysis({ duration: result.duration, cost: result.cost })
-      onTranscribe(result.transcript, { duration: result.duration, cost: result.cost })
+      setLastAnalysis({ duration: result.duration, cost: result.cost, costKnown: result.costKnown })
+      onTranscribe(result.transcript, result)
     } catch (err: any) {
       setError(err?.message || t.genericError)
     } finally {
@@ -450,7 +471,6 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const transcribeSegments = async () => {
     const mimeType = mimeTypeRef.current
     const segments = segmentsRef.current.filter((blob) => blob.size > 0)
-    segmentsRef.current = []
     if (!segments.length) return
 
     setTranscribing(true)
@@ -459,21 +479,34 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       const texts: string[] = []
       let duration = 0
       let cost = 0
+      let costKnown = true
+      const models = new Set<string>()
       for (const [index, blob] of segments.entries()) {
-        const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
-        const result = await transcribeFile(file)
-        if (!result) continue
-        if (result.transcript.trim()) texts.push(result.transcript.trim())
+        if(!mountedRef.current)throw Error('The recording panel was closed. Further audio was not uploaded.')
+        let result = segmentResultsRef.current[index]
+        if (!result) {
+          const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
+          const received = await transcribeFile(file,audioSessionRef.current)
+          if(!mountedRef.current)throw Error('The recording panel was closed. Further audio was not uploaded.')
+          if (!received) throw Error('Audio segment could not be transcribed. Recording retained for explicit retry.')
+          result = received
+          segmentResultsRef.current[index] = result
+        }
+        if (!result.transcript.trim()) throw Error('Empty audio segment; review it before continuing.')
+        texts.push(scopeAmbientSpeakers(result.transcript.trim(),index))
         duration += result.duration
         cost += result.cost
+        costKnown = costKnown && result.costKnown
+        if(result.model)models.add(result.model)
       }
-      if (!texts.length) {
-        setError(t.genericError)
-        return
-      }
-      setLastAnalysis({ duration, cost })
-      onTranscribe(texts.join('\n\n'), { duration, cost })
+      // No partial transcript may masquerade as a complete consultation.
+      setLastAnalysis({ duration, cost, costKnown })
+      onTranscribe(texts.join('\n\n'), { duration, cost, costKnown, model:models.size===1?[...models][0]:'multiple' })
+      segmentsRef.current = []
+      segmentResultsRef.current = {}
+      revokeAudioSession()
     } catch (err: any) {
+      // The untranscribed audio remains in browser memory, not on the server.
       setError(err?.message || t.genericError)
     } finally {
       setTranscribing(false)
@@ -552,11 +585,16 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         },
       })
 
+      if(!mountedRef.current){stream.getTracks().forEach(track=>track.stop());return}
+      recordingLocaleRef.current=getClientLocale()
       const candidateMimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
       const mimeType = candidateMimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) || ''
       mimeTypeRef.current = mimeType || 'audio/webm'
       streamRef.current = stream
       segmentsRef.current = []
+      segmentResultsRef.current = {}
+      revokeAudioSession()
+      audioSessionRef.current=crypto.randomUUID()
       rotatingRef.current = false
       elapsedRef.current = 0
       lastSegmentAtRef.current = 0
@@ -672,10 +710,10 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
                 {t.recording} {formatClock(recordingTime)}
               </div>
               <p className="text-sm text-indigo-700 font-medium">
-                {t.estimatedStt(calculateAudioTranscriptionCost(recordingTime))}
+                {openrouterOnly ? sttCostHint : t.estimatedStt(calculateAudioTranscriptionCost(recordingTime))}
               </p>
               <p className="text-xs text-gray-500 max-w-md mx-auto">
-                {costByDuration}
+                {sttCostHint}
               </p>
               <button
                 onClick={stopRecording}
@@ -715,10 +753,10 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
                 {t.maxSize(maxSize)}
               </p>
               <p className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mt-2">
-                {costByDuration}
+                {sttCostHint}
               </p>
               <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-                {t.privacyHint}
+                {openrouterOnly?ambientUi(locale,'privacy'):t.privacyHint}
               </p>
             </>
           )}
@@ -730,12 +768,13 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         </div>
       )}
       
+      {segmentsRef.current.length>0 && !transcribing && !recording && <button type="button" onClick={()=>void transcribeSegments()} className="mt-3 rounded border border-indigo-500 px-3 py-2 text-sm text-indigo-800">{ambientUi(locale,'retry')}</button>}
       {lastAnalysis && !transcribing && !recording && (
         <div className="mt-4 p-3 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded-lg">
           <div className="flex items-center justify-between text-sm">
             <div className="flex flex-wrap items-center gap-4">
               <span>⏱️ {t.duration}: <b>{formatClock(lastAnalysis.duration)}</b></span>
-              <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span>
+              {lastAnalysis.costKnown ? <span>💰 {t.cost}: <b>{lastAnalysis.cost.toFixed(2)} cr.</b></span> : <span>{ambientUi(locale,'unreported')}</span>}
             </div>
             <button
               onClick={() => setLastAnalysis(null)}
@@ -744,7 +783,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
               ✕
             </button>
           </div>
-          <p className="mt-1 text-[11px] text-indigo-600">{costByDuration}</p>
+          <p className="mt-1 text-[11px] text-indigo-600">{sttCostHint}</p>
         </div>
       )}
     </div>

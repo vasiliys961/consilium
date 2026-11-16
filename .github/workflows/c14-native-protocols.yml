@@ -1,0 +1,41 @@
+name: Native protocol typecheck (RU and Global)
+
+on:
+  pull_request:
+    branches: [chatgpt-dev]
+    paths:
+      - 'integrations/protocol/ru/**'
+      - 'integrations/protocol/en/**'
+      - '.github/workflows/c14-native-protocols.yml'
+  push:
+    branches: [chatgpt-dev]
+    paths:
+      - 'integrations/protocol/ru/**'
+      - 'integrations/protocol/en/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [ru, en]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: integrations/protocol/${{ matrix.edition }}/package-lock.json
+      - name: Install native protocol dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: integrations/protocol/${{ matrix.edition }}
+      - name: TypeScript check native protocol
+        run: ./node_modules/.bin/tsc --noEmit
+        working-directory: integrations/protocol/${{ matrix.edition }}

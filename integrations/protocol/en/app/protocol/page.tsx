@@ -27,6 +27,7 @@ import { finalizeStage2Note, isValidStage2Note } from '@/lib/protocol-stage2'
 import { getClientLocale,setClientLocale } from '@/lib/i18n/client'
 import { protocolMessages } from '@/lib/i18n/ui-client-messages'
 import { isLocale, type Locale } from '@/lib/i18n/config'
+import { ambientUi } from '@/lib/i18n/ambient-ui'
 import mammoth from 'mammoth'
 
 declare global {
@@ -93,6 +94,8 @@ function chunkTemplateForRag(content: string, maxChunkLength: number = 1200): st
 export default function ProtocolPage() {
   const [locale, setLocale] = useState<Locale>('en')
   const [speechReady,setSpeechReady]=useState<boolean|null>(null)
+  const [speechProvider,setSpeechProvider]=useState<'openrouter'|'assemblyai'>('openrouter')
+  const [speechModel,setSpeechModel]=useState('')
   const sourceMessages = protocolMessages[locale] || protocolMessages.en
   const t = Object.fromEntries(Object.entries(sourceMessages).map(([key,value])=>[key,typeof value==='string'?nativeProtocolUi(locale,value):value])) as typeof sourceMessages
   const ui=(text:string)=>nativeProtocolUi(locale,text)
@@ -103,11 +106,12 @@ export default function ProtocolPage() {
   useEffect(()=>{if(new URLSearchParams(window.location.search).get('conciliumAmbient')==='1')setShowConversationRecorder(true);},[]);
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
+  const [draftSourceTranscript, setDraftSourceTranscript] = useState('')
+  const [draftSourceLocale, setDraftSourceLocale] = useState<Locale>('en')
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
-  const [autoInsertConversationToProtocol, setAutoInsertConversationToProtocol] = useState(false)
-  const [conversationStats, setConversationStats] = useState({ duration: 0, cost: 0 })
+  const [conversationStats, setConversationStats] = useState({ duration: 0, cost: 0, costKnown: true })
   const [protocol, setProtocol] = useState('')
   const [editingDraft,setEditingDraft]=useState(false)
   const [editingFinal,setEditingFinal]=useState(false)
@@ -160,7 +164,7 @@ export default function ProtocolPage() {
     })
   }
 
-  useEffect(()=>{let alive=true;fetch('/api/concilium/health').then(r=>r.json()).then(v=>{if(alive)setSpeechReady(v.assemblyAi===true);}).catch(()=>{if(alive)setSpeechReady(false);});return()=>{alive=false;};},[]);
+  useEffect(()=>{let alive=true;fetch('/api/concilium/health').then(r=>r.json()).then(v=>{if(alive){setSpeechReady(v.speechConfigured===true);setSpeechProvider(v.speechProvider==='assemblyai'?'assemblyai':'openrouter');setSpeechModel(String(v.speechModel||''));}}).catch(()=>{if(alive)setSpeechReady(false);});return()=>{alive=false;};},[]);
   useEffect(() => {
     const requested=new URLSearchParams(location.search).get('protocolLocale');
     const saved=isLocale(requested)?requested:getClientLocale();setLocale(saved);setClientLocale(saved)
@@ -755,6 +759,8 @@ export default function ProtocolPage() {
         throw new Error(t.draftError)
       }
       setRecordedDraftText(draft)
+      setDraftSourceTranscript(safeTranscript)
+      setDraftSourceLocale(locale)
       setDraftFromConversationModel(typeof data?.modelUsed === 'string' ? data.modelUsed : null)
       const usage = readApiUsage(data)
       if (usage) {
@@ -765,16 +771,10 @@ export default function ProtocolPage() {
           outputTokens: usage.completion_tokens,
         })
       }
-      if (autoInsertConversationToProtocol) {
-        setRawText((prev) => (prev ? `${prev}\n\n${draft}` : draft))
-      }
     } catch (error: any) {
       setDraftFromConversationError(error?.message || t.draftError)
-      setRecordedDraftText(safeTranscript)
+      // Preserve any physician-edited draft on error; a transcript is not a clinical draft.
       setDraftFromConversationModel(null)
-      if (autoInsertConversationToProtocol) {
-        setRawText((prev) => (prev ? `${prev}\n\n${safeTranscript}` : safeTranscript))
-      }
     } finally {
       setDraftFromConversationLoading(false)
     }
@@ -953,35 +953,26 @@ export default function ProtocolPage() {
                 {t.conversationHint}
               </p>
               <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 mb-2">
-                {t.conversationCostHint.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))}
+                {speechProvider==='openrouter'?ambientUi(locale,'cost'):t.conversationCostHint.replace('{rate}', String(AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR))}
               </p>
               <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                 {t.conversationStartHint}
               </p>
               {conversationStats.duration > 0 && (
                 <p className="text-[11px] font-semibold text-indigo-800 mb-3">
-                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {ui("· STT")}{conversationStats.cost.toFixed(2)} {ui("cr.")}</p>
+                  ⏱️ {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ambientUi(locale,'unreported')}</p>
               )}
-              <label className="inline-flex items-center gap-2 text-[11px] font-semibold text-indigo-700 mb-3">
-                <input
-                  type="checkbox"
-                  checked={autoInsertConversationToProtocol}
-                  onChange={(e) => setAutoInsertConversationToProtocol(e.target.checked)}
-                  className="w-3.5 h-3.5"
-                />
-                {t.autoInsertDraft}
-              </label>
               <label className="flex items-start gap-2 text-xs mb-3 leading-relaxed text-amber-900">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={event=>setAmbientAudioConsent(event.target.checked)}/>
-                I confirm the required consent to record and transmit raw audio to the configured speech provider. A voice recording may identify a person even without a name; privacy review is required. Recording begins only after pressing Record.
+                {ambientUi(locale,'consent')}
               </label>
-              {speechReady?(ambientAudioConsent?<AudioUpload maxSize={100}
+              {speechReady?(ambientAudioConsent?<AudioUpload maxSize={speechProvider==='openrouter'?24:100} openrouterOnly={speechProvider==='openrouter'}
                 onTranscribe={(transcript, meta) => {
                   if (meta?.cost) {
                     setCostPart('stt', meta.cost, 'add')
                     recordUsageCost({
                       section: 'appointment-protocol',
-                      model: 'assemblyai',
+                      model: meta.model||speechModel||speechProvider,
                       costUnits: meta.cost,
                     })
                   }
@@ -989,15 +980,13 @@ export default function ProtocolPage() {
                     setConversationStats((prev) => ({
                       duration: prev.duration + (Number(meta.duration) || 0),
                       cost: prev.cost + (Number(meta.cost) || 0),
+                      costKnown: prev.costKnown && meta.costKnown === true,
                     }))
                   }
-                  const nextTranscript = conversationTranscriptText
-                    ? `${conversationTranscriptText}\n\n${transcript}`
-                    : transcript
-                  setConversationTranscriptText(nextTranscript)
+                  setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // Explicit action is required before any paid LLM draft.
                 }}
-              />:<p role="status" className="text-xs text-gray-600">Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ui("Audio-file transcription is not configured in this installation. Browser dictation may still be available.")}</p>}
+              />:<p role="status" className="text-xs text-gray-600">{ui('Confirm recording and cloud transcription consent above before selecting audio or starting the microphone.')}</p>):<p role="status" className="text-sm leading-relaxed">{speechReady===null?ui("Checking audio transcription..."):ambientUi(locale,'notConfigured')}</p>}
               {draftFromConversationLoading && (
                 <p className="mt-2 text-xs text-indigo-600">⏳ {t.draftLoading}</p>
               )}
@@ -1009,6 +998,7 @@ export default function ProtocolPage() {
               )}
               {recordedDraftText && (
                 <div className="mt-3">
+                  {(draftSourceTranscript!==conversationTranscriptText.trim()||draftSourceLocale!==locale)&&<p role="alert" className="mb-2 text-xs text-amber-800">{ambientUi(locale,'stale')}</p>}
                   <label className="block text-xs font-medium text-gray-700 mb-2">{t.draftLabel}</label>
                   <textarea dir="auto"
                     value={recordedDraftText}
@@ -1021,7 +1011,7 @@ export default function ProtocolPage() {
                     <button
                       onClick={() => setRawText(prev => prev ? `${prev}\n\n${recordedDraftText}` : recordedDraftText)}
                       className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-colors"
-                      disabled={loading || !recordedDraftText.trim()}
+                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim() || draftSourceLocale!==locale}
                     >
                       ➕ {t.insertDraft}
                     </button>
@@ -1037,7 +1027,7 @@ export default function ProtocolPage() {
               )}
               {conversationTranscriptText && (
                 <button type="button" className="mt-3 border border-indigo-500 px-3 py-2 text-xs text-indigo-800 disabled:opacity-50" disabled={loading||draftFromConversationLoading} onClick={()=>void buildDraftFromConversation(conversationTranscriptText)}>
-                  Prepare an editable draft from transcript (external LLM; charges may apply)
+                  {ambientUi(locale,'draftAction')}
                 </button>
               )}
               {conversationTranscriptText && (
@@ -1082,7 +1072,7 @@ export default function ProtocolPage() {
                     💰 {t.serviceCost}: {currentCost.toFixed(2)} {ui("cr.")}</div>
                   {conversationStats.cost > 0 && (
                     <div className="mt-1 text-[10px] text-teal-700">
-                      {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {ui("· STT")}{conversationStats.cost.toFixed(2)} {ui("cr.")}</div>
+                      {t.conversationRecorded}: {formatConversationClock(conversationStats.duration)} {conversationStats.costKnown?`${ui("· STT")} ${conversationStats.cost.toFixed(2)} ${ui("cr.")}`:ui("· STT billing not reported")}</div>
                   )}
                 </div>
               )}

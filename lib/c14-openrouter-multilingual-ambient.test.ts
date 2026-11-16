@@ -1,0 +1,212 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT,ambientModelSelection,transcribeAmbientOpenRouter} from '../integrations/protocol/en/lib/concilium-openrouter-stt.ts';
+import {ambientModelSelection as ruModels,transcribeAmbientOpenRouter as ruTranscribe} from '../integrations/protocol/ru/lib/concilium-openrouter-stt.ts';
+import {scopeAmbientSpeakers as ruScope} from '../integrations/protocol/ru/lib/ambient-chunk-speakers.ts';
+import {scopeAmbientSpeakers as enScope} from '../integrations/protocol/en/lib/ambient-chunk-speakers.ts';
+
+const repo=(path:string)=>readFileSync(path,'utf8');
+function withMock<T>(request:(url:string,init:RequestInit)=>Promise<Response>,action:()=>Promise<T>):Promise<T>{
+ const original=globalThis.fetch,key=process.env.OPENROUTER_API_KEY,model=process.env.CONCILIUM_AMBIENT_STT_MODEL;
+ process.env.OPENROUTER_API_KEY='SYNTHETIC_TEST_KEY_ONLY';
+ delete process.env.CONCILIUM_AMBIENT_STT_MODEL;
+ globalThis.fetch=((url:URL|string|Request,init?:RequestInit)=>request(String(url),init??{})) as typeof fetch;
+ return action().finally(()=>{globalThis.fetch=original;if(key===undefined)delete process.env.OPENROUTER_API_KEY;else process.env.OPENROUTER_API_KEY=key;if(model===undefined)delete process.env.CONCILIUM_AMBIENT_STT_MODEL;else process.env.CONCILIUM_AMBIENT_STT_MODEL=model;});
+}
+
+test('C14: only two approved STT models, same priority for RU and Global',()=>{
+ assert.deepEqual(ambientModelSelection({} as NodeJS.ProcessEnv),[AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT]);
+ assert.deepEqual(ruModels({} as NodeJS.ProcessEnv),[AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT]);
+ assert.deepEqual(ambientModelSelection({...process.env,CONCILIUM_AMBIENT_STT_MODEL:AMBIENT_FALLBACK_STT}),[AMBIENT_FALLBACK_STT,AMBIENT_PRIMARY_STT]);
+ assert.throws(()=>ambientModelSelection({...process.env,CONCILIUM_AMBIENT_STT_MODEL:'unapproved/custom'}),/Unsupported/);
+});
+
+test('C14: all 11 encounter languages use the existing OpenRouter key and dedicated STT API',async()=>{
+ const languages=['ru','en','es','fr','ar','hi','pt','id','ms','tr','zh'];
+ let calls=0;
+ await withMock(async(url,init)=>{
+  calls++;
+  assert.equal(url,'https://openrouter.ai/api/v1/audio/transcriptions');
+  assert.equal(new Headers(init.headers).get('authorization'),'Bearer SYNTHETIC_TEST_KEY_ONLY');
+  const payload=JSON.parse(String(init.body));
+  assert.ok(languages.includes(payload.language));
+  assert.equal(payload.model,AMBIENT_PRIMARY_STT);
+  assert.equal(payload.input_audio.format,'webm');
+  assert.equal(payload.response_format,'verbose_json');
+  assert.equal(payload.provider.options.azure.diarization.enabled,true);
+  return Response.json({text:'Synthetic interview: no penicillin allergy. Warfarin 5 mg.',usage:{seconds:12,cost:0.0003}});
+ },async()=>{
+  for(const lang of languages){
+   const result=await (lang==='ru'?ruTranscribe:transcribeAmbientOpenRouter)(new Uint8Array([1,2,3]).buffer,'audio/webm;codecs=opus',lang);
+   assert.match(result.text,/no penicillin allergy/);
+   assert.equal(result.costUsd,0.0003);
+   assert.equal(result.duration,12);
+  }
+ });
+ assert.equal(calls,languages.length);
+});
+
+test('C14: acoustic speaker IDs are preserved without asserting doctor/patient roles',async()=>{
+ await withMock(async()=>Response.json({segments:[
+  {speaker:0,text:'Не принимаю варфарин 5 мг.'},
+  {speaker:1,text:'Аллергия на пенициллин?'}
+ ],usage:{seconds:8,cost:0.00005}}),async()=>{
+  const result=await ruTranscribe(new Uint8Array([3,4]).buffer,'audio/webm','ru');
+  assert.equal(result.speakerLabels,true);
+  assert.equal(result.text,'Speaker 0: Не принимаю варфарин 5 мг.\nSpeaker 1: Аллергия на пенициллин?');
+  assert.doesNotMatch(result.text,/Врач:|Пациент:/);
+ });
+});
+
+test('C14: predictable fallback on unsupported primary model, no silent retry after server failure',async()=>{
+ const attempted:string[]=[];
+ await withMock(async(_url,init)=>{
+  const request=JSON.parse(String(init.body));attempted.push(request.model);
+  return attempted.length===1?Response.json({error:'unsupported'},{status:400}):Response.json({text:'No dyspnea.',usage:{seconds:3,cost:0.00001}});
+ },async()=>{
+  const output=await transcribeAmbientOpenRouter(new Uint8Array([1]).buffer,'audio/ogg','en');
+  assert.equal(output.model,AMBIENT_FALLBACK_STT);
+  assert.equal(output.text,'No dyspnea.');
+ });
+ assert.deepEqual(attempted,[AMBIENT_PRIMARY_STT,AMBIENT_FALLBACK_STT]);
+ let count=0;
+ await withMock(async()=>{count++;return Response.json({error:'provider failure'},{status:502})},async()=>{
+  await assert.rejects(()=>transcribeAmbientOpenRouter(new Uint8Array([1]).buffer,'audio/wav','en'),/HTTP 502/);
+ });
+ assert.equal(count,1);
+});
+
+test('C14: missing key and unsafe audio arguments fail before network calls',async()=>{
+ const key=process.env.OPENROUTER_API_KEY;
+ delete process.env.OPENROUTER_API_KEY;
+ try{await assert.rejects(()=>transcribeAmbientOpenRouter(new Uint8Array([1]).buffer,'audio/wav','ru'),/OPENROUTER_API_KEY/)}
+ finally{if(key!==undefined)process.env.OPENROUTER_API_KEY=key}
+ await withMock(async()=>{throw Error('No network request expected')},async()=>{
+  await assert.rejects(()=>transcribeAmbientOpenRouter(new Uint8Array([1]).buffer,'text/plain','ru'),/Unsupported audio/);
+  await assert.rejects(()=>transcribeAmbientOpenRouter(new Uint8Array([1]).buffer,'audio/wav','invalid-locale'),/Invalid transcription language/);
+  await assert.rejects(()=>transcribeAmbientOpenRouter(new ArrayBuffer(0),'audio/wav','en'),/Audio must/);
+ });
+});
+
+test('C14: Global 10 locales, correct Preview origin and configured OpenRouter speech readiness',()=>{
+ const langs=repo('integrations/protocol/en/lib/i18n/config.ts');
+ for(const locale of ['en','es','fr','ar','hi','pt-BR','id','ms','tr','zh-CN'])
+  assert.match(langs,new RegExp("'"+locale.replace('-','\\-')+"'"));
+ const mapping=repo('integrations/protocol/en/lib/i18n/stt-language.ts');
+ for(const code of ['en','es','fr','ar','hi','pt','id','ms','tr','zh'])
+  assert.match(mapping,new RegExp("'"+code+"'"));
+ const route=repo('integrations/protocol/en/app/api/transcribe/route.ts');
+ const health=repo('integrations/protocol/en/app/api/concilium/health/route.ts');
+ const page=repo('integrations/protocol/en/app/protocol/page.tsx');
+ assert.match(route,/3212/);
+ assert.match(route,/nativeAudioGuard\(request\)/);
+ assert.match(route,/transcribeAmbientOpenRouter/);
+ assert.match(health,/speechConfigured:configured/);
+ assert.match(page,/setSpeechReady\(v.speechConfigured===true\)/);
+ assert.match(page,/openrouterOnly=\{speechProvider==='openrouter'\}/);
+});
+
+test('C14: model draft never auto-inserts; transcript and document locale are reviewed before manual transfer',()=>{
+ for(const edition of ['ru','en']){
+  const page=repo('integrations/protocol/'+edition+'/app/protocol/page.tsx');
+  assert.doesNotMatch(page,/autoInsertConversationToProtocol/);
+  assert.match(page,/draftSourceTranscript!==conversationTranscriptText.trim\(\)/);
+  assert.match(page,/setConversationTranscriptText\(previous=>/);
+  assert.match(page,/onClick=\{\(\)=>void buildDraftFromConversation\(conversationTranscriptText\)\}/);
+  assert.match(page,/recordedDraftText/);
+  assert.doesNotMatch(page,/setRecordedDraftText\(safeTranscript\)/);
+ }
+ assert.match(repo('integrations/protocol/en/app/protocol/page.tsx'),/draftSourceLocale!==locale/);
+});
+
+test('C14: RU long encounter is segmented into complete files and STT runs only after stop',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ const route=repo('integrations/protocol/ru/app/api/transcribe/route.ts');
+ assert.match(recorder,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(recorder,/new MediaRecorder\(stream/);
+ assert.match(recorder,/segmentsRef\.current\.push\(new File\(/);
+ assert.match(recorder,/rotatingRef\.current=true/);
+ assert.match(recorder,/void transcribeSegments\(\)/);
+ assert.match(recorder,/const stopRecording = \(\) =>/);
+ assert.match(recorder,/if\(rotatingRef\.current&&recordingRef\.current&&activeStreamRef\.current\)/);
+ assert.match(recorder,/onTranscribe\(texts\.join\('\\n\\n'\)/);
+ assert.match(recorder,/segmentResultsRef\.current\[index\]=result/);
+ assert.match(recorder,/hasPendingSegments&&!transcribing&&!recording/);
+ assert.match(recorder,/Повторить оставшуюся расшифровку/);
+ assert.match(recorder,/window\.addEventListener\('pagehide', cancelOnLeave\)/);
+ assert.match(route,/CONCILIUM_OPENROUTER_ONLY === '1'\s*\? text\s*:\s*await maybeApplyRoleDiarization\(text\)/);
+});
+test('C14: incomplete RU ambient transcript cannot be silently inserted as a complete consultation',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ assert.doesNotMatch(recorder,/onTranscribe\(result\.transcript.*for \(let/);
+ const complete=recorder.indexOf("onTranscribe(texts.join('\\n\\n')");
+ const clear=recorder.indexOf("segmentsRef.current=[]",complete);
+ assert.ok(complete>0&&clear>complete,'only deliver after all segments succeed, then discard temporary audio');
+ assert.match(recorder,/Запись временно хранится в этой вкладке/);
+ assert.match(recorder,/возможна повторная оплата/);
+});
+
+test('C14: one consent for encounter chunks, but signed SHA-256 approval for each file',()=>{
+ for(const edition of ['ru','en']){
+  const privacy=repo('integrations/protocol/'+edition+'/components/ConciliumPrivacy.tsx');
+  const recorder=repo('integrations/protocol/'+edition+'/components/AudioUpload.tsx');
+  const route=repo('integrations/protocol/'+edition+'/app/api/transcribe/route.ts');
+  assert.match(privacy,/AUDIO_SESSION_TTL_MS=60\*60\*1000/);
+  assert.match(privacy,/audioConsents\.current\.get\(session\)/);
+  assert.match(privacy,/crypto\.subtle\.digest\('SHA-256'/);
+  assert.match(privacy,/x-concilium-privacy-audio/);
+  assert.match(privacy,/concilium\.audio-session-revoke/);
+  assert.match(recorder,/conciliumAudioSession/);
+  assert.match(recorder,/audioSessionRef\.current=crypto\.randomUUID\(\)/);
+  assert.match(recorder,/revokeAudioSession\(\)/);
+  assert.match(route,/nativeAudioGuard\(request\)/);
+  assert.doesNotMatch(privacy,/localStorage\.setItem\(.+audioConsent/);
+ }
+});
+test('C14: both ambient recorders rotate complete three-minute audio files',()=>{
+ const ru=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ const en=repo('integrations/protocol/en/components/AudioUpload.tsx');
+ assert.match(ru,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(en,/const SEGMENT_SECONDS = 3 \* 60/);
+ assert.match(ru,/mountedRef\.current/);
+ assert.match(ru,/if\(interruptedRef\.current\)/);
+ assert.match(ru,/Запись прервана/);
+ assert.match(ru,/!interruptedRef\.current&&<button/);
+ for(const page of [ru,en])assert.match(page,/transcribeSegments\(\)/);
+});
+
+test('C14: changing Global UI language during STT cannot change the language of earlier recorded audio',()=>{
+ const recorder=repo('integrations/protocol/en/components/AudioUpload.tsx');
+ assert.match(recorder,/recordingLocaleRef\.current=getClientLocale\(\)/);
+ assert.match(recorder,/audioSession\?recordingLocaleRef\.current:getClientLocale\(\)/);
+ assert.match(recorder,/mountedRef\.current=false/);
+ assert.match(recorder,/if\(!mountedRef\.current\)throw Error/);
+});
+test('C14: revoking microphone consent or closing RU panel stops subsequent paid chunk requests',()=>{
+ const recorder=repo('integrations/protocol/ru/components/AudioUpload.tsx');
+ assert.match(recorder,/mountedRef\.current=false/);
+ assert.match(recorder,/if\(!mountedRef\.current\)throw Error/);
+ assert.match(recorder,/stream\.getTracks\(\)\.forEach\(track=>track\.stop\(\)\)/);
+ assert.match(recorder,/revokeAudioSession\(\)/);
+});
+
+test('C14: repeated acoustic speaker IDs in separate audio files are never presented as the same person',()=>{
+ const source='Speaker 0: No fever or penicillin allergy.\nSpeaker 1: Are you taking warfarin 5 mg?';
+ const first='Chunk 1 / Speaker 0: No fever or penicillin allergy.\nChunk 1 / Speaker 1: Are you taking warfarin 5 mg?';
+ const second=first.replaceAll('Chunk 1','Chunk 2');
+ assert.equal(ruScope(source,0),first);
+ assert.equal(enScope(source,1),second);
+ assert.equal(ruScope('Пациент: нет аллергии.',0),'Пациент: нет аллергии.');
+ assert.throws(()=>enScope(source,-1),/Invalid audio chunk index/);
+ for(const edition of ['ru','en']){
+  assert.match(repo('integrations/protocol/'+edition+'/components/AudioUpload.tsx'),/scopeAmbientSpeakers\(result\.transcript/);
+ }
+});
+
+test('C14: RU server does not mislabel missing OpenRouter STT charges as free',()=>{
+ const route=repo('integrations/protocol/ru/app/api/transcribe/route.ts');
+ assert.match(route,/const actualCostKnown = typeof costUsd/);
+ assert.match(route,/costKnown: actualCostKnown/);
+ assert.match(route,/CONCILIUM_OPENROUTER_ONLY === '1'\s*\? null/);
+});

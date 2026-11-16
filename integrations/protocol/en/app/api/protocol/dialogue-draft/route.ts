@@ -5,10 +5,12 @@ import { addModelUsage, emptyTokenUsage } from '@/lib/cost-calculator'
 import { getForcedLanguageInstructionForRequest } from '@/lib/i18n/llm-response-language'
 
 const DEFAULT_DRAFT_MODEL = process.env.PROTOCOL_DIALOGUE_DRAFT_MODEL?.trim() || MODELS.HAIKU
-const FALLBACK_DRAFT_MODEL = MODELS.GEMINI_3_PRO
+const FALLBACK_DRAFT_MODEL = MODELS.GEMINI_3_FLASH
 
 function buildDialogueDraftPrompt(params: { transcript: string; specialistName?: string; languageInstruction: string }): string {
   const { transcript, specialistName, languageInstruction } = params
+  // These T-identifiers use the same line enumeration as protocolDocumentMessage.
+  const numberedTranscript = transcript.replace(/\r\n?/g,'\n').split('\n').filter(Boolean).map((line,index)=>`[T${index+1}] ${line}`).join('\n')
   return `${languageInstruction}
 You are a medical assistant for initial structuring of visit data.
 Task: from a physician-patient conversation transcript, produce a draft for further protocol completion.
@@ -18,6 +20,10 @@ IMPORTANT:
 - This is only a draft from complaints/history; no final diagnosis and no definitive treatment plan.
 - If data is missing, explicitly write "NO DATA" so the physician can quickly complete it.
 - Do not invent facts. Use only information present in the conversation.
+- Preserve exact negations, drug names, dose amounts, units and chronology. A doctor's question is not confirmation of a symptom.
+- "Speaker 0/1" are acoustic labels, NOT verified doctor/patient roles. Mark uncertain roles for physician review.
+- Cite the exact original transcript line [T1], [T2], etc. for each stated clinical fact. Never fabricate evidence IDs or clinical findings.
+- Flag contradictions, unclear drug doses and doubtful negatives as needing verification.
 - Plain text only, no markdown, no "*" list formatting.
 
 Return plain text in this exact section order.
@@ -29,9 +35,10 @@ Important: section titles MUST be written in the required response language.
 4) Medications/allergies from the conversation
 5) Objective findings (already present in conversation)
 6) What the physician still needs to document objectively (numbered list)
+7) Items to verify with original [Tn] quotations (speaker, dose, negation, omissions)
 
-Raw conversation text:
-${transcript}`
+Original conversation lines (Tn, speaker roles unverified):
+${numberedTranscript}`
 }
 
 export async function POST(request: NextRequest) {
