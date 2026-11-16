@@ -1,7 +1,7 @@
 import { CitationContent } from "@/app/components/citation-content";
 import { useWorkspaceLanguage } from "@/app/components/workspace-language";
 import type { ClinicalReport } from '@/lib/clinical-report';
-import type { Citation } from '@/lib/literature';
+import {citationPassages,type Citation} from '@/lib/literature';
 import {reviewClaimEvidence} from '@/lib/clinical-claim-evidence';
 import {medicationCopy} from '@/lib/medication-copy';
 import {useId,useState} from 'react';
@@ -18,7 +18,7 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
  const [selectedOption,setSelectedOption]=useState<number>();
  const checkerId=useId();
  function sourceLink(key:string,claim:string) {
-   const citation=citations.find(item=>item.passageId===key||item.url===key||`pmid:${item.pmid}`===key);
+   const citation=citations.flatMap(citationPassages).find(item=>item.passageId===key||item.url===key||`pmid:${item.pmid}`===key);
    if(!citation)return null;
    const assessment=reviewClaimEvidence(claim,citation);
    const access=assessment.level==='paragraph'?t('Фрагмент полного текста')
