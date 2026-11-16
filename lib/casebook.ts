@@ -272,7 +272,7 @@ export async function persistNativeProtocol(
   if(!value||value.deletedAt)throw Error('Случай не найден или удалён. Протокол остался в отдельном модуле.');
   if(value.status==='closed')throw Error('Случай завершён. Верните его в работу перед сохранением протокола.');
   const previous=(value.protocols??[]).find(item=>item.id===document.id);
-  const comparable=(item:typeof document)=>JSON.stringify([item.edition,item.format,item.locale,item.sourceSnapshot,item.sections,item.nativeState]);
+  const comparable=(item:typeof document)=>JSON.stringify([item.edition,item.format,item.locale,item.sourceSnapshot,item.ambientTranscript,item.sections,item.nativeState]);
   if(previous&&comparable(previous)===comparable(document))return value;
   const updated:ClinicalCase={
    ...value,updated:now,
