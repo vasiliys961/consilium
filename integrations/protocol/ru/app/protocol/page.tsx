@@ -1844,7 +1844,7 @@ export default function ProtocolPage() {
               </label>
               <label className="mb-3 flex items-start gap-2 text-xs leading-relaxed text-[#5C4636]">
                 <input type="checkbox" checked={ambientAudioConsent} onChange={e=>setAmbientAudioConsent(e.target.checked)}/>
-                Подтверждаю необходимое согласие пациента на запись и передачу обезличенного аудио внешнему сервису распознавания. Начать запись можно только отдельной кнопкой.
+                Подтверждаю необходимое согласие пациента на запись и передачу исходного аудио внешнему сервису распознавания. Даже без ФИО голос может раскрывать личность; перед передачей требуется проверка приватности. Запись включается только по кнопке.
               </label>
               {ambientAudioConsent ? <AudioUpload
                 variant="cabinet"
