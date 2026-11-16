@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import ConciliumProtocolBridge from '@/components/ConciliumProtocolBridge'
 import AudioUpload from '@/components/AudioUpload'
+import {auditAmbientDraft} from '@/lib/ambient-draft-audit'
 import VoiceInput from '@/components/VoiceInput'
 
 import ReactMarkdown from 'react-markdown'
@@ -90,6 +91,7 @@ export default function ProtocolPage() {
   const [conversationTranscriptText, setConversationTranscriptText] = useState('')
   const [recordedDraftText, setRecordedDraftText] = useState('')
   const [draftSourceTranscript, setDraftSourceTranscript] = useState('')
+  const [ambientAuditConfirmed,setAmbientAuditConfirmed]=useState(false)
   const [draftFromConversationLoading, setDraftFromConversationLoading] = useState(false)
   const [draftFromConversationError, setDraftFromConversationError] = useState('')
   const [draftFromConversationModel, setDraftFromConversationModel] = useState<string | null>(null)
@@ -1590,6 +1592,7 @@ export default function ProtocolPage() {
     if (!safeTranscript) return
 
     setDraftFromConversationLoading(true)
+    setAmbientAuditConfirmed(false)
     setDraftFromConversationError('')
     try {
       const response = await fetch('/api/protocol/dialogue-draft', {
@@ -1621,6 +1624,7 @@ export default function ProtocolPage() {
     }
   }
 
+  const ambientIssues=auditAmbientDraft(conversationTranscriptText,recordedDraftText)
   const fieldClass = 'w-full border-0 border-b border-[#C9BBA8] bg-transparent px-0 py-2 text-sm text-[#1C1612] outline-none focus:border-[#9C4221]'
   const labelClass = 'block mb-1 text-[11px] uppercase tracking-[0.16em] text-[#8A7563]'
   const quietButton = 'border border-[#C9BBA8] px-3 py-1.5 text-xs tracking-wide text-[#5C4636] hover:border-[#9C4221] disabled:opacity-50'
@@ -1838,6 +1842,7 @@ export default function ProtocolPage() {
                 maxSize={gateway==='openrouter'?24:500}
                 provider={gateway}
                 onTranscribe={(transcript) => {
+                  setAmbientAuditConfirmed(false)
                   setConversationTranscriptText(previous=>previous?`${previous}\n\n${transcript}`:transcript)
                   // C14: a transcript is only source material. Do not make a paid
                   // LLM draft request until the physician explicitly asks for one.
@@ -1858,21 +1863,27 @@ export default function ProtocolPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-2">Черновик по жалобам/анамнезу (можно редактировать перед вставкой):</label>
                   <textarea
                     value={recordedDraftText}
-                    onChange={(e) => setRecordedDraftText(e.target.value)}
+                    onChange={(e) => {setRecordedDraftText(e.target.value);setAmbientAuditConfirmed(false)}}
                     className={`${fieldClass} min-h-[140px] text-xs`}
                     placeholder="Транскрипт беседы появится здесь..."
                     disabled={loading}
                   />
+                  {ambientIssues.length>0&&<div role="alert" className="mt-3 border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">
+                    <strong>Проверка фактов перед передачей в протокол</strong>
+                    <p className="my-2">Автоматические замечания не доказывают ошибку и не подтверждают точность. Сверьте дозы, лекарства, отрицания и роли говорящих с исходной беседой.</p>
+                    <ul className="list-disc space-y-1 pl-5">{ambientIssues.map((issue,i)=><li key={i}>{issue.code==='missing_citations'?'В черновике нет ссылок на исходные реплики':issue.code==='invalid_citation'?'Несуществующая ссылка на реплику':issue.code==='unsupported_dose'?'Доза или объём не найдены в исходной речи':'Указанная ссылка не подтверждает дозу'}: {issue.detail}</li>)}</ul>
+                    <label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={ambientAuditConfirmed} onChange={e=>setAmbientAuditConfirmed(e.target.checked)} /><span>Я сверил замечания с расшифровкой и подтверждаю передачу исправленного черновика.</span></label>
+                  </div>}
                   <div className="mt-2 flex flex-wrap gap-2">
                     <button
                       onClick={() => setRawText(prev => prev ? `${prev}\n\n${recordedDraftText}` : recordedDraftText)}
                       className="bg-[#9C4221] px-3 py-1.5 text-xs text-[#FBF7F0] hover:bg-[#7C341A] disabled:opacity-50"
-                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim()}
+                      disabled={loading || !recordedDraftText.trim() || draftSourceTranscript!==conversationTranscriptText.trim() || (ambientIssues.length>0&&!ambientAuditConfirmed)}
                     >
                       Вставить черновик в протокол
                     </button>
                     <button
-                      onClick={() => setRecordedDraftText('')}
+                      onClick={() => {setRecordedDraftText('');setAmbientAuditConfirmed(false)}}
                       className={quietButton}
                       disabled={loading}
                     >
@@ -1891,7 +1902,7 @@ export default function ProtocolPage() {
                   <summary className="text-xs text-gray-500 cursor-pointer">Показать исходную транскрипцию беседы</summary>
                   <textarea
                     value={conversationTranscriptText}
-                    onChange={(e) => setConversationTranscriptText(e.target.value)}
+                    onChange={(e) => {setConversationTranscriptText(e.target.value);setAmbientAuditConfirmed(false)}}
                     className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg text-xs min-h-[100px] focus:ring-2 focus:ring-gray-400 outline-none"
                     disabled={loading}
                   />
