@@ -21,14 +21,14 @@ function tokens(text:string):Set<string>{
  return new Set((text.toLocaleLowerCase().match(/[\p{L}][\p{L}\p{N}-]{3,}/gu)??[])
   .filter(term=>!STOP.has(term)));
 }
-const QUANTITY=/\b\d+(?:[.,]\d+)?\s*(?:mg|mcg|µg|mmol|ml|kg|мг|мкг|ммоль|мл|кг|%|years?|лет|мл\/мин|ml\/min)\b/giu;
+const QUANTITY=/(?<![\p{L}\p{N}])\d+(?:[.,]\d+)?\s*(?:мл\/мин|ml\/min|mmol|ммоль|mcg|mg|µg|мкг|мг|ml|мл|kg|кг|%|years?|лет)(?![\p{L}\p{N}])/giu;
 function normalized(value:string){return value.toLocaleLowerCase().replace(/\s+/g,'').replace(/,/g,'.');}
 const POPULATIONS=[
- {label:'беременность',pattern:/\b(?:pregnan\w*|gestation\w*|беремен\w*)\b/iu},
- {label:'детский возраст',pattern:/\b(?:pediatric\w*|paediatric\w*|children|child|adolescen\w*|дет\w*|подрост\w*)\b/iu},
- {label:'взрослые',pattern:/\b(?:adults?|взросл\w*)\b/iu},
- {label:'функция почек',pattern:/\b(?:renal|kidney|egfr|gfr|ckd|скф|почечн\w*)\b/iu},
- {label:'печёночная функция',pattern:/\b(?:hepatic|liver|цирроз\w*|печен\w*|печёночн\w*)\b/iu},
+ {label:'беременность',pattern:/(?:pregnan[\p{L}]*|gestation[\p{L}]*|беремен[\p{L}]*)/iu},
+ {label:'детский возраст',pattern:/(?:pediatric[\p{L}]*|paediatric[\p{L}]*|children|child|adolescen[\p{L}]*|дет[\p{L}]*|подрост[\p{L}]*|педиатр[\p{L}]*)/iu},
+ {label:'взрослые',pattern:/(?:adults?|взросл[\p{L}]*)/iu},
+ {label:'функция почек',pattern:/(?:renal|kidney|egfr|gfr|ckd|скф|почечн[\p{L}]*)/iu},
+ {label:'печёночная функция',pattern:/(?:hepatic|liver|цирроз[\p{L}]*|печен[\p{L}]*|печёночн[\p{L}]*)/iu},
 ];
 export function reviewClaimEvidence(claim:string,card:Citation):ClaimEvidenceReview {
  const content=card.excerpt?.trim()||card.abstract?.trim()||'';
