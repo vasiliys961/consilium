@@ -22,4 +22,4 @@
 - C8 restored-search [PR #37](https://github.com/vasiliys961/consilium/pull/37), [CI #43903672430](https://github.com/vasiliys961/consilium/actions/runs/43903672430) — успешен.
 - C9 [PR #38](https://github.com/vasiliys961/consilium/pull/38): [CI #43905116305](https://github.com/vasiliys961/consilium/actions/runs/43905116305) — 982/983 (1 skipped), 0 fail; [post-merge #43905423814](https://github.com/vasiliys961/consilium/actions/runs/43905423814) — успешен.
 
-- C10 PR #40 [CI #43917791050](https://github.com/vasiliys961/consilium/actions/runs/43917791050) — успешен: 988/989 (1 skipped), 0 fail; [post-merge #43918047771](https://github.com/vasiliys961/consilium/actions/runs/43918047771) — проверить итог.
+- C10 PR #40 [CI #43917791050](https://github.com/vasiliys961/consilium/actions/runs/43917791050) — успешен: 988/989 (1 skipped), 0 fail; [post-merge #43918047771](https://github.com/vasiliys961/consilium/actions/runs/43918047771) — **успешен**.
