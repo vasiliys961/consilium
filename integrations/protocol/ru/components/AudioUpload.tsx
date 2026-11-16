@@ -6,12 +6,11 @@ interface AudioUploadProps {
   onTranscribe: (transcript: string, data?: { duration: number; cost: number }) => void
   accept?: string
   maxSize?: number // в MB
-  autoStartOnMount?: boolean
   provider?: 'polza' | 'openrouter'
   variant?: 'default' | 'cabinet'
 }
 
-export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize = 2000, autoStartOnMount = false, provider = 'polza', variant = 'default' }: AudioUploadProps) {
+export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize = 2000, provider = 'polza', variant = 'default' }: AudioUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [transcribing, setTranscribing] = useState(false)
@@ -20,6 +19,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
   const [lastAnalysis, setLastAnalysis] = useState<{ duration: number; cost: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const activeStreamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -28,20 +28,15 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       if (timerRef.current) {
         clearInterval(timerRef.current)
       }
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop()
+      // Unmount/consent withdrawal cancels the recording; never upload on cleanup.
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.onstop = null
+        if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
       }
+      activeStreamRef.current?.getTracks().forEach(track => track.stop())
+      activeStreamRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    if (!autoStartOnMount) return
-    // Небольшая задержка нужна, чтобы DOM успел отрисоваться перед запросом доступа к микрофону.
-    const timer = setTimeout(() => {
-      void startRecording()
-    }, 150)
-    return () => clearTimeout(timer)
-  }, [autoStartOnMount])
 
   const handleFile = async (file: File) => {
     setError(null)
@@ -121,6 +116,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
           autoGainControl: true,
         },
       })
+      activeStreamRef.current = stream
       
       // Определяем поддерживаемый MIME тип
       const candidateMimeTypes = [
@@ -168,6 +164,7 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
         
         // Останавливаем все треки
         stream.getTracks().forEach(track => track.stop())
+        activeStreamRef.current = null
         
         // Отправляем на транскрипцию
         await handleFile(file)
