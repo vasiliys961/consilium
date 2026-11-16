@@ -4,9 +4,10 @@ import {isLocale,type Locale} from '@/lib/i18n/config';
 import {nativeProtocolUi} from '@/lib/native-ui';
 type State={reasoningDraft:string;finalNote:string;physicianAdditions:string;templateId:string;specialistName:string;customTemplate:string;universalPrompt:string};
 type Link={session:string;origin:string};
+const allowedConciliumOrigins=process.env.NEXT_PUBLIC_CONCILIUM_PREVIEW==='1'?['http://127.0.0.1:3207','http://localhost:3207']:['http://127.0.0.1:3107','http://localhost:3107'];
 export default function GlobalCaseBridge({locale,rawText,state,diagnostic,busy,onImport,onRestore,onLocale}:{locale:Locale;rawText:string;state:State;diagnostic:boolean;busy:boolean;onImport:(text:string)=>void;onRestore:(state:State)=>void;onLocale:(locale:Locale)=>void}){
  const ui=(text:string)=>nativeProtocolUi(locale,text);const [link,setLink]=useState<Link|null>(null),[incoming,setIncoming]=useState(''),[notice,setNotice]=useState('');const ids=useRef<Record<string,string>>({}),latest=useRef({rawText,state,busy,onImport,onRestore,onLocale});latest.current={rawText,state,busy,onImport,onRestore,onLocale};
- useEffect(()=>{const params=new URLSearchParams(location.search),session=params.get('conciliumSession')??'',origin=params.get('conciliumOrigin')??'';if(window.parent===window||!/^[-a-f0-9]{36}$/i.test(session)||!['http://127.0.0.1:3107','http://localhost:3107'].includes(origin))return;
+ useEffect(()=>{const params=new URLSearchParams(location.search),session=params.get('conciliumSession')??'',origin=params.get('conciliumOrigin')??'';if(window.parent===window||!/^[-a-f0-9]{36}$/i.test(session)||!allowedConciliumOrigins.includes(origin))return;
   setLink({session,origin});const receive=(event:MessageEvent)=>{if(event.source!==window.parent||event.origin!==origin||event.data?.session!==session)return;
    if(event.data?.type==='concilium.protocol.locale'&&isLocale(event.data.locale)&&!latest.current.busy){latest.current.onLocale(event.data.locale);return;}
    if(event.data?.type!=='concilium.protocol.context'||typeof event.data.text!=='string'||event.data.text.length>100000)return;
