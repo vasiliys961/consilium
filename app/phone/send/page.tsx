@@ -34,6 +34,8 @@ export default function PhoneSendPage() {
   useEffect(()=>{if(file)sendPanel.current?.scrollIntoView({behavior:'smooth',block:'nearest'});},[file]);
   useEffect(()=>{if(!file){setPreviewUrl('');return;}const url=URL.createObjectURL(file);setPreviewUrl(url);return()=>URL.revokeObjectURL(url);},[file]);
   const [sending, setSending] = useState(false);
+  const [pendingId,setPendingId]=useState<number|null>(null);
+  const uploadKeys=useRef(new WeakMap<File,string>());
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState("");
   const stopRef = useRef<((keep: boolean) => void) | null>(null);
@@ -55,6 +57,38 @@ export default function PhoneSendPage() {
   useEffect(()=>{if(!token)return;let active=true;const ping=async()=>{try{const response=await fetch('/api/phone/heartbeat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token})});if(active)setConnection(response.ok?'Связь с компьютером активна':'Сессия истекла или сервер перезапущен. Откройте QR на компьютере заново.');}catch{if(active)setConnection('Нет связи. Повторим автоматически после восстановления Wi-Fi.');}};void ping();const timer=setInterval(()=>void ping(),20000);const resume=()=>void ping();window.addEventListener('online',resume);document.addEventListener('visibilitychange',resume);return()=>{active=false;clearInterval(timer);window.removeEventListener('online',resume);document.removeEventListener('visibilitychange',resume);};},[token]);
 
   useEffect(() => () => stopRef.current?.(false), []);
+  // Resume checking an upload receipt after Safari backgrounding or a page reload.
+  useEffect(()=>{
+    if(!token)return;
+    const id=Number(sessionStorage.getItem('doctor-opus-phone-receipt:'+token)??'');
+    if(Number.isSafeInteger(id)&&id>0)setPendingId(id);
+  },[token]);
+  useEffect(()=>{
+    if(!token||pendingId===null)return;
+    let active=true;
+    const verify=async()=>{
+      try{
+        const response=await fetch('/api/phone/status?token='+encodeURIComponent(token)+'&id='+pendingId,{cache:'no-store'});
+        const received=await response.json() as {status?:string};
+        if(!active)return;
+        if(received.status==='delivered'){
+          sessionStorage.removeItem('doctor-opus-phone-receipt:'+token);
+          setPendingId(null);
+          setFile(null);
+          setStatus(purpose==='inbox'?'Файл принят и подтверждён папкой приёма компьютера.':'Компьютер подтвердил получение файла.');
+        }else if(received.status==='expired'||received.status==='unknown'){
+          sessionStorage.removeItem('doctor-opus-phone-receipt:'+token);
+          setPendingId(null);
+          setStatus('Сервер не подтвердил приём файла. Проверьте его наличие на компьютере перед повторной отправкой.');
+        }else setStatus('Файл в очереди передачи. Ожидаем подтверждения приёма на компьютере; сохраняйте эту страницу.');
+      }catch{if(active)setStatus('Связь прервалась: подтверждение не получено. Проверим снова после восстановления сети.');}
+    };
+    void verify();const timer=setInterval(()=>void verify(),3000);
+    const resume=()=>void verify();
+    window.addEventListener('online',resume);
+    document.addEventListener('visibilitychange',resume);
+    return()=>{active=false;clearInterval(timer);window.removeEventListener('online',resume);document.removeEventListener('visibilitychange',resume);};
+  },[token,pendingId,purpose]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -62,6 +96,7 @@ export default function PhoneSendPage() {
   }, [locale]);
 
   function keepFile(next: File | null) {
+    if(pendingId!==null)return;
     stopRef.current?.(false);
     setFile(next);
     setStatus("");
@@ -129,7 +164,7 @@ export default function PhoneSendPage() {
   }
 
   async function send() {
-    if (!file || !token || sending) return;
+    if (!file || !token || sending || pendingId!==null) return;
     if (file.size > PHONE_BYTE_LIMIT) {
       setStatus(copy.phoneLarge);
       return;
@@ -137,19 +172,24 @@ export default function PhoneSendPage() {
     setSending(true);
     setStatus("");
     try {
+      let requestId=uploadKeys.current.get(file);
+      if(!requestId){requestId=crypto.randomUUID();uploadKeys.current.set(file,requestId);}
       const dataUrl = await fileToDataUrl(file);
       const response = await fetch("/api/phone/upload", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ token, name: file.name, dataUrl }),
+        body: JSON.stringify({ token, name: file.name, dataUrl, requestId }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         setStatus(body?.error === "large" ? copy.phoneLarge : copy.phoneSendFailed);
         return;
       }
-      setFile(null);
-      setStatus(purpose==='inbox'?t('Файл отправлен в папку приёма на компьютере.'):copy.phoneSent);
+      const receipt=await response.json() as {id?:number};
+      if(!Number.isSafeInteger(receipt.id)||!receipt.id||receipt.id<1)throw Error('missing receipt');
+      sessionStorage.setItem('doctor-opus-phone-receipt:'+token,String(receipt.id));
+      setPendingId(receipt.id);
+      setStatus('Файл принят в очередь. Ожидаем подтверждения приёма на компьютере.');
     } catch {
       setStatus(copy.phoneSendFailed);
     } finally {
@@ -159,8 +199,8 @@ export default function PhoneSendPage() {
 
   return (
     <main className="phone-page">
-      <h1>{purpose==='inbox'?t('Передача файлов на компьютер'):copy.phoneTitle}</h1>{purpose==='inbox'&&<p>{t('Файлы поступят в самостоятельную папку приёма. Случай или разбор создавать не нужно.')}</p>}<p role="status">{t(connection)}</p><PhoneScanGuide/><DocumentScanner disabled={sending} onPdf={token?pdf=>{keepFile(pdf);setStatus(token?'PDF готов. Нажмите «Отправить» для передачи на компьютер.':'PDF готов. Сохраните его кнопкой сканера; для передачи откройте эту страницу по QR компьютера.');}:undefined}/>
-      {token&&file&&<section ref={sendPanel} aria-label={t('Готовый файл для отправки')} style={{padding:18,marginBlock:18,border:'2px solid #2b6048',borderRadius:10,background:'#edf5e9'}}><h2>{t('Готово к отправке')}</h2><p>{file.name}</p>{previewUrl&&file.type.startsWith('audio/')&&<audio controls src={previewUrl}/>} {previewUrl&&file.type.startsWith('video/')&&<video controls playsInline src={previewUrl} style={{maxWidth:'100%'}}/>}<button type="button" className="open" disabled={sending||recording} onClick={()=>void send()}>{sending?t('Отправляем файл…'):copy.phoneSend}</button></section>}
+      <h1>{purpose==='inbox'?t('Передача файлов на компьютер'):copy.phoneTitle}</h1>{purpose==='inbox'&&<p>{t('Файлы поступят в самостоятельную папку приёма. Случай или разбор создавать не нужно.')}</p>}<p role="status">{t(connection)}</p><PhoneScanGuide/><DocumentScanner disabled={sending||pendingId!==null} onPdf={token?pdf=>{keepFile(pdf);setStatus(token?'PDF готов. Нажмите «Отправить» для передачи на компьютер.':'PDF готов. Сохраните его кнопкой сканера; для передачи откройте эту страницу по QR компьютера.');}:undefined}/>
+      {token&&file&&<section ref={sendPanel} aria-label={t('Готовый файл для отправки')} style={{padding:18,marginBlock:18,border:'2px solid #2b6048',borderRadius:10,background:'#edf5e9'}}><h2>{t('Готово к отправке')}</h2><p>{file.name}</p>{previewUrl&&file.type.startsWith('audio/')&&<audio controls src={previewUrl}/>} {previewUrl&&file.type.startsWith('video/')&&<video controls playsInline src={previewUrl} style={{maxWidth:'100%'}}/>}<button type="button" className="open" disabled={sending||recording||pendingId!==null} onClick={()=>void send()}>{sending?t('Отправляем файл…'):pendingId!==null?t('Ожидаем подтверждения компьютера…'):copy.phoneSend}</button></section>}
       {status&&<p role="status">{status}</p>}
       {token ? (
         <details open={purpose!=='inbox'}>
@@ -169,6 +209,7 @@ export default function PhoneSendPage() {
             {copy.phonePick}
             <input
               type="file"
+              disabled={sending||pendingId!==null}
               onChange={(event) => {
                 keepFile(event.target.files?.[0] ?? null);
                 event.target.value = "";
@@ -180,6 +221,7 @@ export default function PhoneSendPage() {
             <input
               type="file"
               accept="image/*"
+              disabled={sending||pendingId!==null}
               capture="environment"
               onChange={(event) => {
                 keepFile(event.target.files?.[0] ?? null);
@@ -187,10 +229,10 @@ export default function PhoneSendPage() {
               }}
             />
           </label>
-          <label className="file">{t("Записать или выбрать видео")}<input type="file" accept="video/*" capture="environment" onChange={event=>keepFile(event.target.files?.[0]??null)}/></label>
-          <label className="file">{t("Добавить аудиозапись")}<input type="file" accept="audio/*,.m4a,.mp3,.wav" onChange={event=>keepFile(event.target.files?.[0]??null)}/></label>
-          <section><h2>{t('Диктовка текстом')}</h2><p>{t('Нажмите микрофон на клавиатуре iPhone и продиктуйте текст в поле. Проверьте числа перед передачей. Это способ ввода текста, а не аудиозапись приложения.')}</p><textarea aria-label={t('Текст диктовки')} rows={5} value={dictation} onChange={event=>setDictation(event.target.value)}/><button disabled={!dictation.trim()||sending} onClick={()=>keepFile(new File([dictation],`dictation-${Date.now()}.txt`,{type:'text/plain'}))}>{t('Подготовить текст для передачи')}</button></section>{purpose!=='inbox'&&<p>{t('Голосовые аудиофрагменты для разбора — до 20 секунд. Более длинную диктовку удобнее передать текстом.')}</p>}{!secure && <p>{t("Прямая аудиозапись требует доверенного HTTPS. По текущей Wi-Fi HTTP-ссылке используйте диктовку текстом или готовую аудиозапись из «Файлов». Кнопка видео снимает именно видео; это отдельный режим.")}</p>}
-          <button type="button" className="open" disabled={!secure} onClick={() => void toggleRecord()}>
+          <label className="file">{t("Записать или выбрать видео")}<input type="file" disabled={sending||pendingId!==null} accept="video/*" capture="environment" onChange={event=>keepFile(event.target.files?.[0]??null)}/></label>
+          <label className="file">{t("Добавить аудиозапись")}<input type="file" disabled={sending||pendingId!==null} accept="audio/*,.m4a,.mp3,.wav" onChange={event=>keepFile(event.target.files?.[0]??null)}/></label>
+          <section><h2>{t('Диктовка текстом')}</h2><p>{t('Нажмите микрофон на клавиатуре iPhone и продиктуйте текст в поле. Проверьте числа перед передачей. Это способ ввода текста, а не аудиозапись приложения.')}</p><textarea aria-label={t('Текст диктовки')} rows={5} value={dictation} onChange={event=>setDictation(event.target.value)}/><button disabled={!dictation.trim()||sending||pendingId!==null} onClick={()=>keepFile(new File([dictation],`dictation-${Date.now()}.txt`,{type:'text/plain'}))}>{t('Подготовить текст для передачи')}</button></section>{purpose!=='inbox'&&<p>{t('Голосовые аудиофрагменты для разбора — до 20 секунд. Более длинную диктовку удобнее передать текстом.')}</p>}{!secure && <p>{t("Прямая аудиозапись требует доверенного HTTPS. По текущей Wi-Fi HTTP-ссылке используйте диктовку текстом или готовую аудиозапись из «Файлов». Кнопка видео снимает именно видео; это отдельный режим.")}</p>}
+          <button type="button" className="open" disabled={!secure||pendingId!==null} onClick={() => void toggleRecord()}>
             {recording ? copy.listening : copy.phoneRecord}
           </button>
 
