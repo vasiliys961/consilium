@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect,useState } from 'react'
 import { audioConsent } from '@/lib/audio-consent'
 import { appUi } from '@/lib/i18n/app-ui'
-import LiveAutoDialogue from '@/components/LiveAutoDialogue'
+import LiveAutoDialogue, {type CompletedDialogue} from '@/components/LiveAutoDialogue'
+import {translatorParentOrigin,translatorCaseSession} from '@/lib/concilium-transfer'
 import AccessGate from '@/components/AccessGate'
 import RealtimeTranslatorPanel from '@/components/RealtimeTranslator'
 import { INTERFACE_LANGUAGE_LABEL, LOCALE_LABELS, SUPPORTED_LOCALES, type Locale } from '@/lib/i18n/config'
@@ -15,6 +16,26 @@ export default function HomePage() {
   const [active, setActive] = useState(false)
   const [consented, setConsented] = useState(false)
   const copy = translatorUi[locale]
+  const [caseSession,setCaseSession]=useState('')
+  const [transferStatus,setTransferStatus]=useState('')
+  useEffect(()=>{setCaseSession(translatorCaseSession(location.search))},[])
+  useEffect(()=>{
+   if(!caseSession)return
+   const receive=(event:MessageEvent)=>{
+    if(event.origin!==translatorParentOrigin()||event.source!==window.parent
+      ||event.data?.session!==caseSession||event.data?.type!=='concilium.translator.saved')return
+    setTransferStatus(event.data.ok
+      ?(locale==='ru'?'Перевод сохранён в клиническом случае.':'Translation saved in clinical case.')
+      :(typeof event.data.error==='string'?event.data.error:(locale==='ru'?'Перевод не сохранён.':'Translation not saved.')))
+   }
+   window.addEventListener('message',receive)
+   return()=>window.removeEventListener('message',receive)
+  },[caseSession,locale])
+  function saveCompleted(value:CompletedDialogue){
+   if(!caseSession||window.parent===window)return
+   setTransferStatus(locale==='ru'?'Передаём выбранный перевод в клинический случай…':'Transferring selected translation to clinical case…')
+   window.parent.postMessage({type:'concilium.translator.transcript',session:caseSession,...value},translatorParentOrigin())
+  }
 
   return (
     <div className="min-h-screen">
@@ -64,7 +85,8 @@ export default function HomePage() {
             <button disabled={active} aria-pressed={mode === 'auto'} onClick={() => setMode('auto')} className={`rounded-xl px-4 py-3 font-semibold disabled:opacity-50 ${mode === 'auto' ? 'bg-primary-700 text-white' : 'bg-white'}`}>{appUi[locale].common.autoMode}</button>
             <button disabled={active} aria-pressed={mode === 'manual'} onClick={() => setMode('manual')} className={`rounded-xl px-4 py-3 font-semibold disabled:opacity-50 ${mode === 'manual' ? 'bg-primary-700 text-white' : 'bg-white'}`}>{appUi[locale].common.manualMode}</button>
           </div>
-          {consented && (mode === 'auto' ? <LiveAutoDialogue locale={locale} onActiveChange={setActive} /> : <RealtimeTranslatorPanel locale={locale} />)}
+          {consented && (mode === 'auto' ? <LiveAutoDialogue locale={locale} onActiveChange={setActive} onSaveTranscript={caseSession?saveCompleted:undefined} /> : <RealtimeTranslatorPanel locale={locale} />)}
+          {caseSession&&<p role="status" className="mt-4 text-teal-900">{transferStatus|| (locale==='ru'?'В клинический случай можно передать только явно выбранные завершённые переводы. Запись не является подтверждённым анамнезом.':'Only explicitly selected completed translations can be saved. They are not verified patient history.')}</p>}
         </AccessGate>
       </main>
     </div>
