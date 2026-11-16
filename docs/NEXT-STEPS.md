@@ -15,4 +15,4 @@
 - C7 post-merge [CI #43891251420](https://github.com/vasiliys961/consilium/actions/runs/43891251420) успешен.
 - C8 PR #33 [CI #43896058881](https://github.com/vasiliys961/consilium/actions/runs/43896058881) успешен.
 - C8 post-merge PR #33 [CI #43896391779](https://github.com/vasiliys961/consilium/actions/runs/43896391779) — **успешен**.
-- C8 PR #35 [CI #43901216917](https://github.com/vasiliys961/consilium/actions/runs/43901216917) — **успешен**; [post-merge #43901570153](https://github.com/vasiliys961/consilium/actions/runs/43901570153) проверять отдельно.
+- C8 PR #35 [CI #43901216917](https://github.com/vasiliys961/consilium/actions/runs/43901216917) — **успешен**; [post-merge #43901570153](https://github.com/vasiliys961/consilium/actions/runs/43901570153) **успешен**.
