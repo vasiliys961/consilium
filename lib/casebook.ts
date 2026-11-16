@@ -199,6 +199,58 @@ export async function persistCaseDraft(
   return true;
  });
 }
+/** C11: attach source-provenance material without replacing newer clinical observations.
+ * Only SHA-256 bound originals can be saved through this route.
+ */
+export async function persistRadiologyMaterials(caseId:string,materials:import('./conductor').CaseFile[],now=new Date().toISOString()):Promise<ClinicalCase>{
+ if(!materials.every(item=>typeof item.sha256==='string'&&SHA256.test(item.sha256)&&item.processingModule==='radiology'))
+  throw Error('Не удалось проверить исходные материалы по SHA-256. Сохранение отменено.');
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt)throw Error('Случай не найден. Материалы не сохранены.');
+  if(current.status==='closed')throw Error('Верните случай в работу перед добавлением материалов.');
+  const existing=new Set(current.files.map(file=>sourceHash(file.sha256)).filter(Boolean));
+  const unique=materials.filter(file=>{const key=sourceHash(file.sha256);if(!key||existing.has(key))return false;existing.add(key);return true;});
+  if(!unique.length)return current;
+  const updated:ClinicalCase={...current,updated:now,files:[...current.files,...unique]};
+  await writeVaultCase(updated);
+  return updated;
+ });
+}
+/** C11: radiology report is an UNSIGNED module draft, not proof that every slice was examined.
+ * Never guess its source from filenames or from unrelated studies in the selected case.
+ */
+export async function persistRadiologyReport(
+ caseId:string,report:{text:string;fileKeys:string[];sources:string[]},now=new Date().toISOString()
+):Promise<ClinicalCase>{
+ const text=report.text.trim();
+ if(!text||text.length>100000)throw Error('Пустое или слишком длинное описание нельзя сохранить.');
+ if(report.fileKeys.length>2000||report.sources.length>2000||
+    report.fileKeys.some(key=>!SHA256.test(key))||
+    report.sources.some(name=>typeof name!=='string'||name.length>1000))
+  throw Error('Некорректная привязка к исходным материалам. Описание не сохранено.');
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt)throw Error('Случай не найден. Описание осталось в Radiology.');
+  if(current.status==='closed')throw Error('Случай завершён. Верните его в работу перед сохранением описания.');
+  const keys=[...new Set(report.fileKeys.map(key=>key.toLowerCase()))].sort();
+  const attached=new Set(current.files.map(file=>sourceHash(file.sha256)).filter(Boolean));
+  // All or nothing: partially matched series cannot be called a bound examination.
+  const fileKeys=keys.every(key=>attached.has(key))?keys:[];
+  const sources=[...new Set(report.sources)];
+  const old=(current.moduleReports??[]).find(item=>item.text===text
+   &&JSON.stringify([...item.fileKeys].sort())===JSON.stringify(fileKeys)
+   &&JSON.stringify(item.sources)===JSON.stringify(sources));
+  if(old)return current;
+  const value:import('./module-evidence.ts').RadiologyModuleReport={
+   id:crypto.randomUUID(),module:'radiology',fileKeys,sources,text,at:now,status:'reported',coverage:'not_verified'
+  };
+  const updated:ClinicalCase={...current,updated:now,moduleReports:[value,...(current.moduleReports??[])]};
+  await writeVaultCase(updated);
+  return updated;
+ });
+}
+
 /** C11: complete an iframe handoff against the latest persisted case, not a stale React snapshot.
  * The per-case write queue serializes this with local autosave and other case writes.
  */

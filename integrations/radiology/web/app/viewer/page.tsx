@@ -1,5 +1,6 @@
 "use client";
 import {LocalizedUi,useUiTranslator} from '../../components/ConciliumBridge';
+import {conciliumParentOrigin} from '../../lib/concilium-parent-origin';
 import { useViewerLayout,useConciliumViewerCopy } from "../../components/ConciliumBridge";
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
@@ -250,7 +251,7 @@ export default function ViewerPage() {
     useEffect(()=>{
         const receive=(event:MessageEvent)=>{
             const session=new URLSearchParams(location.search).get('conciliumSession')||sessionStorage.getItem('concilium.bridge.session');
-            if(event.origin!=='http://127.0.0.1:3107'||event.source!==window.parent||event.data?.type!=='concilium.materials'||event.data.session!==session||!session||typeof event.data.nonce!=='string'||event.data.nonce===importedNonce.current)return;
+            if(event.origin!==conciliumParentOrigin()||event.source!==window.parent||event.data?.type!=='concilium.materials'||event.data.session!==session||!session||typeof event.data.nonce!=='string'||event.data.nonce===importedNonce.current)return;
             const files=event.data.files;if(!Array.isArray(files)||!files.length||!files.every((f:unknown)=>f instanceof File)||files.reduce((n:number,f:File)=>n+f.size,0)>64*1024*1024)return;
             importedNonce.current=event.data.nonce;if(Array.isArray(event.data.sourceKeys))files.forEach((file:File,i:number)=>{const key=event.data.sourceKeys[i];if(typeof key==='string'&&key.length<=256)sourceBindings.current.set(file,key);});
             const dicom=files.filter((f:File)=>/\.(dcm|dicom)$/i.test(f.name));
@@ -260,14 +261,14 @@ export default function ViewerPage() {
         };
         window.addEventListener('message',receive);
         const session=new URLSearchParams(location.search).get('conciliumSession')||sessionStorage.getItem('concilium.bridge.session');
-        if(session&&window.parent!==window)window.parent.postMessage({type:'concilium.ready',session},'http://127.0.0.1:3107');
+        if(session&&window.parent!==window)window.parent.postMessage({type:'concilium.ready',session},conciliumParentOrigin());
         return()=>window.removeEventListener('message',receive);
     },[]);
     useEffect(()=>{
         const session=new URLSearchParams(location.search).get('conciliumSession')||sessionStorage.getItem('concilium.bridge.session');
         const files=[...indexed.map(item=>item.file),...photos.map(item=>item.file)];
-        if(session&&window.parent!==window&&files.length&&files.reduce((n,f)=>n+f.size,0)>64*1024*1024)window.parent.postMessage({type:'concilium.materials-too-large',session},'http://127.0.0.1:3107');
-        if(session&&window.parent!==window&&files.length&&files.reduce((n,f)=>n+f.size,0)<=64*1024*1024)window.parent.postMessage({type:'concilium.materials-export',session,files,sourceKeys:files.map(file=>sourceBindings.current.get(file)??'')},'http://127.0.0.1:3107');
+        if(session&&window.parent!==window&&files.length&&files.reduce((n,f)=>n+f.size,0)>64*1024*1024)window.parent.postMessage({type:'concilium.materials-too-large',session},conciliumParentOrigin());
+        if(session&&window.parent!==window&&files.length&&files.reduce((n,f)=>n+f.size,0)<=64*1024*1024)window.parent.postMessage({type:'concilium.materials-export',session,files,sourceKeys:files.map(file=>sourceBindings.current.get(file)??'')},conciliumParentOrigin());
     },[indexed,photos]);
     function onPhotos(event: ChangeEvent<HTMLInputElement>) {
         const chosen = Array.from(event.target.files ?? []);

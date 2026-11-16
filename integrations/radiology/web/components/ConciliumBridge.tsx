@@ -1,5 +1,6 @@
 'use client';
 import {conciliumSession} from '../lib/concilium-session';
+import {conciliumParentOrigin} from '../lib/concilium-parent-origin';
 import {makeUiTranslator} from '../lib/ui-locale';
 import {createContext,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
 const defaults={title:'Opus Radiology в составе Concilium',question:'Вопрос и контекст выбранного случая',transfer:'Передать описание и заключение в случай',empty:'Сначала получите описание или заключение в модуле.',sent:'Результат передан в Concilium. Сохраните его в случае.',local:'Локальный режим',study:'Исследование',load:'Загрузить DICOM',files:'Выбрать DICOM-файлы',folder:'Выбрать папку DICOM',projection:'Добавить одну проекцию',analyze:'Анализировать исследование',running:'Идёт анализ исследования…',tooLong:'Описание слишком длинное для передачи.'};
@@ -16,7 +17,7 @@ export default function ConciliumBridge({children,initialLanguage='ru',initialTr
  const [wide,setWideState]=useState(false);
  const [copy,setCopy]=useState(defaults),[language,setLanguage]=useState(initialLanguage),[translations,setTranslations]=useState<Record<string,string>>(initialTranslations);
  const translate=useMemo(()=>makeUiTranslator(translations),[translations]);
- const origin=process.env.NEXT_PUBLIC_CONCILIUM_PREVIEW==='1'?'http://127.0.0.1:3207':'http://127.0.0.1:3107';
+ const origin=conciliumParentOrigin();
  useEffect(()=>{const saved=document.cookie.split(';').map(value=>value.trim()).find(value=>value.startsWith('concilium-ui-language='))?.split('=')[1];if(saved&&/^(?:ru|en|es|fr|ar|hi|pt-BR|id|tr|zh-CN)$/.test(decodeURIComponent(saved)))setLanguage(decodeURIComponent(saved));},[]);
  useEffect(()=>{document.documentElement.lang=language;document.documentElement.dir=language==='ar'?'rtl':'ltr';},[language]);
  useEffect(()=>{let stored:string|null=null;try{stored=sessionStorage.getItem('concilium.bridge.session');}catch{}const token=conciliumSession(location.search,stored);if(window.parent===window||!/^[-a-f0-9]{36}$/.test(token))return;setSession(token);try{sessionStorage.setItem('concilium.bridge.session',token);}catch{}
