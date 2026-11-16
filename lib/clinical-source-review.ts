@@ -1,5 +1,5 @@
 import type {Analysis,ClinicalCase} from './casebook.ts';
-import type {Citation} from './literature.ts';
+import {citationPassages,type Citation} from './literature.ts';
 
 export const GUIDELINE_HANDOFF_KEY='consilium-guideline-topic-v1';
 export type ClinicalSourceEntry={
@@ -34,7 +34,7 @@ function score(entry:ClinicalSourceEntry):number{
   +(card.url&&/^https:\/\//i.test(card.url)?3:0);
 }
 function entries(analysis:Analysis):ClinicalSourceEntry[]{
- return (analysis.result.citations??[]).map(citation=>{
+ return (analysis.result.citations??[]).flatMap(citationPassages).map(citation=>{
   const matchedStatements=(analysis.result.draft.statements??[]).filter(statement=>
    !statement.held&&matchesClaim(statement.source,citation)
   ).map(statement=>statement.text);
