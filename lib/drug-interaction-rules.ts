@@ -274,6 +274,11 @@ export function checkMedicationRegimen(input:{current:string;proposed?:string;st
  }
  if(has(/^(?:moxifloxacin|avelox|моксифлоксацин|авелокс)(?!\p{L})/iu)){
   if(context.qtcMs!=null&&Number.isFinite(context.qtcMs)&&context.qtcMs>=500)organAlerts.push({drug:'Моксифлоксацин',severity:'major',risk:'Моксифлоксацин при выраженном удлинении QTc — риск torsade de pointes',action:'По инструкции избегать моксифлоксацина при известном удлинении QT; оценить альтернативу и электролиты.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.6'});
+  if(context.potassium!=null&&Number.isFinite(context.potassium)&&context.potassium<3.5)
+   organAlerts.push({drug:'Моксифлоксацин',severity:'major',
+    risk:'Моксифлоксацин при гипокалиемии (K+ <3,5 ммоль/л) · повышен риск удлинения QT и желудочковой аритмии',
+    action:'Инструкция рекомендует избегать моксифлоксацина при некорригированной гипокалиемии. Проверить актуальный K+, магний, ЭКГ и рассмотреть другой антибиотик. Порог 3,5 — клиническая граница гипокалиемии, не отдельный порог из инструкции.',
+    url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.6'});
   if(context.ageYears!=null&&Number.isFinite(context.ageYears)&&context.ageYears>60)organAlerts.push({drug:'Моксифлоксацин',severity:'monitor',risk:'Возраст >60 лет: повышен риск тендинита и разрыва сухожилий, особенно с ГКС',action:'Уточните предшествующее поражение сухожилий, использование системных ГКС и возможные альтернативы фторхинолону.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.2 / 8.5'});
   if(alerts.some(alert=>alert.risk.includes('удлинение QT'))&&context.qtcMs==null)missing.push('Моксифлоксацин + антиаритмик: исходная QTc не указана (сочетание всё равно рекомендуется избегать).');
  }

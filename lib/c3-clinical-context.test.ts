@@ -25,7 +25,7 @@ const scenarios=[
  {id:'C3-E prolonged QT and multiple cardiovascular drugs',
   clinical:'Возраст: 68 лет\nСКФ: 52 мл/мин/1,73 м²\nQTc: 515 мс\nКалий: 3,2 ммоль/л',
   current:'амиодарон\nдигоксин\nмоксифлоксацин\nбисопролол',
-  pairs:2,organs:['QTc','сухожилий'],contra:0,egfr:52},
+  pairs:2,organs:['QTc','сухожилий','гипокалиемии'],contra:0,egfr:52},
  {id:'C3-F QT interaction persists even if QTc not prolonged',
   clinical:'Возраст: 49 лет\nСКФ: 72 мл/мин/1,73 м²\nQTc: 425 мс',
   current:'амиодарон\nмоксифлоксацин\nдигоксин\nбисопролол',
@@ -108,4 +108,12 @@ test('coverage reports missing pairs even when every individual ingredient is re
  assert.deepEqual(result.unrecognized,[]);
  assert.ok(result.unverifiedPairCount>=1);
  assert.ok(result.unverifiedPairs.some(s=>s.includes('лозартан')));
+});
+
+test('hypokalemia adds clinically relevant QT warning without fabricating ECG results',()=>{
+ const clinical=extractMedicationSafetyContext('QTc: неизвестна\nКалий: 3,1 ммоль/л\nВозраст: 48 лет').context;
+ const checked=checkMedicationRegimen({current:'моксифлоксацин\nметформин\nпантопразол',context:clinical});
+ assert.equal(clinical.qtcMs,undefined);
+ assert.ok(checked.organAlerts.some(a=>a.risk.includes('гипокалиемии')));
+ assert.equal(checked.organAlerts.some(a=>a.risk.includes('выраженном удлинении QTc')),false);
 });
