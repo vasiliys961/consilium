@@ -1,1 +1,1 @@
-export {default} from './structured/page';
+export {default} from './case/page';
