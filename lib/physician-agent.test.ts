@@ -70,7 +70,9 @@ test('C13: UI never sends case files, retains conversation only in component sta
  assert.match(component,/\/api\/physician-agent/);
  assert.match(component,/disabled=\{agentBusy\|\|!text.trim\(\)\}/);
  assert.match(component,/Бесплатный план по правилам/);
- assert.match(component,/Обсудить с ИИ · OpenRouter/);
+ assert.match(component,/Спросить Opus Copilot/);
+ assert.match(component,/Opus Copilot — помощник врача/);
+ assert.doesNotMatch(component,/Обсудить с ИИ · OpenRouter/);
  assert.match(component,/requestController\.current\?\.abort\(\)/);
  assert.doesNotMatch(component,/localStorage\.setItem\([^\n]*dialogue/);
  assert.match(route,/parsePhysicianAgentRequest\(parsed\)/);
