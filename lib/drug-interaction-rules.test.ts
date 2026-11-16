@@ -14,7 +14,7 @@ test('a proposed active ingredient is checked against current drugs, including a
 test('numbered prescriptions and plus-separated names are parsed; unsupported drugs are visible',()=>{
  assert.equal(knownDrugInteractions('1. таб. Варфарин 5 мг + Ибупрофен 200 мг').length,1);
  const coverage=localDrugCoverage('Верошпирон 25 мг, Лозартан 50 мг, Метформин');
- assert.equal(coverage.recognized.length,3);assert.deepEqual(coverage.unrecognized,[]);assert.equal(coverage.ruleCount,23);
+ assert.equal(coverage.recognized.length,3);assert.deepEqual(coverage.unrecognized,[]);assert.equal(coverage.ruleCount,26);
 });
 
 test('C3: risk matrix has source-backed actionable signals and avoids route/lookalike false positives',()=>{
@@ -117,4 +117,14 @@ test('C3: dual anticoagulant use is flagged, but a planned switch can mark the o
  const options=checkMedicationRegimen({current:'',alternatives:'апиксабан\nривароксабан'});
  assert.equal(options.alerts.length,0);
  assert.equal(options.alternatives.every(option=>option.alerts.length===0),true);
+});
+
+test('C3 post-audit regression: rivaroxaban and warfarin bleeding risks with NSAIDs / antiplatelets',()=>{
+ for(const [a,b] of [['ривароксабан','ибупрофен'],['Xarelto','аспирин'],['варфарин','клопидогрель']] as const){
+  const alerts=knownDrugInteractions(a,b);
+  assert.equal(alerts.length,1,a+' + '+b);
+  assert.equal(alerts[0].severity,'major');
+  assert.ok(alerts[0].source&&alerts[0].section&&alerts[0].mechanism);
+ }
+ assert.equal(knownDrugInteractions('ривароксабан','ибупрофен гель').length,0);
 });
