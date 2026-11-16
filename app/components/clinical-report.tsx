@@ -2,6 +2,7 @@ import { CitationContent } from "@/app/components/citation-content";
 import { useWorkspaceLanguage } from "@/app/components/workspace-language";
 import type { ClinicalReport } from '@/lib/clinical-report';
 import type { Citation } from '@/lib/literature';
+import {reviewClaimEvidence} from '@/lib/clinical-claim-evidence';
 import {medicationCopy} from '@/lib/medication-copy';
 import {useId,useState} from 'react';
 import {DrugInteractionAlerts, DrugInteractionChecker} from './drug-interaction-checker';
@@ -16,12 +17,22 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
  const tactics=report.tactics;
  const [selectedOption,setSelectedOption]=useState<number>();
  const checkerId=useId();
- function sourceLink(key:string) {
+ function sourceLink(key:string,claim:string) {
    const citation=citations.find(item=>item.passageId===key||item.url===key||`pmid:${item.pmid}`===key);
    if(!citation)return null;
+   const assessment=reviewClaimEvidence(claim,citation);
+   const access=assessment.level==='paragraph'?t('Фрагмент полного текста')
+    :assessment.level==='excerpt'?t('Фрагмент источника')
+    :assessment.level==='abstract'?t('Аннотация'):t('Библиографическая запись');
    return <li key={key}>{citation.url&&/^https:\/\//i.test(citation.url)
      ? <a href={citation.url} target="_blank" rel="noreferrer">{citation.title} ↗</a>
-     : citation.title}<CitationContent citation={citation}/></li>;
+     : citation.title}
+     <p><small>{access}. {assessment.topicOverlap
+      ?t('Термины варианта встречаются в тексте; применимость не подтверждена автоматически.')
+      :t('Содержание рекомендации не подтверждено доступным текстом автоматически.')}
+      {assessment.missingQuantities.length>0?' '+t('Проверить дозы/цифры:')+' '+assessment.missingQuantities.join(', '):''}
+      {assessment.unlocatedPopulation.length>0?' '+t('Уточнить применимость:')+' '+assessment.unlocatedPopulation.join(', '):''}</small></p>
+     <CitationContent citation={citation}/></li>;
  }
     return <section aria-label={t("Диагностический и лечебный план")}>
   <h3>{t("Клиническая задача")}</h3><p>{report.problem}</p>
@@ -41,7 +52,7 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
       <p>{t("Условия:")} {item.conditions.join('; ') || t('Не оценено')}</p>
       <p>{t("Перед назначением:")} {item.safetyChecks.join('; ') || t('Не оценено')}</p>
       {item.monitoring.length > 0 && <p>{t("Контроль:")} {item.monitoring.join('; ')}</p>}
-      {Boolean(item.sources?.length)&&<ul>{item.sources!.map(sourceLink)}</ul>}
+      {Boolean(item.sources?.length)&&<ul>{item.sources!.map(source=>sourceLink(source,[item.option,...item.conditions].join(' ')))}</ul>}
       {selectedOption !== i && item.localInteractions && item.localInteractions.length > 0 && <section>
         <h4>{t('Локальная проверка сочетаний')}</h4>
         <DrugInteractionAlerts alerts={item.localInteractions}/>
@@ -66,7 +77,7 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
     <h3>{t('Взаимодействия и риски лекарств')}</h3>
     {report.medicationSafety.alerts.map((item,i)=><article key={i}>
       <strong>{item.combination}</strong><p>{item.risk}</p>{item.patientFactor&&<p>{item.patientFactor}</p>}{item.mitigation&&<p>{item.mitigation}</p>}
-      {item.sources.length ? <ul>{item.sources.map(sourceLink)}</ul> : <small>{t('Источник не подтверждён · вывод модели')}</small>}
+      {item.sources.length ? <ul>{item.sources.map(source=>sourceLink(source,item.combination+' '+item.risk))}</ul> : <small>{t('Источник не подтверждён · вывод модели')}</small>}
     </article>)}
     {report.medicationSafety.gaps.length>0&&<ul>{report.medicationSafety.gaps.map((gap,i)=><li key={i}>{gap}</li>)}</ul>}
     {report.medicationSafety.alerts.length===0&&<p>{t('Совместимость препаратов не установлена.')}</p>}
