@@ -91,6 +91,8 @@ export interface LibraryChunkInput {
   sourceType?: 'text' | 'caption';
   tags?: string[];
   embedding?: StoredVector;
+  /** Import-only provenance: this chunk comes from OCR of a given PDF page. */
+  ocrPage?: number;
 }
 
 function ensureDbSchema(request: IDBOpenDBRequest): void {
@@ -172,6 +174,7 @@ function normalizeChunkInput(input: string | LibraryChunkInput): LibraryChunkInp
     sourceType: input.sourceType || 'text',
     tags: Array.isArray(input.tags) ? input.tags : undefined,
     embedding: input.embedding,
+    ocrPage: Number.isInteger(input.ocrPage) && (input.ocrPage ?? 0)>0 ? input.ocrPage : undefined,
   };
 }
 
@@ -196,7 +199,7 @@ export async function saveDocument(
     chunks.forEach((chunkInput, index) => {
       const normalized = normalizeChunkInput(chunkInput);
       chunksStore.put({
-        id: `${doc.id}_${index}`,
+        id: normalized.ocrPage ? `${doc.id}_ocr_${normalized.ocrPage}_${index}` : `${doc.id}_${index}`,
         documentId: doc.id,
         content: normalized.content,
         pageId: normalized.pageId,
@@ -217,6 +220,7 @@ export async function saveDocument(
     
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error ?? Error('Не удалось сохранить книгу: транзакция отменена.'));
   });
 }
 
