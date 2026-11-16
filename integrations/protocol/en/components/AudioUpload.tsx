@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import {scopeAmbientSpeakers} from '@/lib/ambient-chunk-speakers'
 import { AUDIO_TRANSCRIPTION_CREDITS_PER_HOUR, calculateAudioTranscriptionCost } from '@/lib/cost-calculator'
 import { getClientLocale } from '@/lib/i18n/client'
 import { mapLocaleToAssemblyAiLanguage } from '@/lib/i18n/stt-language'
@@ -492,7 +493,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
           segmentResultsRef.current[index] = result
         }
         if (!result.transcript.trim()) throw Error('Empty audio segment; review it before continuing.')
-        texts.push(result.transcript.trim())
+        texts.push(scopeAmbientSpeakers(result.transcript.trim(),index))
         duration += result.duration
         cost += result.cost
         costKnown = costKnown && result.costKnown
