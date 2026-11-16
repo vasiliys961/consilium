@@ -2,7 +2,7 @@
 import { useWorkspaceLanguage } from '@/app/components/workspace-language';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { getAllDocuments, getDocumentChunkRecords, saveLibraryPageOcr, getDocumentSourceFile, type LibraryDocument, searchLibraryLocalWithMeta, type LibrarySearchHit } from '@/lib/library-db';
+import { getAllDocuments, getDocumentChunkRecords, saveLibraryPageOcr, getDocumentSourceFile, checkLibraryFolderSource, type LibraryDocument, searchLibraryLocalWithMeta, type LibrarySearchHit } from '@/lib/library-db';
 import {renderLibraryPdfPage} from '@/lib/library-import';
 import type { CaseFile } from '@/lib/conductor';
 import {retrieveLibraryEvidence} from '@/lib/library-retrieval';
@@ -59,6 +59,11 @@ export function LibrarySuggestions({ query, context = "", initialDocumentId = ""
     async function browsePage(targetId=documentId,targetPage=Number(page)){
         if(!targetId)return;
         try{
+            const document=documents.find(doc=>doc.id===targetId);
+            if(document?.storage==='folder'){
+                const state=await checkLibraryFolderSource(document);
+                if(state==='modified'||state==='unavailable')throw Error(t('Книга в папке изменена или недоступна. Переимпортируйте её перед использованием старых страниц.'));
+            }
             const records=await getDocumentChunkRecords(targetId);
             const name=documents.find(doc=>doc.id===targetId)?.name;
             let results:LibrarySearchHit[]=records.filter(row=>row.pageId===targetPage).map(row=>({content:row.content,chunkId:row.id,documentId:targetId,documentName:name,pageId:row.pageId,mode:'page' as const}));
