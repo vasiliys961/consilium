@@ -226,7 +226,7 @@ export function checkMedicationRegimen(input:{current:string;proposed?:string;st
  if((impairedRenal||context.severeHepaticImpairment||context.decompensatedCirrhosis)&&has(/^(?:colchicine|колхицин)(?!\p{L})/iu)&&has(/^(?:clarithromycin|кларитромицин|клацид)(?!\p{L})/iu)){
   for(const alert of alerts)if(alert.risk.includes('колхицина')){alert.severity='contraindicated';alert.conditions='Почечная или печёночная недостаточность подтверждена';}
  }
- if(has(/^(?:moxifloxacin|avelox|моксифлоксацин|авелокс)(?!\p{L})/iu))){
+ if(has(/^(?:moxifloxacin|avelox|моксифлоксацин|авелокс)(?!\p{L})/iu)){
   if(context.qtcMs!=null&&Number.isFinite(context.qtcMs)&&context.qtcMs>=500)organAlerts.push({drug:'Моксифлоксацин',severity:'major',risk:'Моксифлоксацин при выраженном удлинении QTc — риск torsade de pointes',action:'По инструкции избегать моксифлоксацина при известном удлинении QT; оценить альтернативу и электролиты.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=1e6bc886-eec9-4cd8-be78-7563817457f2',section:'5.6'});
   if(context.ageYears!=null&&Number.isFinite(context.ageYears)&&context.ageYears>60)missing.push('Моксифлоксацин: возраст старше 60 лет повышает риск тендинопатии, особенно с системными ГКС.');
   if(alerts.some(alert=>alert.risk.includes('удлинение QT'))&&context.qtcMs==null)missing.push('Моксифлоксацин + антиаритмик: исходная QTc не указана (сочетание всё равно рекомендуется избегать).');
