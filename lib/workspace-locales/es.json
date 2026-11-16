@@ -1221,5 +1221,18 @@
   "Второе мнение": "Segunda opinión",
   "Второе мнение по исходным изображениям": "Segunda opinión sobre las imágenes originales",
   "Проверка с учётом первого ответа": "Revisión con conocimiento de la primera respuesta",
-  "Микроскопия крови": "Microscopía sanguínea"
+  "Микроскопия крови": "Microscopía sanguínea",
+  "Разбор завершён. Оформить протокол?": "Análisis finalizado. ¿Preparar el informe clínico?",
+  "Клинический разбор уже сохранён. Выбор языка откроет существующий модуль протокола с данными случая — повторного консилиума не будет.": "El análisis clínico ya está guardado. Al elegir el idioma se abrirá el módulo de informes existente con los datos del caso, sin repetir el análisis clínico.",
+  "Выбор языка протокола": "Idioma del informe clínico",
+  "Русский": "Ruso",
+  "Другие языки / несколько версий": "Otros idiomas / varias versiones",
+  "Выберите языки отдельных версий протокола": "Seleccione los idiomas de las versiones independientes del informe",
+  "Формирование текста в модуле может потребовать отдельного модельного запроса. Переключение языка само по себе платный анализ не запускает; клинические выводы не переводятся незаметно.": "Generar texto en el módulo puede requerir otra consulta al modelo. Cambiar de idioma no inicia un análisis de pago ni traduce los hallazgos clínicos sin avisar.",
+  "Перейти к оформлению протокола": "Abrir el módulo de informes",
+  "Пока продолжить работу со случаем": "Seguir trabajando en el caso",
+  "Языковые версии протокола": "Versiones del informe por idioma",
+  "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "El análisis clínico guardado no se repite. Cree y guarde una versión para cada idioma; generar texto en el módulo puede tener un coste.",
+  "Сохранён": "Guardado",
+  "Не создан": "No creado"
 }

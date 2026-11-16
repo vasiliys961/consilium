@@ -6,7 +6,9 @@ const path=terminalLogPath();mkdirSync(dirname(path),{recursive:true,mode:0o700}
 const history=process.argv.includes('--history')||process.argv.includes('--once');
 console.log(`Concilium · журнал разработки\n${path}\nЭто просмотр событий: вводить команды здесь не нужно.\nОткройте приложение и нажмите «Разобрать случай» — здесь появятся этапы, модели, время и расчётная стоимость.\nCtrl+C останавливает только просмотр.\n`);
 if(history)console.log('СОХРАНЁННЫЕ СОБЫТИЯ · записи ниже могли произойти до запуска просмотра.\n');
-else console.log('Ожидаю новые события. Прошлые записи не показываются; для истории: npm run logs -- --history\n');
+// In live mode, announce readiness only AFTER the log cursor is initialized.
+// Otherwise a fast writer can append between the readiness message and the
+// initial stat(), making the just-written event look historical and invisible.
 let offset=history?0:(existsSync(path)?statSync(path).size:0),partial='',initial=history;
 function poll(){
  try{
@@ -24,4 +26,5 @@ function poll(){
  }catch{console.error('Журнал временно недоступен; повторяю чтение.');}
 }
 poll();
+if(!history)console.log('Ожидаю новые события. Прошлые записи не показываются; для истории: npm run logs -- --history\n');
 if(!process.argv.includes('--once')){const timer=setInterval(poll,500);process.on('SIGINT',()=>{clearInterval(timer);process.exit(0);});process.on('SIGTERM',()=>{clearInterval(timer);process.exit(0);});}
