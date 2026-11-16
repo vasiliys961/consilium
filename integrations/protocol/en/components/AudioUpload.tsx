@@ -378,9 +378,13 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
     const onPageHide = () => {
       if (recordingRef.current) {
         rotatingRef.current = false
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-          mediaRecorderRef.current.stop()
+        // Leaving the page is cancellation, not consent to transcribe remaining audio.
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.onstop = null
+          if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
         }
+        segmentsRef.current = []
+        stopTracks()
       }
     }
     document.addEventListener('visibilitychange', onVisibility)
@@ -390,9 +394,12 @@ export default function AudioUpload({ onTranscribe, accept = 'audio/*', maxSize 
       window.removeEventListener('pagehide', onPageHide)
       clearTimer()
       releaseWakeLock()
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop()
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.onstop = null
+        if (mediaRecorderRef.current.state !== 'inactive') mediaRecorderRef.current.stop()
       }
+      segmentsRef.current = []
+      stopTracks()
     }
   }, [])
 
