@@ -320,6 +320,8 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
   const segmentsRef = useRef<Blob[]>([])
   const segmentResultsRef = useRef<Record<number, {transcript:string;duration:number;cost:number;costKnown:boolean;model?:string}>>({})
   const audioSessionRef = useRef('')
+  const recordingLocaleRef=useRef<Locale>('en')
+  const mountedRef=useRef(false)
   const streamRef = useRef<MediaStream | null>(null)
   const mimeTypeRef = useRef('audio/webm')
   const rotatingRef = useRef(false)
@@ -374,6 +376,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
   }
 
   useEffect(() => {
+    mountedRef.current=true
     const update=()=>setLocale(getClientLocale());update();window.addEventListener('protocol-locale',update);return()=>window.removeEventListener('protocol-locale',update)
   }, [])
 
@@ -386,6 +389,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
       }
     }
     const onPageHide = () => {
+      mountedRef.current=false
       if (recordingRef.current) {
         rotatingRef.current = false
         // Leaving the page is cancellation, not consent to transcribe remaining audio.
@@ -401,6 +405,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('pagehide', onPageHide)
     return () => {
+      mountedRef.current=false
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('pagehide', onPageHide)
       clearTimer()
@@ -427,7 +432,7 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
 
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('language', mapLocaleToAssemblyAiLanguage(getClientLocale()))
+    formData.append('language', mapLocaleToAssemblyAiLanguage(audioSession?recordingLocaleRef.current:getClientLocale()))
     if(audioSession)formData.append('conciliumAudioSession',audioSession)
 
     const response = await fetch('/api/transcribe', {
@@ -476,10 +481,12 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
       let costKnown = true
       const models = new Set<string>()
       for (const [index, blob] of segments.entries()) {
+        if(!mountedRef.current)throw Error('The recording panel was closed. Further audio was not uploaded.')
         let result = segmentResultsRef.current[index]
         if (!result) {
           const file = new File([blob], `recording-${index + 1}.${extensionForMime(mimeType)}`, { type: mimeType })
           const received = await transcribeFile(file,audioSessionRef.current)
+          if(!mountedRef.current)throw Error('The recording panel was closed. Further audio was not uploaded.')
           if (!received) throw Error('Audio segment could not be transcribed. Recording retained for explicit retry.')
           result = received
           segmentResultsRef.current[index] = result
@@ -577,6 +584,8 @@ export default function AudioUpload({ onTranscribe, openrouterOnly = false, acce
         },
       })
 
+      if(!mountedRef.current){stream.getTracks().forEach(track=>track.stop());return}
+      recordingLocaleRef.current=getClientLocale()
       const candidateMimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
       const mimeType = candidateMimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) || ''
       mimeTypeRef.current = mimeType || 'audio/webm'
