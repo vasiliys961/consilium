@@ -113,7 +113,7 @@ test('C13 visible UI records provenance and truly submits physician council choi
  const ui=readFileSync('app/components/clinical-workspace.tsx','utf8');
  const feed=readFileSync('app/components/case-feed.tsx','utf8');
  const analyze=readFileSync('lib/analyze-case.ts','utf8');
- assert.match(ui,/councilSpecialty:withCouncil\?councilSpecialty:'auto',secondOpinion/);
+ assert.match(ui,/councilSpecialty:withCouncil\?councilSpecialty:'auto',councilFallback:withCouncil&&councilFallback,secondOpinion/);
  assert.match(ui,/autoCouncilPlan\.suggested/);
  assert.match(ui,/priorCouncilBilled/);
  assert.match(ui,/Стоимость следующего обсуждения заранее не гарантирована/);
