@@ -9,7 +9,7 @@ test('C13: exact physician report "у парня кашель с одышкой"
  assert.equal(respiratoryPresentation(phrase),true);
  assert.equal(respiratoryPresentation('[PHYSICIAN]\\n'+phrase),true);
  const free=planPhysicianTask(phrase);
- assert.deepEqual(free.steps.map(x=>x.tool),['clinical']);
+ assert.deepEqual(free.steps.map(x=>x.tool),['specialist','clinical']);
  assert.match(free.message,/SpO₂/);
  assert.match(free.message,/ЧДД/);
  assert.doesNotMatch(free.message,/создать протокол|наши возможности/i);
