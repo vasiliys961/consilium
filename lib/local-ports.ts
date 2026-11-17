@@ -34,3 +34,6 @@ export function allowedAppOrigin(origin: string | null): boolean {
   const port = localPorts().app;
   return origin === `http://127.0.0.1:${port}` || origin === `http://localhost:${port}`;
 }
+
+/** Reserve BOTH the main and Preview port sets to avoid opening app or bridge services as standalone Radiology. */
+export function reservedLocalPorts():number[]{return [...Object.values(PRIMARY),...Object.values(PREVIEW)];}
