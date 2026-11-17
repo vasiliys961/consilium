@@ -12,6 +12,8 @@ import { requestStreamedJson } from '@/lib/analysis-stream';
 import { recordConsultQuestion } from '@/lib/consult-recording';
 import {consumeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import {storeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
+import {specialistCaseReport} from '@/lib/specialist-case-report';
+import {persistSpecialistCaseReport} from '@/lib/casebook';
 import {suggestClinicalCase} from '@/lib/consult-case-suggestion';
 import {copilotText} from '@/lib/copilot-i18n';
 import { LOCALES, parseLocale, type Locale } from '@/lib/locale';
@@ -86,6 +88,7 @@ export default function ConsultPage() {
   const [clip, setClip] = useState<string>();
   const [editedCopy, setEditedCopy] = useState<{ original: string; text: string }>();
   const [sourceCaseId,setSourceCaseId]=useState<string>();
+  const [savingReport,setSavingReport]=useState<number|null>(null);
   const [attachmentPreview,setAttachmentPreview]=useState<{name:string;text:string}>();
   const [preparedDocuments,setPreparedDocuments]=useState<Partial<Record<SpecialistId,boolean>>>({});
   const [attachmentBusy,setAttachmentBusy]=useState(false);
@@ -101,7 +104,7 @@ export default function ConsultPage() {
   const dialogue = dialogues[specialty] ?? EMPTY_DIALOGUE;
   const offerCase= !casePromptDismissed[specialty]&&suggestClinicalCase(question,dialogue.turns.length,Boolean(attachmentPreview)||Boolean(preparedDocuments[specialty]));
   const profile = SPECIALIST_PROFILES.find(item => item.id === specialty)!;
-  const busy = Boolean(action || mic);
+  const busy = Boolean(action || mic || savingReport!==null);
   const original = question.trim() ? consultationTranscript(dialogue.transcript, question) : '';
   const edited = editedCopy?.original === original ? editedCopy.text : undefined;
   const automatic = useMemo(() => cleanChatText(original), [original]);
@@ -115,9 +118,11 @@ export default function ConsultPage() {
     // Opus Copilot leaves a short, local draft only. The physician reviews it
     // before the specialist's ordinary consent and model action.
     const received=consumeCopilotConsultDraft();
+    const queryCase=new URLSearchParams(window.location.search).get('case');
+    const caseId=queryCase&&/^[\\w-]{1,80}$/.test(queryCase)?queryCase:undefined;
+    setSourceCaseId(received?.caseId??caseId);
     if(received){
       setSpecialty(received.specialty);
-      setSourceCaseId(received.caseId);
       setDrafts(current=>({...current,[received.specialty]:current[received.specialty]?.trim()||received.text}));
       promptInput.current?.focus();
     }
@@ -255,6 +260,24 @@ export default function ConsultPage() {
     setPreparedDocuments(current=>({...current,[specialty]:true}));
     setAttachmentPreview(undefined);
   }
+  async function saveCompletedSpecialistReply(index:number){
+    if(!sourceCaseId||busy)return;
+    const turn=dialogue.turns[index];
+    if(!turn?.text?.trim()||!turn.transcript?.trim()){
+      setError('Нет завершённого ответа для сохранения.');return;
+    }
+    setSavingReport(index);setError('');
+    try{
+      const report=await specialistCaseReport(specialty,turn.question,turn.transcript,turn);
+      await persistSpecialistCaseReport(sourceCaseId,report);
+      // The actual completed response is committed before changing pages.
+      // No additional clinical or provider request is made here.
+      router.push('/workspace?case='+encodeURIComponent(sourceCaseId));
+    }catch(failure){
+      setError(failure instanceof Error?failure.message:'Не удалось сохранить ответ. Он остался в диалоге.');
+    }finally{setSavingReport(null)}
+  }
+
   function continueInClinicalCase(){
     // A deliberately bounded and clearly marked *draft*, not a clinical summary.
     // Copy the latest turns without pretending this is the entire consultation.
@@ -374,6 +397,10 @@ export default function ConsultPage() {
           <article className={styles.answer}>
             <strong>{copilotText(language,profile.label)} · {t('ИИ-помощник')}</strong>
             <ReplyContent reply={turn} />
+            {sourceCaseId&&<button type="button" className={styles.verifyButton}
+              disabled={busy} onClick={()=>void saveCompletedSpecialistReply(index)}>
+              {t(savingReport===index?'Сохраняем ответ…':'Сохранить этот ответ в клинический случай')}
+            </button>}
             {turn.verification ? <section className={styles.verification} aria-label={t('Проверка другой моделью')}>
               <strong>{t('Проверка другой моделью')}</strong>
               <ReplyContent reply={turn.verification} />
