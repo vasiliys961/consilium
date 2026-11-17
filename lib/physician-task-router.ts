@@ -44,7 +44,7 @@ const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|д�
 const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
 const CARDIAC=/(?:болит\s+сердц|боль\s+(?:в|за)\s+(?:груд|грудин|сердц)|бол[ьи]\s+(?:в\s+)?груд|давит\s+(?:в\s+)?груд|дискомфорт\s+(?:в\s+)?груд|chest\s+(?:pain|tightness|discomfort)|heart\s+pain)/i;
 export const isCardiacPresentation=(value:string)=>CARDIAC.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
-export const isCopilotHelpQuery=(value:string)=>/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?функции|help|what can you do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$)/i.test(value.trim());
+export const isCopilotHelpQuery=(value:string)=>/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?(?:функции|возможности)|help|what can you do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$)/i.test(value.trim());
 
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
