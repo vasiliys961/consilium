@@ -41,12 +41,18 @@ const PROTO=/протокол|soap|заключен|документир|офо�
 const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
 const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц');
 const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
+const CARDIAC=/(?:болит\s+сердц|боль\s+(?:в|за)\s+(?:груд|грудин|сердц)|бол[ьи]\s+(?:в\s+)?груд|давит\s+(?:в\s+)?груд|дискомфорт\s+(?:в\s+)?груд|chest\s+(?:pain|tightness|discomfort)|heart\s+pain)/i;
+export const isCardiacPresentation=(value:string)=>CARDIAC.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
+export const isCopilotHelpQuery=(value:string)=>/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?функции|help|what can you do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$)/i.test(value.trim());
+
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
- if(/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?функции|help|what can you do)/i.test(value))
-  return {intent:'help',steps:(['clinical','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Вот реальные инструменты Doctor Opus. Выберите подходящий модуль или опишите задачу своими словами, чтобы получить маршрут. Запуск, платные запросы и сохранение — только по вашему подтверждению.'};
+ if(isCopilotHelpQuery(value))
+  return {intent:'help',steps:(['clinical','specialist','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Могу помочь выбрать инструмент Doctor Opus. Выберите модуль ниже или напишите, что хотите сделать.'};
+ if(isCardiacPresentation(value))
+  return {intent:'route',steps:physicianToolSteps(['specialist','clinical']),message:'При боли в груди можно обратиться к специалисту. При внезапной или выраженной боли, одышке, обмороке, холодном поте или ухудшении состояния нужна срочная очная оценка.'};
  const tools:PhysicianTool[]=[];
  const add=(tool:PhysicianTool)=>{if(!tools.includes(tool))tools.push(tool);};
  if(RAD.test(value))add('radiology');
