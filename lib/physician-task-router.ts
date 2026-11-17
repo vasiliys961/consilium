@@ -1,3 +1,4 @@
+import {suggestClinicalDestination} from './copilot-clinical-routing.ts';
 /** C13 lightweight, offline and deterministic assistant for clinical TOOL routing.
  * Not a diagnostic engine: it never launches modules or sends clinical data.
  */
@@ -51,8 +52,13 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
  if(isCopilotHelpQuery(value))
   return {intent:'help',steps:(['clinical','specialist','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Могу помочь выбрать инструмент Doctor Opus. Выберите модуль ниже или напишите, что хотите сделать.'};
- if(isCardiacPresentation(value))
-  return {intent:'route',steps:physicianToolSteps(['specialist','clinical']),message:'При боли в груди можно обратиться к специалисту. При внезапной или выраженной боли, одышке, обмороке, холодном поте или ухудшении состояния нужна срочная очная оценка.'};
+ const specialty=suggestClinicalDestination(value);
+ if(specialty&&!PROTO.test(value)&&!AMBIENT.test(value)){
+  const available=[...physicianToolSteps(['specialist','clinical'])];
+  return {intent:'route',steps:available,message:specialty.urgentHint
+    ? 'Рекомендую специалиста: '+specialty.label+'. '+specialty.urgentHint
+    : 'По этому вопросу могу предложить специалиста: '+specialty.label+'. Можно также открыть клинический разбор.'};
+ }
  const tools:PhysicianTool[]=[];
  const add=(tool:PhysicianTool)=>{if(!tools.includes(tool))tools.push(tool);};
  if(RAD.test(value))add('radiology');
