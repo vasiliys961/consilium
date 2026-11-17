@@ -78,8 +78,11 @@ export function planAdaptiveCouncil(note:string,modalities:readonly string[],req
  const focus=chooseClinicalFocus(excerpt,modalities).filter(item=>
   allowed.has(item.domain)&&item.domain!=='auto'&&item.domain!=='internal medicine'&&item.domain!=='clinical pharmacology'
  );
- const fromText=focus.filter(item=>item.reason==='clinical-text').map(item=>item.domain as ClinicalSpecialty);
- const fromModality=focus.filter(item=>item.reason==='input-modality').map(item=>item.domain as ClinicalSpecialty);
+ // Re-run the free focus matcher without modalities: when a disease is both
+ // documented in text AND tagged by an ECG, textual evidence retains priority.
+ const fromText=chooseClinicalFocus(excerpt,[]).filter(item=>allowed.has(item.domain)&&item.domain!=='auto'&&item.domain!=='internal medicine'&&item.domain!=='clinical pharmacology')
+  .map(item=>item.domain as ClinicalSpecialty);
+ const fromModality=focus.map(item=>item.domain as ClinicalSpecialty).filter(item=>!fromText.includes(item));
  // Reuse specialist image-read conclusions as EVIDENCE. The council does not
  // claim to have inspected histology pixels, dermatoscopy, retinal scans, etc.
  const imageContext:ClinicalSpecialty[]=[];
