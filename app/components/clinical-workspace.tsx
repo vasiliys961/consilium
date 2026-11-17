@@ -37,6 +37,7 @@ import { WorkflowGuideView } from "@/app/components/workflow-guide";
 import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
 import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,councilSpecialtyLabel,type CouncilSpecialty} from '@/lib/adaptive-council';
+import {profileModality} from '@/packages/medical-images/profiles';
 
 import type {MedicationContext} from '@/lib/drug-interaction-rules';
 import {medicationCopy} from '@/lib/medication-copy';
@@ -94,13 +95,27 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const [rereadImages,setRereadImages]=useState(false);
     const [consilium, setConsilium] = useState(false);
     const [councilSpecialty,setCouncilSpecialty]=useState<CouncilSpecialty>('auto');
-    const councilPlan=planAdaptiveCouncil(
-      [caseQuestion,current?.question,current?caseContext(current):''].filter(Boolean).join('\n').slice(0,5000),
-      current?.files.map(file=>{
+    const councilContext=[caseQuestion,current?.question,current?.context,
+      ...(current?.events.slice(-5).map(item=>item.text)??[])].filter(Boolean).join('\n').slice(0,9000);
+    const councilModalities=[
+      ...(current?.files.map(file=>{
+        const profile=file.imageProfile&&file.imageProfile!=='auto'?file.imageProfile:current.imageProfile;
+        if(profile&&profile!=='auto'&&file.image)return profileModality(profile);
         const route=materialRoute(file);
-        return route==='ecg'||route==='radiology'?route:(file.imageProfile??'general');
-      })??[],councilSpecialty,
-    );
+        return route==='ecg'||route==='radiology'?route:'unknown';
+      })??[]),
+      ...(current?.analyses.flatMap(item=>item.result.ledger.filter(row=>row.status==='read').map(row=>row.modality))??[]),
+      ...(current?.moduleReports?.length?['radiology']:[]),
+    ].slice(0,100);
+    const autoCouncilPlan=planAdaptiveCouncil(councilContext,councilModalities);
+    const councilPlan=planAdaptiveCouncil(councilContext,councilModalities,councilSpecialty);
+    // A past provider receipt is a grounded cost reference; never present it as
+    // the guaranteed price of the NEXT council on a changed patient context.
+    const priorCouncilCalls=current?.analyses.map(item=>item.result.cost.calls?.filter(call=>call.stage==='consilium'))
+      .find(calls=>calls?.length);
+    const priorCouncilUsd=priorCouncilCalls?.length?
+      priorCouncilCalls.reduce((sum,call)=>sum+call.usd,0):null;
+    const priorCouncilBilled=Boolean(priorCouncilCalls?.length&&priorCouncilCalls.every(call=>call.billingSource==='openrouter'));
     const [imageSecondOpinion,setImageSecondOpinion]=useState(false);
     const [eventDrafts, setEventDrafts] = useState(EMPTY_EVENT_DRAFTS);
     const [dirty, setDirty] = useState(false);
@@ -437,12 +452,42 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         </div>
 <details><summary>{t("Настройки разбора и источников")}</summary><p className={styles.muted}>{t("Разбор учитывает контекст, материалы и записи о динамике.")}</p><label>{t("Задача")}<select value={task} disabled={busy} onChange={e => setTask(e.target.value as CaseTask | 'auto')}><option value="auto">{t("Определить по вопросу")}</option><option value="interpret">{t("Разобрать материалы")}</option><option value="clinical">{t("Диагностический разбор")}</option><option value="management">{t("Лечебная тактика")}</option><option value="evidence">{t("Поиск доказательств")}</option></select><small>{t("Если не уверены, оставьте «Определить по вопросу». Для начала достаточно одного ясного вопроса и нужных материалов.")}</small></label><ImageProfileSelect value={current.imageProfile??"auto"} onChange={imageProfile=>update({imageProfile})} disabled={busy}/><label className={styles.check}><input type="checkbox" checked={externalSearch} disabled={busy} onChange={e => setExternalSearch(e.target.checked)}/>{t("Разрешить поиск в публичных источниках, если он нужен для задачи")}</label><label className={styles.check}><input type="checkbox" checked={imageSecondOpinion} disabled={busy} onChange={e=>setImageSecondOpinion(e.target.checked)}/>{t("Второе мнение по исходным изображениям")}</label><label className={styles.check}><input type="checkbox" checked={consilium} disabled={busy} onChange={e => setConsilium(e.target.checked)}/>{t("Подключить консилиум")}</label><small>{t("Необязательно: добавляет отдельные мнения моделей, увеличивает время и расход. Для обычного чтения файла начните без консилиума.")}</small>{consilium&&<label style={{display:'block',marginBlock:8}}>{t('Клинический профиль консилиума')}
  <select disabled={busy} value={councilSpecialty} onChange={event=>setCouncilSpecialty(event.target.value as CouncilSpecialty)}>
-  {COUNCIL_SPECIALTIES.map(option=><option key={option.id} value={option.id}>{option.id==='auto'?t('Определить по вопросу'):councilSpecialtyLabel(option.id,language)}</option>)}
+  <option value="auto">{language==='ru'?'Автоматически (рекомендуется)':'Automatically (recommended)'}</option>
+  <optgroup label={language==='ru'?'Предложенные по материалам':'Suggested for this case'}>
+   {autoCouncilPlan.suggested.map(id=><option key={id} value={id}>{councilSpecialtyLabel(id,language)}</option>)}
+  </optgroup>
+  <optgroup label={language==='ru'?'Другие профили (врач выбирает сам)':'Other available perspectives'}>
+   {COUNCIL_SPECIALTIES.filter(option=>option.id!=='auto'&&!autoCouncilPlan.suggested.some(id=>id===option.id))
+     .map(option=><option key={option.id} value={option.id}>{councilSpecialtyLabel(option.id,language)}</option>)}
+  </optgroup>
  </select>
  <small>{t('По умолчанию система выбирает профиль автоматически. Это изменяет задачи существующих моделей, а не добавляет новых участников.')}</small>
  <p style={{fontSize:13,margin:'6px 0'}}>{language==='ru'
-   ? 'Клинический фокус: '+councilSpecialtyLabel(councilPlan.lead,language)+'; независимый ракурс: '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Критик, безопасность лекарств и синтез — прежние роли. Всего до 5 вызовов LLM; сумма зависит от объёма ответа.'
-   : 'Clinical focus: '+councilSpecialtyLabel(councilPlan.lead,language)+'; second perspective: '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Independent critic, medication safety and synthesis remain. Up to 5 LLM calls; cost depends on token usage.'}</p>
+   ? 'Предварительно: гипотезы — '+councilSpecialtyLabel(councilPlan.lead,language)+'; обследования — '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Критик, безопасность лекарств и синтез остаются независимыми ролями.'
+   : 'Preliminary plan: hypotheses — '+councilSpecialtyLabel(councilPlan.lead,language)+'; investigations — '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Critic, medication safety and synthesis remain separate.'}</p>
+ <p style={{fontSize:12,margin:'4px 0'}}>
+  {language==='ru'?'При запуске консилиума — до 5 платных вызовов, но адаптация профилей не добавляет ни одного.':'Launching the council may use up to five paid model calls; adapting their perspectives adds none.'}
+  {priorCouncilUsd!==null?' '+(language==='ru'?'Предыдущий консилиум в этом случае: ':'Previous council in this case: ')+
+    '
+ </label>}{!configured && <p className={styles.muted}>{t("Если разбор недоступен, откройте «Инструкцию для врача» и раздел «Если не получается начать».")}</p>}{payloadTooLarge && <p role="alert">{t("Объём запроса превышает 12 МБ. Удалите часть материалов.")}</p>}<small>{t("Результат — черновик. Проверяйте диагнозы, дозы, противопоказания и ссылки.")}</small></details>
+        {current.analyses.length>0&&<label className={styles.check}><input type="checkbox" disabled={busy} checked={rereadImages} onChange={event=>setRereadImages(event.target.checked)}/>{t('Повторно прочитать прежние изображения')}</label>}
+      </section>
+      <details><summary>{t('Проверить препараты · можно дополнить список')}</summary><DrugInteractionChecker onReview={canAnalyze?reviewMedications:undefined} current={current.currentMedications??''} onCurrentChange={currentMedications=>update({currentMedications})} disabled={busy||current.status==='closed'}/></details>
+      {busy&&<AnalysisProgress events={progress} preview={preview}/>}
+      {!current.analyses.length?<div className={styles.empty}><h3>{t('Разбор ещё не выполнен')}</h3><p>{t('Добавьте клинические данные и материалы, задайте вопрос и нажмите «Разобрать случай» выше.')}</p></div>:<CaseFeed value={current} busy={busy} onCouncil={()=>askCase('council')} onDecision={()=>goToTab('decision')}/>}
+    </>}
+    {(tab === 'followup' || tab === 'decision') && <>{tab==='decision'&&<div className={styles.decisionDraft}><h3>{t('Проект решения по резюме')}</h3>{current.decisionDraft?<><p>{t('Это предложение модели. Перенесите его в поле ниже, проверьте и отредактируйте перед добавлением записи.')}</p>{current.analyses[0]?.id!==current.decisionDraft.analysisId&&<p role="status">{t('После этого резюме появились новые этапы. Обновите резюме перед решением.')}</p>}<details><summary>{t('Посмотреть проект и уточняющие вопросы')}</summary><pre>{current.decisionDraft.text}</pre></details><button disabled={busy||current.status==='closed'} onClick={()=>setEventDrafts(value=>({...value,decision:current.decisionDraft!.text}))}>{t('Взять за основу и редактировать')}</button></>:<p>{t('Сначала нажмите «Резюме разбора» во вкладке «Разбор». Здесь появится проект решения и вопросы для уточнения.')}</p>}</div>}<h2>{tab === 'followup' ? t("Наблюдение в динамике") : t("Решение лечащего врача")}</h2><p className={styles.muted}>{tab === 'followup' ? t("Новые симптомы, результаты обследований и ответ на лечение войдут в следующий разбор.") : t("Зафиксируйте принятый план, изменения к черновику и сроки контроля. Запись не является электронной подписью.")}</p><textarea rows={5} disabled={busy||saving} aria-label={t("Новая запись")} readOnly={current.status==='closed'} value={eventText} onChange={e => {const text=e.target.value;setEventDrafts(value=>({...value,[eventKind]:text}));}} placeholder={tab === 'followup' ? t("Что изменилось с предыдущего визита?") : t("Ваше решение и обоснование…")}/><div className={styles.actions}><button disabled={busy||saving||current.status==='closed'||!eventText.trim()} onClick={()=>addEvent()}>{t(editingCurrent?'Сохранить правку':'Добавить запись')}</button>{editingCurrent&&<button onClick={()=>{setEditingEvent(undefined);setEventDrafts(value=>({...value,[eventKind]:''}));}}>{t('Отменить правку')}</button>}<button className={styles.primary} disabled={!canAnalyze || !eventText.trim()} onClick={()=>addEvent(true)}>{t("Добавить запись и разобрать")}</button></div><div className={styles.timeline}>{current.events.filter(e => e.kind === eventKind).slice().reverse().map(e => <article key={e.id}><small>{date(e.at)}{e.editedAt?' · '+t('Изменено')+' '+date(e.editedAt):''}</small><p>{e.text}</p><button disabled={busy||current.status==='closed'} onClick={()=>{setEditingEvent(e.id);setEventDrafts(value=>({...value,[eventKind]:e.text}));}}>{t('Редактировать запись')}</button>{e.revisions?.length?<details><summary>{t('История правок')} · {e.revisions.length}</summary>{e.revisions.map((revision,index)=><section key={index}><small>{date(revision.at)}</small><p>{revision.text}</p></section>)}</details>:null}</article>)}</div>{tab==='decision'&&current.status==='active'&&<button className={styles.primary} disabled={busy||saving} onClick={()=>void finishCase()}>{t('Завершить и сохранить случай')}</button>}{tab === 'decision' && <label>{t("Статус случая")}<select disabled={busy} value={current.status} onChange={e => {if(e.target.value==='closed')void finishCase();else void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.');}}><option value="active">{t("В работе")}</option><option value="closed">{t("Завершён")}</option></select></label>}</>}
+    <CaseSectionControls index={tabIndex} onNavigate={goToTab}/>
+    </section><aside className={styles.rightPanel}><WorkflowGuideView guide={workflowGuide({ context: caseContext(current), files: current.files, result: current.analyses[0]?.result, busy, changed: Boolean(current.analyses[0] && (current.analyses[0].inputSignature ? current.analyses[0].inputSignature !== caseSignature(current) : current.events.some(e=>e.kind==='note' && e.at>current.analyses[0].at))), decision: current.events.some(event => event.kind === 'decision') })} onHelp={()=>setHelpOpen(true)} onAction={goToTab}/><div className={styles.noteCard}><h3>{t("Хранение случая")}</h3><p>{t("Новый случай сохраняется сразу, до первого разбора. Жалобы, вопросы и материалы сохраняются автоматически; идентификатор не меняется при переходах.")}</p><p>{t("Серверной базы случаев нет. Для переноса между устройствами используйте зашифрованную резервную копию в меню «Хранение случаев»; Markdown и DOCX подходят для чтения, но не восстанавливают диалог.")}</p></div></aside></div>
+   </>}
+   {section === 'modules' && <><div className={styles.heading}><div><p className={styles.eyebrow}>{t("ИНСТРУМЕНТЫ DOCTOR OPUS")}</p><h1>{t("Одна задача. Разные инструменты.")}</h1><p>{t("Реальные возможности и границы подключённых компонентов.")}</p></div><Link className={styles.primary} href={current?moduleHref('workbench',current.id):'/workbench'}>{t("Открыть станцию ↗")}</Link></div>{[false,true].map(extra=><section key={String(extra)}>{extra&&<h2>{t('Дополнительные инструменты')}</h2>}<div className={styles.moduleGrid}>{modules.filter(([, , , href])=>(href==='/protocol'||href==='/translator')===extra).map(([name,formats,description,href])=><article className={styles.panel} key={name}><h2>{href==='/drug-labels'?medicationCopy(language).title:t(name)}</h2><strong>{t(formats)}</strong><p>{href==='/drug-labels'?medicationCopy(language).market:t(description)}</p><Link href={current?moduleHref(href.slice(1),current.id):href}>{t('Перейти к инструментам →')}</Link></article>)}</div></section>)}</>}
+   </main><PhysicianHelp open={helpOpen} onClose={()=>setHelpOpen(false)}/><footer className={styles.footer}>CONCILIUM / DOCTOR OPUS <span>{t("Клиническое мышление с опорой на данные")}</span></footer>
+  </div>
+ </div>;
+}
++priorCouncilUsd.toFixed(4)+(priorCouncilBilled?(language==='ru'?' (данные провайдера)':' (provider billed)'):(language==='ru'?' (расчётная сумма)':' (estimated)'))+'. ':''}
+  {language==='ru'?'Стоимость следующего обсуждения заранее не гарантирована.':'The cost of the next council is not guaranteed.'}
+ </p>
  </label>}{!configured && <p className={styles.muted}>{t("Если разбор недоступен, откройте «Инструкцию для врача» и раздел «Если не получается начать».")}</p>}{payloadTooLarge && <p role="alert">{t("Объём запроса превышает 12 МБ. Удалите часть материалов.")}</p>}<small>{t("Результат — черновик. Проверяйте диагнозы, дозы, противопоказания и ссылки.")}</small></details>
         {current.analyses.length>0&&<label className={styles.check}><input type="checkbox" disabled={busy} checked={rereadImages} onChange={event=>setRereadImages(event.target.checked)}/>{t('Повторно прочитать прежние изображения')}</label>}
       </section>
