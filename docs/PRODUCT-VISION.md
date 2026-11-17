@@ -81,3 +81,11 @@ Medical Translator остаётся необязательным дополни�
 5. Валидировать медицинскую пользу и стоимость на разрешённых бенчмарках/экспертной оценке; позже рассмотреть доступ для других врачей после проверки информационной безопасности, правовых условий и качества.
 
 **Критерий любого нового PR:** это делает жизнь врача проще, заключение надёжнее или систему быстрее/дешевле **без потери клинической безопасности**?
+
+## Language policy — international product with full Russian clinical workflow (17.11.2026)
+
+Doctor Opus is designed as an **international clinical application**. **English** is the reference language for international medical UI, terminology, navigation, clinical safety messages and end-to-end quality. **Russian** remains a full, first-class development and clinical workflow language: physician review and iterative feature development may be conducted in Russian; do not remove Russian or treat it as obsolete. Every other supported interface language must have complete physician-facing navigation and safe fallbacks, not fragments of Russian in the middle of translated pages.
+
+For Opus Copilot workflow suggestions, show the canonical **English first line**, followed by the **selected interface language** (including Russian) on the second line; English UI only needs one line. The physician may write and speak in the chosen language. If the routing is ambiguous, offer General Internal Medicine / Therapy with an explicit manual specialty choice; never infer a diagnosis from a lexical match. No additional paid model calls just for the deterministic bilingual hint. The clinical question may still be reviewed by a specialist on the physician's action.
+
+Do not silently translate medically important numerical values, negations or drug doses. The bilingual layout is for navigation and short descriptions, not a claim that clinical analysis has been independently validated in every language.
