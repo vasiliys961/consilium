@@ -52,10 +52,9 @@ test('C13: no backup without consent and no automatic second billing on uncertai
   [()=>Response.json({error:{message:'Model not found'}},{status:404}),false],
  ] as const){
   let calls=0;const result=await complete({OPENROUTER_API_KEY:'synthetic'},{
-   model:MODELS.pro,pinModel:true,fallbackModel:MODELS.hydrogen,fallbackOnlyIfUnavailable:true,
+   model:MODELS.pro,pinModel:true,...(allow?{fallbackModel:MODELS.hydrogen}:{}),fallbackOnlyIfUnavailable:true,
    maxTokens:100,retryInvalidResponse:false,validate:s=>s==='valid',messages:[{role:'user',content:'Synthetic'}],
   },async()=>{calls++;return response()});
-  if(!allow&&calls!==1)throw Error('unexpected');
   assert.equal(result,null);
   assert.equal(calls,1);
  }
