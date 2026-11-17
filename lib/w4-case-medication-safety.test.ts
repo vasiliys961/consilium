@@ -113,10 +113,10 @@ test('W4 no extra provider: follow-up council retains clinical facts and medicat
 });
 
 test('W4 spelling: affirmative and negated Russian confirmed status stay distinct',()=>{
- const yes=caseMedicationSafetyContext('Декомпенсированный цирроз: подтверждён\\nТяжёлая печёночная недостаточность: подтверждена',blank);
+ const yes=caseMedicationSafetyContext('Декомпенсированный цирроз: подтверждён\nТяжёлая печёночная недостаточность: подтверждена',blank);
  assert.equal(yes.context.decompensatedCirrhosis,true);
  assert.equal(yes.context.severeHepaticImpairment,true);
- const no=caseMedicationSafetyContext('Декомпенсированный цирроз: не подтверждён\\nТяжёлая печёночная недостаточность: не подтверждена',blank);
+ const no=caseMedicationSafetyContext('Декомпенсированный цирроз: не подтверждён\nТяжёлая печёночная недостаточность: не подтверждена',blank);
  assert.equal(no.context.decompensatedCirrhosis,false);
  assert.equal(no.context.severeHepaticImpairment,false);
 });
