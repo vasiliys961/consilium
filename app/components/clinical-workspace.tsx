@@ -1,6 +1,6 @@
 'use client';
 import {retrieveLibraryEvidence} from '@/lib/library-retrieval';
-import{materialRoute,moduleHref}from'@/lib/material-routing';
+import{materialRoute}from'@/lib/material-routing';
 import{CaseConnections}from'./case-connections';
 import {CaseResultsSummary} from './case-results-summary';
 import {PhysicianTaskAssistant} from './physician-task-assistant';
