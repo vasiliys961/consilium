@@ -1,4 +1,4 @@
-import {redactText} from '../packages/intake/redact.ts';
+import {cleanChatText} from './privacy-chat.ts';
 
 /**
  * Client-side conservative preflight. The server still sanitizes every text
