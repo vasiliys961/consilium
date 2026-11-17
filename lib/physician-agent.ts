@@ -66,6 +66,37 @@ export function parsePhysicianAgentJson(text:string):AgentJson|null{
   tools:validTools(data.tools),
  };
 }
+
+/**
+ * Keep a symptom-only encounter out of documentation-first navigation.
+ * This is a guardrail for the physician's workflow, NOT a clinical diagnosis.
+ * It recognizes only common respiratory phrases; other presentations are
+ * handled by the LLM instruction and the existing deterministic router.
+ */
+export function respiratoryPresentation(text:string):boolean{
+ const latest=extractLatest(text);
+ const hasSymptoms=/(?:кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i.test(latest);
+ const requestedDocument=/(?:протокол|soap|оформ|запиш.*карт|заключени|состав.*документ|write.*note|draft.*protocol|medical report)/i.test(latest);
+ const featureQuestion=/(?:что умеет|возможност|покаж.*функци|help.*features|what can (?:you|opus) do)/i.test(latest);
+ return hasSymptoms&&!requestedDocument&&!featureQuestion;
+}
+export function clinicalFirstResponse(text:string,locale:Locale,parsed:AgentJson):AgentJson{
+ if(!respiratoryPresentation(text))return parsed;
+ // Keep explicit available tests or medications if mentioned, but never suggest
+ // writing a protocol solely because the clinician stated a symptom.
+ const tools=(['clinical',...parsed.tools.filter(tool=>tool!=='clinical'&&tool!=='protocol'&&tool!=='ambient')] as PhysicianTool[]).slice(0,4);
+ const generic=/(?:возможност|функци|созда.*протокол|состав.*протокол|перейд.*протокол|выбер.*модул|наши инструмент|our tools|capabilit|write.*protocol|create.*note)/i.test(parsed.reply);
+ const english=locale==='en';
+ const defaultReply=english
+   ? 'With cough and breathlessness, assess severity first: SpO₂, respiratory rate, vital signs, onset and chest pain. Severe respiratory distress, low oxygen or instability requires urgent in-person assessment. The clinical review can then consider the differential.'
+   : 'При кашле с одышкой сначала оцените тяжесть: SpO₂, ЧДД, пульс, АД, температуру, давность симптомов и боль в груди. При выраженной дыхательной недостаточности, гипоксемии или нестабильности — срочная очная оценка. Далее — клинический разбор возможных причин.';
+ const defaultQuestion=english
+   ? 'What are the SpO₂, respiratory rate and symptom onset?'
+   : 'Каковы SpO₂, ЧДД и когда начались симптомы?';
+ // A generic marketing/feature answer is never allowed to replace triage.
+ return {...parsed,reply:generic?defaultReply:parsed.reply,question:parsed.question||defaultQuestion,tools};
+}
+
 function localFallback(text:string,locale:Locale):PhysicianAgentResult{
  const plan=planPhysicianTask(extractLatest(text));
  const msg=locale==='ru'?'ИИ-помощник сейчас недоступен. Предлагаю локальный маршрут без новой оплаты.':'The AI assistant is unavailable. Here is a local tool route without another paid call.';
@@ -84,7 +115,12 @@ export async function converseWithPhysician(
   retryInvalidResponse:false,signal,
   messages:[
    {role:'system',content:[
-    'You are Doctor Opus physician workflow assistant, not a medical diagnostician or an autonomous agent.',
+    'You are Opus Copilot, a physician-facing clinical workflow assistant. You are not an autonomous diagnostic engine.',
+    'Treat a short patient presentation (e.g. cough with dyspnea) as a clinical question, NOT a request to list platform features or generate a protocol.',
+    'For an undifferentiated patient complaint, first help the physician assess urgency/red flags, name the minimum discriminating clinical measurements, and ask ONE focused follow-up. Do not manufacture findings or prescribe.',
+    'For cough and dyspnea, focus first on SpO2, respiratory rate, vital signs, timing, chest pain and whether urgent in-person evaluation is needed. The main first tool is clinical.',
+    'Only propose protocol, Ambient or document creation if the physician explicitly requested documentation or recording in the CURRENT message.',
+    'Never offer a feature catalog unless asked about available functions. Prioritize the physician\'s most recent message over older assistant suggestions.',
     'Understand the doctor\'s current goal in the previous conversation and last message.',
     'Answer in '+languageName(locale)+'. Be concise, helpful, non-patronizing, one clarifying question only if needed.',
     'Propose clinical workflow steps using ONLY these exact module IDs: '+tools+'.',
@@ -101,9 +137,9 @@ export async function converseWithPhysician(
  },fetchImpl);
  const parsed=result&&parsePhysicianAgentJson(result.text);
  if(!result||!parsed)return localFallback(text,locale);
- const latest=extractLatest(text);
- const plan:PhysicianTaskPlan={intent:parsed.tools.length?'route':'welcome',message:parsed.reply,steps:physicianToolSteps(parsed.tools)};
+ const clinicallyPrioritized=clinicalFirstResponse(text,locale,parsed);
+ const plan:PhysicianTaskPlan={intent:clinicallyPrioritized.tools.length?'route':'welcome',message:clinicallyPrioritized.reply,steps:physicianToolSteps(clinicallyPrioritized.tools)};
  const costKnown=result.inputTokens>0||result.outputTokens>0;
- return {message:parsed.reply,question:parsed.question,plan,usedModel:true,
+ return {message:clinicallyPrioritized.reply,question:clinicallyPrioritized.question,plan,usedModel:true,
   model:result.model,estimatedUsd:costKnown?priceUsd(result.model,result.inputTokens,result.outputTokens):null,warning:null};
 }
