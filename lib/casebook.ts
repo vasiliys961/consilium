@@ -163,6 +163,33 @@ async function serialCaseWrite<T>(id:string,writer:()=>Promise<T>):Promise<T>{
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{
  return serialCaseWrite(value.id,()=>writeVaultCase(value,remove));
 }
+/** A completed answer appends to the freshest case, rather than replacing
+ * documents, observations or attachments returned while the model was busy. */
+export async function persistCompletedClinicalAnalysis(
+ snapshot:ClinicalCase,entry:Analysis,draft:NonNullable<ClinicalCase['workspaceDraft']>,
+):Promise<ClinicalCase>{
+ return serialCaseWrite(snapshot.id,async()=>{
+  const latest=await readVaultCaseById(snapshot.id);
+  if(!latest||latest.deletedAt||latest.status==='closed')throw Error('case_not_active');
+  if(latest.analyses.some(item=>item.id===entry.id))return latest;
+  const existingEvents=new Set(latest.events.map(item=>item.id));
+  const events=[...latest.events,...snapshot.events.filter(item=>item.kind==='question'&&!existingEvents.has(item.id))];
+  const editor=latest.workspaceDraft;
+  const value:ClinicalCase={...latest,
+   updated:latest.updated>entry.at?latest.updated:entry.at,
+   events,analyses:[entry,...latest.analyses],
+   workspaceDraft:{...draft,
+    ...(editor?{note:editor.note,decision:editor.decision}:{}),
+    // A different question typed in another window must remain unsent.
+    ...(editor?.question&&editor.question!==entry.question?{question:editor.question}:{}),
+   },
+   ...(entry.kind==='summary'&&entry.result.clinicalDraft==='generated'&&(!latest.decisionDraft||latest.decisionDraft.at<=entry.at)
+    ?{decisionDraft:{analysisId:entry.id,at:entry.at,text:decisionDraftFrom(entry)}}:{}),
+  };
+  await writeVaultCase(value);
+  return value;
+ });
+}
 /** Autosave snapshots can complete after newer analysis/attachment writes.
  * Never allow an older snapshot to overwrite newer physician work.
  * This preserves all current in-memory fields, unlike an editor-only patch.

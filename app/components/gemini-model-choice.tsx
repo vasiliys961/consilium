@@ -24,7 +24,8 @@ export function GeminiModelChoice(){
  if(hidden||!policy)return null;
  return <aside style={{maxWidth:1120,margin:'12px auto',padding:'0 24px',fontSize:16}}>
   <details aria-label={t('Модели Doctor Opus и их задачи')} style={{border:'1px solid #cbd8d0',borderRadius:10,background:'#f7fbf8',padding:'8px 12px'}}>
-   <summary style={{cursor:'pointer',fontWeight:600}}>{t('ИИ-команда Doctor Opus')} · {t('Gemini')}: {policy.selected==='argon'?'Argon':'Flash'} · Opus · GPT-6.1 Sol <small style={{fontWeight:400,marginLeft:8}}>{t('Посмотреть роли моделей')}</small></summary>
+   <summary style={{cursor:'pointer',fontWeight:600}}>{t('Служебные настройки')}</summary>
+   <p><strong>{t('Gemini')}: {policy.selected==='argon'?'Argon':'Flash'} · Opus · GPT-6.1 Sol</strong></p>
    <p>{t('Это разные исполнители для разных клинических задач, а не выбор единственной модели для всего приложения. Модели вызываются только в соответствующих режимах.')}</p>
    <ul style={{paddingLeft:24,lineHeight:1.5}}>
     <li><strong>Gemini 4 Argon</strong> — {t('Основное чтение большинства медицинских изображений и гипотезы консилиума; Flash используется для предварительного просмотра объёмных исследований.')}</li>

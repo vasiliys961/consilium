@@ -1,5 +1,20 @@
 > **Текущая рабочая очередь (17.11.2026):** [Roadmap V2 — станция врача прежде Integration Hub](ROADMAP-V2-CLINICAL-WORKSTATION-2026-11-17.md). Начать с W1 (Copilot и специалисты, проверка браузера), затем W2 (один действующий модуль и сохранение результата), W3 (Ambient), W4–W6 (полный сценарий, приёмка, Radiology). **Integration Hub — только после Gate G-WORKSTATION и отдельного решения владельца.** Сведения ниже оставлены как протокол прежних выполненных этапов.
 
+## Current Codex checkpoint — 17 November 2026
+
+Development continues from `chatgpt-dev` (`9443e67`) in independent branch
+`codex/w4-workstation-safety`. The current priority is physician workflow,
+case/editor preservation, factual medication context and clear clinical results.
+Radiology AI is deferred and does not block Gate; Hub requires a later decision.
+Existing PR #75–77/#83–85 remain open drafts, not merged. Do not interpret the
+historical statuses below as current acceptance.
+
+Implemented changes, verified PR/CI state, test commands, browser evidence and the
+next work packages: [Codex workstation checkpoint](CODEX-WORKSTATION-CHECKPOINT-2026-11-17.md).
+Gate remains pending: [acceptance matrix](G-WORKSTATION-ACCEPTANCE.md).
+No changes to main/3107, existing Preview, secrets or patient data; no paid calls.
+
+
 # Consilium — ближайшие действия
 
 **Обновлено 16 ноября 2026 после C11 PR #44.** Фактические SHA и проверки: [PROJECT-STATE.md](PROJECT-STATE.md).

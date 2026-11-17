@@ -1234,5 +1234,18 @@
   "Языковые версии протокола": "Raporun dil sürümleri",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Kaydedilen klinik analiz tekrarlanmaz. Her dilde ayrı bir sürüm oluşturup kaydedin; modülde metin üretimi ücretli olabilir.",
   "Сохранён": "Kaydedildi",
-  "Не создан": "Oluşturulmadı"
+  "Не создан": "Oluşturulmadı",
+  "Служебные настройки": "Hizmet ayarları",
+  "Книги и руководства": "Kitaplar ve kılavuzlar",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Dijital EKG kayıtlarını ve fotoğrafları inceleyin ve raporu olguya kaydedin.",
+  "Руководства и клинические источники": "Kılavuzlar ve klinik kaynaklar",
+  "Взаимодействия и ограничения терапии": "Etkileşimler ve tedavi önlemleri",
+  "● Разбор доступен": "● Analiz kullanılabilir",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "Analiz şu anda kullanılamıyor. Verileri düzenlemeye devam edebilir ve olguyu kaydedebilirsiniz.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "Değişiklikler kaydedilemedi. Bu olguda kalın ve yeniden kaydetmeyi deneyin.",
+  "Сведения о модели и расходах": "Model ve maliyet ayrıntıları",
+  "Помощник Doctor Opus": "Doctor Opus asistanı",
+  "Перенести случай · зашифрованный файл": "Olguyu aktar · şifreli dosya",
+  "Модели Doctor Opus и их задачи": "Doctor Opus modelleri ve görevleri",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Bu analizden sonra olgu verileri değişti. Karar vermeden önce yeni bilgileri inceleyin; önceki yanıt güncellenmedi."
 }
