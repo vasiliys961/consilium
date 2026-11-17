@@ -53,7 +53,7 @@ export const isCopilotHelpQuery=(value:string)=>{
 /** Finding an already installed tool is local navigation, not paid AI reasoning. */
 export function isCopilotToolDiscoveryQuery(task:string):boolean{
  const query=task.trim();
- return /^(?:найди|найти|подбери|покажи|подскажи|find|locate|show|search for)(?=\\s|$)/i.test(query)
+ return /^(?:найди|найти|подбери|покажи|подскажи|find|locate|show|search for)(?=\s|$)/i.test(query)
   && /(?:инструмент|модул|раздел|функци|tool|module)/i.test(query);
 }
 
