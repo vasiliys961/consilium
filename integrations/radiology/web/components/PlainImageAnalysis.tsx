@@ -7,6 +7,7 @@ import { buildVisionPrivacyPacket, createPrivacyFrame, markPrivacyReview, pngFro
 import { runCxrXrvFromOpenedDicom, toSafeXrvScores, XRV_CXR_LABELS, type OriginalXrvCxrResult } from "../lib/xrv-original-cxr";
 import {IndependentImageOpinion} from "./IndependentImageOpinion";
 import type { SanitizedModelReview } from "../lib/sanitized-cloud-review";
+import {reviewedConnectionNotice,reviewedConnectionReady} from "../lib/reviewed-connection-notice";
 type Photo = {
     id: string;
     file: File;
@@ -59,6 +60,7 @@ export default function PlainImageAnalysis({ series, files, photos, views, autoS
     const __ui = useUiTranslator();
     const [status, setStatus] = useState(autoStart ? "Готовим снимки…" : "");
     const [connected, setConnected] = useState<boolean | null>(null);
+    const [connectionNotice,setConnectionNotice] = useState("");
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
     const [scores, setScores] = useState<OriginalXrvCxrResult | null>(null);
@@ -72,12 +74,15 @@ export default function PlainImageAnalysis({ series, files, photos, views, autoS
         void fetch("/api/ai/deidentified-openrouter-review", { cache: "no-store", credentials: "same-origin", signal: controller.signal })
             .then(async (r) => r.ok ? r.json() : null)
             .then(d => {
-            if (!controller.signal.aborted)
-                setConnected(d?.enabled === true && d?.workstationConnected === true);
+            if (!controller.signal.aborted) {
+                setConnected(reviewedConnectionReady(d));
+                setConnectionNotice(reviewedConnectionNotice(d));
+            }
         })
             .catch(() => {
             if (!controller.signal.aborted)
                 setConnected(false);
+                setConnectionNotice(reviewedConnectionNotice(null));
         });
         return () => controller.abort();
     }, [sourceKey]);
@@ -152,16 +157,12 @@ export default function PlainImageAnalysis({ series, files, photos, views, autoS
             setStatus("Argon анализирует выбранные изображения…");
             const ready = await fetch("/api/ai/deidentified-openrouter-review", { cache: "no-store", credentials: "same-origin", signal: controller.signal });
             const readiness: unknown = ready.ok ? await ready.json() : null;
-            const live = !!readiness && typeof readiness === "object" && (readiness as {
-                enabled?: boolean;
-                workstationConnected?: boolean;
-            }).enabled === true &&
-                (readiness as {
-                    workstationConnected?: boolean;
-                }).workstationConnected === true;
+            const live = reviewedConnectionReady(readiness);
+            const reason = reviewedConnectionNotice(readiness);
             setConnected(live);
+            setConnectionNotice(reason);
             if (!live)
-                throw Error("Локальный сервер не подтвердил сеанс Gemini и Opus. Проверка подключения на технической панели.");
+                throw Error(reason);
             requestPayload.current={packet,acknowledgeClinicianLawfulDisclosure:true,acknowledgeProviderHealthDataTerms:true,acknowledgePixelIdentityReviewed:true,acknowledgeTwoPaidCalls:true,...(cxr?{cxrModelEvidence:toSafeXrvScores(cxr)}:{})};
             const response = await fetch("/api/ai/deidentified-openrouter-review", {
                 method: "POST", cache: "no-store", credentials: "same-origin", signal: controller.signal,
@@ -195,7 +196,7 @@ export default function PlainImageAnalysis({ series, files, photos, views, autoS
     const text = editableReport;
     return <section className="cs-geometry" aria-label={__ui("Анализ рентгенограммы или снимка")}>
   <h3><LocalizedUi value={views && views.length > 1 ? "Разбор выбранных проекций" : series ? "Рентгенограмма" : "Снимок PNG или JPEG"}/></h3>
-  <p role="status"><LocalizedUi value={connected === null ? "Проверяем подключение Argon…" : connected ? "Argon подключён. Opus — при расхождении или по запросу." : "Сеанс анализа сейчас не подтверждён."}/></p>
+  <p role="status"><LocalizedUi value={connected === null ? "Проверяем подключение Argon…" : connected ? "Argon подключён. Opus — при расхождении или по запросу." : connectionNotice || "Сеанс анализа сейчас не подтверждён."}/></p>
   <LocalizedUi value={!autoStart && <button type="button" className="cs-analyze" disabled={busy} onClick={() => void analyze()}><LocalizedUi value={busy ? "Анализ выполняется…" : views && views.length > 1 ? "Анализировать выбранные проекции" : "Анализировать снимок"}/></button>}/>
   <LocalizedUi value={status && <p role="status"><LocalizedUi value={status}/></p>}/>
   <LocalizedUi value={error && <p role="alert"><LocalizedUi value={error}/></p>}/>

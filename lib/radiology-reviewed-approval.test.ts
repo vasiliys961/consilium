@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 // @ts-expect-error Tested JavaScript installer exports a runtime ESM helper without a TypeScript declaration.
 import {approvedRadiologyPreviewEnv} from '../scripts/approve-radiology-preview.mjs';
 import {reviewedConnectionNotice,reviewedConnectionReady} from '../integrations/radiology/web/lib/reviewed-connection-notice.ts';
@@ -36,4 +37,13 @@ test('A missing approval cannot silently proceed to reviewing or paid release', 
   assert.equal(reviewedConnectionReady(null),false);
   assert.equal(reviewedConnectionReady({enabled:true,workstationConnected:true}),true);
   assert.match(reviewedConnectionNotice(denied), /разрешён/);
+});
+
+test('PNG and CR/DX image analysis surfaces precise server status instead of generic cloud warning', () => {
+  const source = readFileSync('integrations/radiology/web/components/PlainImageAnalysis.tsx','utf8');
+  assert.match(source,/reviewedConnectionReady\(readiness\)/);
+  assert.match(source,/reviewedConnectionNotice\(readiness\)/);
+  assert.match(source,/setConnectionNotice\(reviewedConnectionNotice\(d\)\)/);
+  assert.match(source,/throw Error\(reason\)/);
+  assert.doesNotMatch(source,/Локальный сервер не подтвердил сеанс Gemini и Opus/);
 });
