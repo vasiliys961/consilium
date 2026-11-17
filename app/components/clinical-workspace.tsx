@@ -36,7 +36,7 @@ import { workflowGuide } from "@/lib/workflow-guide";
 import { WorkflowGuideView } from "@/app/components/workflow-guide";
 import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
-import {COUNCIL_SPECIALTIES,type CouncilSpecialty} from '@/lib/adaptive-council';
+import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,type CouncilSpecialty} from '@/lib/adaptive-council';
 import {copilotText} from '@/lib/copilot-i18n';
 import type {MedicationContext} from '@/lib/drug-interaction-rules';
 import {medicationCopy} from '@/lib/medication-copy';
@@ -94,6 +94,13 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
     const [rereadImages,setRereadImages]=useState(false);
     const [consilium, setConsilium] = useState(false);
     const [councilSpecialty,setCouncilSpecialty]=useState<CouncilSpecialty>('auto');
+    const councilPlan=planAdaptiveCouncil(
+      [caseQuestion,current?.question,current?caseContext(current):''].filter(Boolean).join('\n').slice(0,5000),
+      current?.files.map(file=>{
+        const route=materialRoute(file);
+        return route==='ecg'||route==='radiology'?route:(file.imageProfile??'general');
+      })??[],councilSpecialty,
+    );
     const [imageSecondOpinion,setImageSecondOpinion]=useState(false);
     const [eventDrafts, setEventDrafts] = useState(EMPTY_EVENT_DRAFTS);
     const [dirty, setDirty] = useState(false);
@@ -433,6 +440,9 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
   {COUNCIL_SPECIALTIES.map(option=><option key={option.id} value={option.id}>{option.id==='auto'?t('Определить по вопросу'):copilotText(language,option.name)}</option>)}
  </select>
  <small>{t('По умолчанию система выбирает профиль автоматически. Это изменяет задачи существующих моделей, а не добавляет новых участников.')}</small>
+ <p style={{fontSize:13,margin:'6px 0'}}>{language==='ru'
+   ? 'Клинический фокус: '+councilPlan.lead+'; независимый ракурс: '+councilPlan.secondary+'. Критик, безопасность лекарств и синтез — прежние роли. Всего до 5 вызовов LLM; сумма зависит от объёма ответа.'
+   : 'Clinical focus: '+councilPlan.lead+'; second perspective: '+councilPlan.secondary+'. Independent critic, medication safety and synthesis remain. Up to 5 LLM calls; cost depends on token usage.'}</p>
  </label>}{!configured && <p className={styles.muted}>{t("Если разбор недоступен, откройте «Инструкцию для врача» и раздел «Если не получается начать».")}</p>}{payloadTooLarge && <p role="alert">{t("Объём запроса превышает 12 МБ. Удалите часть материалов.")}</p>}<small>{t("Результат — черновик. Проверяйте диагнозы, дозы, противопоказания и ссылки.")}</small></details>
         {current.analyses.length>0&&<label className={styles.check}><input type="checkbox" disabled={busy} checked={rereadImages} onChange={event=>setRereadImages(event.target.checked)}/>{t('Повторно прочитать прежние изображения')}</label>}
       </section>
