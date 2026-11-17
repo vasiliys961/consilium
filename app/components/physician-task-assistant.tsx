@@ -1,9 +1,11 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {reviewBeforeSending} from '@/lib/privacy-client';
+import {reviewBeforeSending,prepareChatSend} from '@/lib/privacy-client';
+import {copilotNeedsPrivacyReview} from '@/lib/copilot-privacy';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
 import Link from 'next/link';
-import {planPhysicianTask,physicianTaskHref,type PhysicianTool} from '@/lib/physician-task-router';
+import {useRouter} from 'next/navigation';
+import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
 import {useWorkspaceLanguage} from './workspace-language';
 
 type IntegrationSnapshot={
@@ -22,6 +24,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  caseId?:string;caseClosed?:boolean;onClinical?:(task:string)=>void;
 }){
  const {t,language}=useWorkspaceLanguage();
+ const router=useRouter();
  const [text,setText]=useState('');
  const [request,setRequest]=useState('');
  const [agentReply,setAgentReply]=useState<PhysicianAgentResult|null>(null);
@@ -67,6 +70,23 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  async function askAi(){
   const utterance=text.trim();
   if(!utterance||agentBusy)return;
+  // A catalogue question and explicit "open module" instruction are both
+  // local navigation tasks. Do not spend API credits or ask for consent.
+  const local=planPhysicianTask(utterance);
+  if(local.intent==='help'){
+   setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
+   return;
+  }
+  const openTool=copilotRequestedOpen(utterance);
+  if(openTool){
+   const {allowed}=availability(openTool);
+   if(allowed){
+    router.push(physicianTaskHref(openTool,caseId,language));
+    return;
+   }
+   setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
+   return;
+  }
   setAgentBusy(true);setAgentError('');
   const controller=new AbortController();requestController.current=controller;
   try{
@@ -74,8 +94,12 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    // No patient files or saved case are read; only the manually entered conversation.
    const turns=[...dialogue.slice(-4),{role:'physician' as const,text:utterance}];
    const transcript=turns.map(turn=>
-    `[${turn.role==='physician'?'PHYSICIAN':'ASSISTANT'}]\n${turn.text.slice(0,1100)}`).join('\n\n').slice(-6000);
-   const reviewed=await reviewBeforeSending({text:transcript,locale:language,externalSearch:false});
+    `[${turn.role==='physician'?'PHYSICIAN':'ASSISTANT'}]\n${turn.text.slice(0,1100)}`).join('\n\n').slice(-7600);
+   // Identifiers trigger the full review. Anonymous questions get local
+   // redaction and short-lived signed approval, without a repeated modal.
+   const reviewed=copilotNeedsPrivacyReview(transcript)
+    ? await reviewBeforeSending({text:transcript,locale:language,externalSearch:false})
+    : await prepareChatSend({text:transcript,locale:language,externalSearch:false},controller.signal);
    if(controller.signal.aborted)return;
    const response=await fetch('/api/physician-agent',{
     method:'POST',headers:{'Content-Type':'application/json'},
@@ -83,9 +107,9 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    });
    const value=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(
-    response.status===429?'Помощник занят. Повторите запрос вручную. Новых запросов автоматически не будет.':
-    response.status===428?'Перед отправкой требуется проверка данных врачом.':
-    'ИИ-помощник недоступен. Используйте бесплатный локальный маршрут.'
+    response.status===429?'Повторите немного позже.':
+    response.status===428?'Этот текст нужно проверить перед отправкой.':
+    'Ответ пока не получен. Ниже — доступный маршрут.'
    );
    if(typeof value?.message!=='string'||!value?.plan||!Array.isArray(value.plan.steps))
     throw Error('Не удалось получить корректный ответ помощника.');
@@ -95,7 +119,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    setAgentReply(answer);setRequest(utterance);setText('');
   }catch(error){
    if(!controller.signal.aborted){
-    setAgentError(error instanceof Error?error.message:'Не удалось связаться с ИИ-помощником.');
+    setAgentError(error instanceof Error?error.message:'Ответ пока не получен.');
     setRequest(utterance);setAgentReply(null);
    }
   }finally{if(requestController.current===controller){requestController.current=null;setAgentBusy(false);}}
@@ -103,31 +127,31 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  function resetAi(){requestController.current?.abort();setDialogue([]);setAgentReply(null);setAgentError('');setText('');setRequest('');}
  return <section id="doctor-opus-assistant" aria-label={t('Opus Copilot — помощник врача')} style={{padding:'22px 24px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
   <h2 style={{marginTop:0}}>{t('Opus Copilot')} <small style={{fontWeight:400,fontSize:13}}>{t('Помощник врача')}</small></h2>
-  <p><strong>{t('Чем Doctor Opus может вам помочь?')}</strong></p>
-  <p>{t('Опишите клиническую задачу своими словами. Помощник предложит уже доступные инструменты, объяснит шаги и откроет выбранный модуль только по вашему нажатию. Это навигатор, а не отдельная диагностическая модель.')}</p>
+  <p>{t('Опишите задачу. Подскажу следующий шаг и помогу открыть нужный инструмент.')}</p>
   {caseId?<p><small>{t('Выбран случай')} · {caseId.slice(0,8)}{caseClosed?' · '+t('Случай завершён, для новых результатов верните его в работу.'):''}</small></p>
-   :<p><Link href="/workspace?new=1">{t('Создать случай, чтобы сохранить результаты')}</Link> · {t('Без случая результаты не будут связаны общей историей.')}</p>}
+   :<p><Link href="/workspace?new=1">{t('Создать случай, чтобы сохранить результаты')}</Link> · {t('Для сохранения результата нужен случай.')}</p>}
   <form onSubmit={event=>{event.preventDefault();if(text.trim()){setRequest(text.trim());setAgentReply(null);setAgentError('');}}}>
    <label htmlFor="opus-physician-task">{t('Что требуется сделать?')}</label>
    <textarea id="opus-physician-task" rows={3} maxLength={4000} value={text} disabled={agentBusy} onChange={event=>setText(event.target.value)} placeholder={t('Например: есть КТ и ЭКГ, нужен комплексный разбор и протокол')} style={{display:'block',width:'100%',boxSizing:'border-box',margin:'6px 0 10px'}}/>
    <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-    <button type="submit" disabled={agentBusy||!text.trim()}>{t('Бесплатный план по правилам')}</button>
+    <button type="submit" disabled={agentBusy||!text.trim()}>{t('Предложить шаги')}</button>
     <button type="button" disabled={agentBusy||!text.trim()} onClick={()=>void askAi()} style={{background:'#174a35',color:'#fff',borderRadius:8,padding:'8px 12px'}}>
      {agentBusy?t('Opus Copilot готовит ответ…'):t('Спросить Opus Copilot')}
     </button>
     {dialogue.length>0&&<button type="button" disabled={agentBusy} onClick={resetAi}>{t('Новый разговор')}</button>}
    </div>
-   <p style={{fontSize:12,marginTop:8,color:'#52665b'}}>{t('Бесплатный маршрут доступен без ИИ. Opus Copilot уточняет задачу и предлагает шаги; для ответа обращается к внешней модели только после вашего подтверждения. Выполнение действий в модулях пока требует отдельных нажатий. Данные случая, файлы и микрофон не передаются автоматически.')}</p>
+   <p style={{fontSize:12,marginTop:8,color:'#52665b'}}>{t('Вопросы без идентификаторов обрабатываются без дополнительного окна. При персональных данных предложу их проверить. Для диалога используется внешний ИИ; файлы случая не загружаются.')}</p>
   </form>
   {dialogue.length>0&&<section aria-label={t('Диалог с Opus Copilot')} aria-live="polite" style={{margin:'14px 0',maxHeight:280,overflowY:'auto',background:'#fff',border:'1px solid #cbd8d0',borderRadius:9,padding:12}}>
     {dialogue.map((turn,index)=><p key={index} style={{whiteSpace:'pre-wrap',margin:'8px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Opus Copilot')}:</strong> {turn.text}</p>)}
   </section>}
   {agentError&&<p role="alert" style={{color:'#8a2b17'}}>{t(agentError)}</p>}
-  {agentReply&&<p role="status" style={{fontSize:12,color:'#52665b'}}>
+  {agentReply&&<details style={{fontSize:12,color:'#52665b',marginTop:10}}>
+    <summary>{t('Сведения о работе помощника')}</summary>
     {agentReply.usedModel
-      ? <>{t('Ответ ИИ')}: {agentReply.model??t('Модель не указана')} · {agentReply.estimatedUsd!==null?t('Оценочная стоимость')+': $'+agentReply.estimatedUsd.toFixed(5):t('Провайдер не сообщил расход токенов')}</>
-      : t('Использован локальный маршрутизатор. Модель не ответила.')}
-  </p>}
+      ? <p>{t('Модель')}: {agentReply.model??t('Не указана')} · {agentReply.estimatedUsd!==null?t('Оценка стоимости')+': $'+agentReply.estimatedUsd.toFixed(5):t('Стоимость неизвестна')}</p>
+      : <p>{t('Маршрут составлен локально.')}{agentReply.warning==='key_not_configured'?t(' В этой копии Preview нет доступного ключа ИИ.'):agentReply.warning?' '+t('Модель не дала корректный ответ.'):''}</p>}
+  </details>}
   <div aria-label={t('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
     <strong style={{width:'100%',fontSize:14}}>{t('С чего начать?')}</strong>
     {examples.map(example=><button type="button" key={example} onClick={()=>propose(example)} style={{textAlign:'left',border:'1px solid #b0c8b9',background:'#fff',padding:'8px 12px',borderRadius:8}}>{t(example)}</button>)}
@@ -135,24 +159,24 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   </div>
   {(request.trim()||agentReply)&&<section aria-label={t('План работы')} style={{marginTop:16}}>
    <h3>{t('Предлагаемый маршрут')}</h3>
-   <p>{agentReply?agentReply.message:t(plan.message)}</p>
+   {!agentReply&&<p>{t(plan.message)}</p>}
    {displayedPlan.steps.length>0&&<ol style={{paddingLeft:22}}>
     {displayedPlan.steps.map(step=>{
      const {allowed,hint}=availability(step.tool);
      const href=physicianTaskHref(step.tool,caseId,language);
      const isClinical=step.tool==='clinical';
      return <li key={step.tool} style={{marginBottom:14}}>
-      <strong>{t(step.title)}</strong><p style={{margin:'5px 0'}}>{t(step.reason)}</p>
-      <small>{t(hint)}</small><div style={{marginTop:6}}>
+      <strong>{t(step.title)}</strong><div style={{marginTop:6}}>
       {isClinical&&caseId&&onClinical?
-       <button type="button" disabled={caseClosed} onClick={()=>onClinical(request)}>{t('Перенести задачу в разбор случая')}</button>:
-       allowed?<Link href={href}>{t('Открыть инструмент для этого шага')}</Link>:
-       <span role="status">{t('Инструмент недоступен в текущей установке.')}</span>}
+       <button type="button" disabled={caseClosed} onClick={()=>onClinical(request)}>{t('Передать задачу')}</button>:
+       allowed?<Link href={href}>{t('Открыть')}</Link>:
+       <span role="status">{t('Пока недоступен')}</span>}
       </div>
+      <details style={{fontSize:12,marginTop:5}}><summary>{t('Подробнее')}</summary><p>{t(step.reason)}</p><p>{t(hint)}</p></details>
      </li>;
     })}
    </ol>}
-   <p><small>{agentReply?t('Opus Copilot предложил шаги, но пока не выполняет их самостоятельно. Каждый запуск подтверждает врач.'):t('Маршрут построен без LLM и без передачи текста на сервер. В каждом модуле анализ, облачная передача и стоимость подтверждаются отдельно. Для сохранения результата используйте выбранный случай.')}</small></p>
+ 
   </section>}
  </section>;
 }
