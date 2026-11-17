@@ -207,6 +207,9 @@ export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
     caseSignature(latest)!==caseSignature(value)||
     latest.title!==value.title||
     latest.status!==value.status||
+    JSON.stringify(latest.protocols)!==JSON.stringify(value.protocols)||
+    JSON.stringify(latest.protocolRevisions)!==JSON.stringify(value.protocolRevisions)||
+    JSON.stringify(latest.structuredProtocolDrafts)!==JSON.stringify(value.structuredProtocolDrafts)||
     latest.analyses.length>value.analyses.length||
     latest.events.length>value.events.length||
     latest.files.length>value.files.length||

@@ -36,7 +36,8 @@ test('structured protocol return and concurrent editor write preserve both resul
  const scratch={source:'Synthetic source with dose 0,125 mg',document:document('fr-draft'),at:new Date().toISOString()};
  await Promise.all([persistStructuredProtocol(value.id,document()),persistStructuredProtocolDraft(value.id,key,scratch)]);
  const saved=await reopened(value.id);assert.equal(saved.protocols?.length,1);assert.deepEqual(saved.structuredProtocolDrafts?.[key],scratch);
- const stale=await persistCaseAutosave(value);assert.equal(stale,false,'A stale workspace cannot erase a newly stored protocol draft');
+ const latest=await reopened(value.id);
+ const stale=await persistCaseAutosave({...value,updated:latest.updated});assert.equal(stale,false,'A stale workspace cannot erase a newly stored protocol draft');
 });
 
 test('separate language/layout drafts survive reopening and saving clears only the current draft',async()=>{
