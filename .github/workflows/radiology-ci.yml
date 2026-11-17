@@ -1,0 +1,48 @@
+name: Radiology Preview integration checks
+
+on:
+  pull_request:
+    branches:
+      - chatgpt-dev
+    paths:
+      - 'integrations/radiology/web/**'
+      - 'scripts/approve-radiology-preview.mjs'
+      - 'lib/radiology-reviewed-approval.test.ts'
+      - 'lib/single-frame-pilot.test.ts'
+      - '.github/workflows/radiology-ci.yml'
+  push:
+    branches:
+      - chatgpt-dev
+    paths:
+      - 'integrations/radiology/web/**'
+      - '.github/workflows/radiology-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  radiology:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          cache: npm
+          cache-dependency-path: integrations/radiology/web/package-lock.json
+      - name: Install isolated Radiology dependencies
+        working-directory: integrations/radiology/web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type-check Radiology
+        working-directory: integrations/radiology/web
+        run: npm run typecheck
+      - name: Build Radiology
+        working-directory: integrations/radiology/web
+        run: npm run build
+      - name: Test reviewed-frame authorization and standalone frame bounds
+        working-directory: integrations/radiology/web
+        run: node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/reviewed-frame-session.test.ts
