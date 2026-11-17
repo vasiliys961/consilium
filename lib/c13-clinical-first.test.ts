@@ -21,9 +21,9 @@ test('C13: a generic marketing/protocol model answer is superseded by clinical t
  {reply:'Наши возможности: можно создать протокол и выбрать модули.',question:null,tools:['protocol','ambient','radiology']}
  );
  assert.deepEqual(data.tools,['clinical','radiology']);
- assert.match(data.reply,/SpO₂/);
+ assert.match(data.reply,/Клинический разбор/);
  assert.match(data.reply,/срочная очная оценка/);
- assert.match(data.question??'',/ЧДД/);
+ assert.match(data.question??'',/SpO₂/);
  assert.doesNotMatch(data.reply,/наши возможности/i);
 });
 
@@ -40,7 +40,7 @@ test('C13: English symptom-only encounter prioritizes immediate clinical assessm
  assert.equal(respiratoryPresentation(request),true);
  const result=clinicalFirstResponse(request,'en',{reply:'We can create a note using our tools.',question:null,tools:['protocol','clinical']});
  assert.deepEqual(result.tools,['clinical']);
- assert.match(result.reply,/SpO₂/);
+ assert.match(result.reply,/Clinical Review/);
  assert.match(result.reply,/urgent/);
  assert.match(result.question??'',/respiratory rate/);
 });
@@ -73,6 +73,6 @@ test('C13: simulated cheap LLM that advertises capabilities is clinically correc
  assert.equal(requests,1);
  assert.equal(response.usedModel,true);
  assert.deepEqual(response.plan.steps.map(x=>x.tool),['clinical']);
- assert.match(response.message,/ЧДД/);
+ assert.match(response.message,/Клинический разбор/);
  assert.match(response.question??'',/SpO₂/);
 });
