@@ -46,9 +46,9 @@ function doses(text:string):Map<string,string>{
 }
 type ExplicitPolarity='present'|'absent';
 const REVIEWED_SYMPTOMS:ReadonlyArray<{label:string;term:RegExp}>=[
- {label:'одышка / dyspnea',term:/одышк|dyspn|shortness\s+of\s+breath|breathless/i},
- {label:'кашель / cough',term:/кашел|кашель|кашл|cough/i},
- {label:'боль в груди / chest pain',term:/бол(?:ь|и|ей)\s+в\s+груд|chest\s+pain/i},
+ {label:'одышка / dyspnea',term:/одышк[а-яё]*|dyspn[a-z]*|shortness\s+of\s+breath|breathless[a-z]*/i},
+ {label:'кашель / cough',term:/кашел|кашель|кашл[а-яё]*|cough[a-z]*/i},
+ {label:'боль в груди / chest pain',term:/бол(?:ь|и|ей)\s+в\s+груд[а-яё]*|chest\s+pain/i},
 ];
 /** Recognize only explicit nearby denial/presence cues; do not infer clinical
  * polarity from unqualified prose, e.g. "dyspnea on exertion". */
