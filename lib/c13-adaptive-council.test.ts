@@ -18,6 +18,7 @@ test('C13 adaptive council chooses clinical perspectives without an extra fifth-
 
 test('C13 adaptive council keeps uncertainty and respects one bounded manual choice',()=>{
  assert.equal(planAdaptiveCouncil('No relevant specialist reported',[]).lead,'internal medicine');
+ assert.equal(planAdaptiveCouncil('No relevant specialist reported',[]).secondary,'internal medicine');
  const manual=planAdaptiveCouncil('Chest pain and breathlessness',['ecg'],'neurology');
  assert.equal(manual.lead,'neurology');
  assert.equal(manual.secondary,'cardiology');
