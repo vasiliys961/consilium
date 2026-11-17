@@ -16,3 +16,10 @@
 - Держать ядро лёгким, сравнимым по нагрузке с существующими Opus. Тяжёлые CT/MRI/US-детекторы — модульно и по запросу; размещение на сервере допустимо только при достаточных ресурсах и разрешении владельца. Ни одна новая служба/веса не запускаются автоматически при старте приложения.
 - Рабочая ветка Codex `main` и его экземпляр на 3107 не изменяются. Разработка ChatGPT — в отдельных ветках и draft PR к `chatgpt-dev`; локальный независимый Preview — 3207. Не выполнять merge, деплой и платные клинические вызовы без согласия.
 - Для расширений сначала измерять пользу, ресурсную нагрузку, надежность, фактическую стоимость и клинические ошибки. CI/синтетические тесты не означают клиническую валидацию.
+
+## Language priority — international English and first-class Russian (17.11.2026)
+
+- **English** is the international reference quality target; all UI and clinical navigation must be coherent and medically precise in English.
+- **Russian** is equally supported for hands-on development and physician testing. Do not remove Russian functionality or make its workflow secondary.
+- Other supported interface languages must show localized controls and clinical routing without leaking Russian labels. For Copilot workflow guidance display **English on the first line and the chosen UI language on the second**, including RU; show only English in an English UI.
+- Do not pay for machine translation of ordinary deterministic tool routes; use reviewed local messages and fall back to a universal specialist when intent/specialty is unclear, with clinician-controlled choice.
