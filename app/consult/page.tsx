@@ -97,7 +97,7 @@ export default function ConsultPage() {
   const conversation = useRef<HTMLDivElement>(null);
   const question = drafts[specialty] ?? '';
   const dialogue = dialogues[specialty] ?? EMPTY_DIALOGUE;
-  const offerCase= !casePromptDismissed[specialty]&&suggestClinicalCase(question,dialogue.turns.length,Boolean(attachmentPreview));
+  const offerCase= !casePromptDismissed[specialty]&&suggestClinicalCase(question,dialogue.turns.length,Boolean(attachmentPreview)||Boolean(preparedDocuments[specialty]));
   const profile = SPECIALIST_PROFILES.find(item => item.id === specialty)!;
   const busy = Boolean(action || mic);
   const original = question.trim() ? consultationTranscript(dialogue.transcript, question) : '';
