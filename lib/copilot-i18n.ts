@@ -141,3 +141,20 @@ export function copilotBilingualLines(locale:Locale,plan:PhysicianTaskPlan,optio
  const lines=copilotWorkflowMessage(locale,plan,options);
  return lines.localized?lines.english+'\n'+lines.localized:lines.english;
 }
+
+const reasonSuffix:Record<Locale,string>={
+ en:'Open this module to continue; the physician reviews any result.',
+ ru:'Откройте этот модуль; результаты проверяет врач.',
+ es:'Abra este módulo para continuar; el médico revisa los resultados.',
+ fr:'Ouvrez ce module pour continuer ; le médecin vérifie les résultats.',
+ ar:'افتح هذه الوحدة للمتابعة؛ يراجع الطبيب النتائج.',
+ hi:'आगे बढ़ने के लिए यह मॉड्यूल खोलें; चिकित्सक परिणाम जाँचता है।',
+ 'pt-BR':'Abra este módulo para continuar; o médico revisa os resultados.',
+ id:'Buka modul ini untuk melanjutkan; dokter memeriksa hasilnya.',
+ ms:'Buka modul ini untuk meneruskan; doktor menyemak hasilnya.',
+ tr:'Devam etmek için bu modülü açın; sonuçları hekim değerlendirir.',
+ 'zh-CN':'打开此模块继续；结果由医生审核。',
+};
+export function copilotToolReason(locale:WorkspaceLanguage,_tool:PhysicianTool):string{
+ return reasonSuffix[locale];
+}
