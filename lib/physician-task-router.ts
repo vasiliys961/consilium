@@ -1,7 +1,7 @@
 /** C13 lightweight, offline and deterministic assistant for clinical TOOL routing.
  * Not a diagnostic engine: it never launches modules or sends clinical data.
  */
-export type PhysicianTool='radiology'|'ecg'|'ultrasound'|'genetics'|'medications'|'guidelines'|'clinical'|'protocol'|'ambient'|'documents';
+export type PhysicianTool='radiology'|'ecg'|'ultrasound'|'genetics'|'medications'|'guidelines'|'clinical'|'specialist'|'protocol'|'ambient'|'documents';
 export interface PhysicianStep {tool:PhysicianTool;title:string;reason:string;}
 export interface PhysicianTaskPlan {intent:'welcome'|'help'|'route';steps:PhysicianStep[];message:string;}
 
@@ -12,7 +12,8 @@ const catalog:Record<PhysicianTool,Omit<PhysicianStep,'tool'>>={
  genetics:{title:'Генетика',reason:'Использовать VCF и обсуждать генетические результаты с привязкой к случаю.'},
  medications:{title:'Проверка лекарств',reason:'Проверить взаимодействия и клинические ограничения до назначения.'},
  guidelines:{title:'Клинические рекомендации',reason:'Найти применимые рекомендации и источники; проверить их актуальность.'},
- clinical:{title:'Клинический разбор',reason:'Сопоставить симптомы, полученные результаты и варианты тактики в истории случая.'},
+ clinical:{title:'Клинический разбор',reason:'Сопоставить симптомы и уже полученные результаты в истории случая.'},
+ specialist:{title:'Спросить специалиста',reason:'Открыть отдельную клиническую консультацию; она не запускается автоматически.'},
  protocol:{title:'Протокол осмотра',reason:'Открыть существующий редактор RU или Global и оформить документ.'},
  ambient:{title:'Запись беседы в протоколе',reason:'Использовать существующую запись/расшифровку RU или Global; микрофон и платное распознавание включаются только отдельно в редакторе.'},
  documents:{title:'Документы и лаборатория',reason:'Открыть выписку, таблицу или документ в рабочей станции.'},
@@ -34,6 +35,7 @@ const US=word('узи|сонограф|эхокардиограф|эхокг|ult
 const GEN=/генет|геном|vcf|фармакогеном|вариантов.*днк/i;
 const MED=/лекарств|препарат|полипрагмаз|взаимодейств|дозиров|назначен|антикоагуля|совместимост|побочн.*эффект/i;
 const GUIDE=/рекомендаци|гайдлайн|guideline|руководств|источник|литератур|доказательн|публикаци/i;
+const SPECIALIST=/специалист|консультаци|консультант|врач.*консультаци|consult specialist|ask specialist/i;
 const CLIN=/консилиум|комплексн|дифференциал|разбор|тактик|диагноз|сопостав|клиническ.*случай|second opinion/i;
 const PROTO=/протокол|soap|заключен|документир|оформлен.*прием|запис.*в карт/i;
 const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
@@ -54,6 +56,7 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(DOC.test(value))add('documents');
  if(MED.test(value))add('medications');
  if(GUIDE.test(value))add('guidelines');
+ if(SPECIALIST.test(value))add('specialist');
  if(CLIN.test(value)||!tools.length&&!(PROTO.test(value)||AMBIENT.test(value)))add('clinical');
  if(AMBIENT.test(value))add('ambient');
  if(PROTO.test(value))add('protocol');
@@ -68,10 +71,22 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  return {intent:'route',steps:tools.map(tool=>({tool,...catalog[tool]})),message};
 }
 
+/** A physician's explicit navigation instruction is permission to OPEN a page,
+ * never to perform a paid analysis or edit a case. LLM text is not accepted here.
+ */
+export function copilotRequestedOpen(task:string):PhysicianTool|null{
+ const phrase=task.trim();
+ if(!/^(?:открой|открыть|перейди|перейти|покажи|open|go to)\s+/i.test(phrase))return null;
+ if(!/(?:\b(?:ecg|ekg|ct|mri|radiology|protocol|ambient|ultrasound|genetics|guidelines|documents)\b|экг|кт|мрт|специалист|консультаци|протокол|при[её]м|разбор|консилиум|радиологи|узи|генетик|лекарств|рекомендаци|документ)/i.test(phrase))
+  return null;
+ const plan=planPhysicianTask(phrase);
+ return plan.intent==='route'&&plan.steps.length===1?plan.steps[0].tool:null;
+}
+
 export function physicianTaskHref(tool:PhysicianTool,caseId?:string,locale='ru'):string{
  const path:Record<PhysicianTool,string>={
   radiology:'/radiology',ecg:'/ecg',ultrasound:'/ultrasound',genetics:'/genetics',
-  medications:'/drug-checker',guidelines:'/guidelines',clinical:'/workspace',
+  medications:'/drug-checker',guidelines:'/guidelines',clinical:'/workspace',specialist:'/consult',
   protocol:'/protocol/case',ambient:'/protocol/case',documents:'/workbench'};
  const params=new URLSearchParams();
  if(caseId)params.set('case',caseId);
