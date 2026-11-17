@@ -50,3 +50,30 @@ test('C13 adaptive council option changes duplicate-paid-run key',()=>{
  assert.notEqual(runOptionsKey({...common,councilSpecialty:'auto'}),runOptionsKey({...common,councilSpecialty:'cardiology'}));
  assert.equal(runOptionsKey({...common}),runOptionsKey({...common,councilSpecialty:'auto'}));
 });
+
+
+test('C13 adaptive council: radiology, dermatology and histology evidence guide a bounded clinical lens',()=>{
+ const skin=planAdaptiveCouncil('Pigmented skin lesion; biopsy considered',['dermatology','histology']);
+ assert.equal(skin.lead,'dermatology');
+ assert.equal(skin.secondary,'histopathology');
+ const renal=planAdaptiveCouncil('Renal insufficiency with rising creatinine',['ecg','radiology']);
+ assert.equal(renal.lead,'nephrology');
+ assert.equal(renal.secondary,'cardiology');
+ const imageOnly=planAdaptiveCouncil('Please review this picture',['radiology']);
+ assert.equal(imageOnly.lead,'radiology and medical imaging');
+ const override=planAdaptiveCouncil('Atrial fibrillation and dyspnea',['ecg'],'pulmonology');
+ assert.equal(override.lead,'pulmonology');
+ assert.equal(override.secondary,'cardiology');
+ assert.ok(skin.suggested.length<=5);
+});
+
+test('C13 adaptive council: input option is passed to existing case runner, no extra specialist endpoint',()=>{
+ const {readFileSync}=require('node:fs') as typeof import('node:fs');
+ const ui=readFileSync('app/components/clinical-workspace.tsx','utf8');
+ const server=readFileSync('lib/analyze-case.ts','utf8');
+ assert.match(ui,/councilSpecialty:withCouncil\?councilSpecialty:'auto'/);
+ assert.match(ui,/const councilPlan=planAdaptiveCouncil/);
+ assert.match(server,/requestedSpecialty: body\.councilSpecialty/);
+ assert.match(server,/modalities: ledger\.filter/);
+ assert.doesNotMatch(server,/runAdditionalSpecialty|startSpecialtyConsultation/);
+});
