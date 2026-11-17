@@ -65,7 +65,7 @@ test('C13 multilingual: unfamiliar clinical words use General Internal Medicine 
   assert.equal(choice?.specialty,'universal',q);
   assert.deepEqual(planPhysicianTask(q).steps.slice(0,2).map(x=>x.tool),['specialist','clinical'],q);
  }
- assert.deepEqual(planPhysicianTask('bana yardım et').steps.slice(0,2).map(x=>x.tool),['specialist','clinical']);
+ assert.deepEqual(planPhysicianTask('bana yardım et').steps.map(x=>x.tool),['clinical']);
 });
 
 test('C13 multilingual: doctor sees bilingual routing and can choose a different specialist without model action',()=>{
