@@ -82,6 +82,9 @@ export function planAdaptiveCouncil(note:string,modalities:readonly string[],req
  // documented in text AND tagged by an ECG, textual evidence retains priority.
  const fromText=chooseClinicalFocus(excerpt,[]).filter(item=>allowed.has(item.domain)&&item.domain!=='auto'&&item.domain!=='internal medicine'&&item.domain!=='clinical pharmacology')
   .map(item=>item.domain as ClinicalSpecialty);
+ // Explicit AF/ФП abbreviations should not be outranked by an incidental
+ // image modality. They describe a clinical problem, not a classifier score.
+ if(/(?:^|[\s,;()])(?:ФП|AFib|atrial fibrillation|фибрилляци[яюие])(?=$|[\s,;().])/iu.test(excerpt) && !fromText.includes('cardiology'))fromText.unshift('cardiology');
  const fromModality=focus.map(item=>item.domain as ClinicalSpecialty).filter(item=>!fromText.includes(item));
  // Reuse specialist image-read conclusions as EVIDENCE. The council does not
  // claim to have inspected histology pixels, dermatoscopy, retinal scans, etc.
