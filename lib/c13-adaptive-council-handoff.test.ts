@@ -22,10 +22,10 @@ test('C13: council synthesis receives real model-role specialty labels, not inve
  assert.match(common,/ECGFounder score/);
  assert.match(common,/histopathology image-reading is not an additional independent specialist vote/);
  const final=payloads.find(x=>x.system.startsWith('Synthesize the four'))!;
- assert.match(final.packet,/hypothesis \[AI clinical perspective: cardiology; NOT a human specialist vote\]/);
- assert.match(final.packet,/testChooser \[AI clinical perspective: pulmonology; NOT a human specialist vote\]/);
- assert.match(final.packet,/challenger \[AI clinical perspective: multidisciplinary critic; NOT a human specialist vote\]/);
- assert.match(final.packet,/stewardship \[AI clinical perspective: medication safety; NOT a human specialist vote\]/);
+ assert.match(final.packet,/hypothesis: Synthetic clinically uncertain note \[AI clinical perspective: cardiology; NOT a human specialist vote\]/);
+ assert.match(final.packet,/testChooser: Synthetic clinically uncertain note \[AI clinical perspective: pulmonology; NOT a human specialist vote\]/);
+ assert.match(final.packet,/challenger: Synthetic clinically uncertain note \[AI clinical perspective: multidisciplinary critic; NOT a human specialist vote\]/);
+ assert.match(final.packet,/stewardship: Synthetic clinically uncertain note \[AI clinical perspective: medication safety; NOT a human specialist vote\]/);
  assert.ok(!final.packet.includes('Medical board has verified'));
 });
 test('C13: a missing council voice is clearly missing even after adaptive labeling',async()=>{
