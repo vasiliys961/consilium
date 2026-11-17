@@ -80,7 +80,7 @@ export function chooseClinicalFocus(note: string, modalities: readonly string[])
   for (const rule of RULES) {
     const fromModality = rule.modalities?.some(modality => normalizedModalities.has(modality)) ?? false;
     if (fromModality || rule.text.test(note)) {
-      selected.push({ domain: rule.domain, reason: fromModality ? 'input-modality' : 'clinical-text' });
+      selected.push({ domain: rule.domain, reason: rule.text.test(note) ? 'clinical-text' : 'input-modality' });
       if (selected.length >= MAX_DOMAINS + 1) break;
     }
   }
