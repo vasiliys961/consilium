@@ -1,9 +1,10 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type FormEvent} from 'react';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
 import {prepareChatSend,reviewBeforeSending} from '@/lib/privacy-client';
 import {copilotNeedsPrivacyReview} from '@/lib/copilot-privacy';
+import {cleanChatText} from '@/lib/privacy-chat';
 import {storeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
 import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
@@ -168,7 +169,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    const outgoing={text:transcript,locale:language,externalSearch:false};
    // For ordinary app navigation: silent LOCAL redaction + HMAC ticket, no pop-up.
    // For identifiers: use the existing full physician privacy review dialog.
-   const reviewed=copilotNeedsPrivacyReview(transcript)
+   const reviewed=copilotNeedsPrivacyReview(utterance)
     ?await reviewBeforeSending(outgoing)
     :await prepareChatSend(outgoing,controller.signal);
    if(controller.signal.aborted)return;
@@ -186,7 +187,10 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    const answer=value as PhysicianAgentResult;
    if(!answer.usedModel)setAgentError(safeError(answer.warning??'model_unavailable'));
    const reply=[answer.message,answer.question].filter(Boolean).join('\n\n');
-   setDialogue([...turns,{role:'assistant',text:reply}].slice(-14));
+   // Retain only sanitized turns, so past identifiers do not trigger a new
+   // review dialog on every unrelated follow-up.
+   const safeTurns:DialogueTurn[]=[...dialogue.slice(-14),{role:'physician',text:cleanChatText(utterance).text}];
+   setDialogue([...safeTurns,{role:'assistant',text:cleanChatText(reply).text}].slice(-14));
    setAgentReply(answer);setRequest(utterance);setText('');
   }catch(error){
    if(!controller.signal.aborted){
@@ -200,7 +204,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   }
  }
 
- function submit(event:React.FormEvent<HTMLFormElement>){
+ function submit(event:FormEvent<HTMLFormElement>){
   event.preventDefault();
   const phrase=text.trim();
   if(!phrase)return;
