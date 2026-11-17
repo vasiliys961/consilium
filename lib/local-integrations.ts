@@ -1,4 +1,5 @@
 import{openRouterRuntime}from'./provider-runtime.ts';
+import{radiologyPreviewApprovalOverrides}from'./radiology-preview-approval-env.ts';
 import {isPreviewInstance,localOrigin,localPorts,reservedLocalPorts} from './local-ports.ts';
 import {protocolStatus} from './protocol-integration.ts';
 import {radiologyTelemetry} from './radiology-telemetry.ts';
@@ -6,7 +7,7 @@ import {writeTerminalEvent} from './telemetry.ts';
 import {spawn,type ChildProcess} from 'node:child_process';
 import {parseEnv} from 'node:util';
 import {homedir} from 'node:os';
-import {existsSync,readFileSync} from 'node:fs';
+import {existsSync,readFileSync,lstatSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {founderReadiness} from '../packages/ecg/founder.ts';
 const home=()=>resolve(process.cwd(),'integrations/radiology/web');
@@ -42,5 +43,17 @@ export function radiologyStandaloneUrl():string|null{
 }
 export function startRadiology(){if(!radiologyInstalled())return false;if(child&&!child.killed&&child.exitCode===null)return true;
  let originalEnv:Record<string,string|undefined>={};if(!isPreviewInstance()){const envPath=resolve(process.env.RADIOLOGY_SOURCE_HOME||resolve(homedir(),'Desktop/opus-radiology-ai-github'),'web/.env.local');try{if(existsSync(envPath))originalEnv=parseEnv(readFileSync(envPath,'utf8'));}catch{}}
- child=spawn(process.execPath,[resolve(home(),'node_modules/next/dist/bin/next'),'dev','--webpack','--hostname','127.0.0.1','--port',String(localPorts().radiology)],{cwd:home(),env:{...openRouterRuntime({...originalEnv,...process.env}),NODE_ENV:'development',CONCILIUM_INTEGRATION:'1',NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','ignore']});let pending='';child.stdout?.on('data',chunk=>{pending+=String(chunk);if(pending.length>16000)pending=pending.slice(-16000);const lines=pending.split('\n');pending=lines.pop()??'';for(const line of lines){const event=radiologyTelemetry(line);if(event)writeTerminalEvent(event);}});child.on('error',()=>{child=undefined;});child.unref();return true;}
+ // Read only the three flags saved by the explicit Preview administrator
+ // action. Next does not override inherited environment variables with .env.local;
+ // without this, an inherited "0" can mask the already-approved "1".
+ // No key or token is copied back into Consilium, logs, or the browser.
+ let previewApproval:Record<string,string>={};
+ if(isPreviewInstance()){
+  const path=resolve(home(),'.env.local');
+  try{
+   const stat=lstatSync(path);
+   if(stat.isFile()&&!stat.isSymbolicLink())previewApproval=radiologyPreviewApprovalOverrides(readFileSync(path,'utf8'));
+  }catch{}
+ }
+ child=spawn(process.execPath,[resolve(home(),'node_modules/next/dist/bin/next'),'dev','--webpack','--hostname','127.0.0.1','--port',String(localPorts().radiology)],{cwd:home(),env:{...openRouterRuntime({...originalEnv,...process.env,...previewApproval}),NODE_ENV:'development',CONCILIUM_INTEGRATION:'1',NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','ignore']});let pending='';child.stdout?.on('data',chunk=>{pending+=String(chunk);if(pending.length>16000)pending=pending.slice(-16000);const lines=pending.split('\n');pending=lines.pop()??'';for(const line of lines){const event=radiologyTelemetry(line);if(event)writeTerminalEvent(event);}});child.on('error',()=>{child=undefined;});child.unref();return true;}
 export async function integrationStatus(){const [running,protocol]=await Promise.all([radiologyHealth(),protocolStatus()]);return {protocol,ecg:{available:founderReadiness().available},radiology:{installed:radiologyInstalled(),running,origin:RADIOLOGY_ORIGIN,readiness:radiologyReadiness(),standaloneUrl:radiologyStandaloneUrl()}};}
