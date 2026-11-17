@@ -9,6 +9,7 @@ import { CitationContent } from '@/app/components/citation-content';
 import { useWorkspaceLanguage } from '@/app/components/workspace-language';
 import { requestStreamedJson } from '@/lib/analysis-stream';
 import { recordConsultQuestion } from '@/lib/consult-recording';
+import {consumeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import { LOCALES, parseLocale, type Locale } from '@/lib/locale';
 import { cleanChatText } from '@/lib/privacy-chat';
 import { prepareChatSend, reviewBeforeSending } from '@/lib/privacy-client';
@@ -97,6 +98,17 @@ export default function ConsultPage() {
   const stageText = stage === 'planning' ? 'Уточняем контекст вопроса…'
     : stage === 'searching' ? 'Ищем клинические источники…'
     : action?.kind === 'verify' ? 'Проверяем ответ…' : 'Готовим ответ…';
+
+  useEffect(()=>{
+    // Opus Copilot leaves a short, local draft only. The physician reviews it
+    // before the specialist's ordinary consent and model action.
+    const received=consumeCopilotConsultDraft();
+    if(received){
+      setSpecialty('universal');
+      setDrafts(current=>({...current,universal:current.universal?.trim()||received}));
+      promptInput.current?.focus();
+    }
+  },[]);
 
   useEffect(() => {
     const statusRequest = new AbortController();
