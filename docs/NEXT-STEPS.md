@@ -1,5 +1,21 @@
 > **Текущая рабочая очередь (17.11.2026):** [Roadmap V2 — станция врача прежде Integration Hub](ROADMAP-V2-CLINICAL-WORKSTATION-2026-11-17.md). Начать с W1 (Copilot и специалисты, проверка браузера), затем W2 (один действующий модуль и сохранение результата), W3 (Ambient), W4–W6 (полный сценарий, приёмка, Radiology). **Integration Hub — только после Gate G-WORKSTATION и отдельного решения владельца.** Сведения ниже оставлены как протокол прежних выполненных этапов.
 
+## Codex W4 continuation — document and genetic integrity
+
+17 November 2026. Independent branch `codex/w4-genetics-case-isolation` from
+`9443e67`: case-specific genetics drafts, fresh queued result save, source-context
+provenance and same-timestamp autosave protection. Real browser A/B questions and
+family history remain separate and reopen in a fresh tab; VCF/result binding is
+covered locally. [Evidence and next work](W4-GENETICS-ISOLATION-2026-11-17.md).
+
+[PR #86](https://github.com/vasiliys961/consilium/pull/86) and
+[PR #87](https://github.com/vasiliys961/consilium/pull/87) remain separate drafts.
+The latter confirms actual Word download, recovered protocol edits and retained
+revision history. No merge, paid calls, deployment, changes to main/3107 or the
+existing 3207 Preview. Gate remains pending; native-module and live-model evidence
+must not be inferred from local tests. Radiology AI/Hub remain deferred.
+
+
 # Consilium — ближайшие действия
 
 **Обновлено 16 ноября 2026 после C11 PR #44.** Фактические SHA и проверки: [PROJECT-STATE.md](PROJECT-STATE.md).

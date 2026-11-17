@@ -1234,5 +1234,6 @@
   "Языковые версии протокола": "Raporun dil sürümleri",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Kaydedilen klinik analiz tekrarlanmaz. Her dilde ayrı bir sürüm oluşturup kaydedin; modülde metin üretimi ücretli olabilir.",
   "Сохранён": "Kaydedildi",
-  "Не создан": "Oluşturulmadı"
+  "Не создан": "Oluşturulmadı",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Taslak kaydedilemedi. Bu sayfada kalın ve materyallerinizi kaydedin."
 }

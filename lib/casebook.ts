@@ -1,3 +1,4 @@
+import {mergeGeneticsIntoCase,geneticsWorkspaceForCase,type GeneticsDiscussionTurn} from './genetics-case-handoff.ts';
 import {readVaultCases,readVaultCaseById,writeVaultCase} from './local-vault.ts';
 import {clinicalReportText} from "./clinical-report.ts";
 import{materialRoute,materialKey}from'./material-routing.ts';
@@ -10,6 +11,7 @@ type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualRea
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
 export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
 export type ClinicalCase = {
+  geneticsDraft?:import('./genetics-case-handoff').GeneticsWorkspaceDraft;
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
   workspaceDraft?:{question:string;note:string;decision:string;tab:string};
   moduleReports?:RadiologyModuleReport[];
@@ -163,6 +165,27 @@ async function serialCaseWrite<T>(id:string,writer:()=>Promise<T>):Promise<T>{
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{
  return serialCaseWrite(value.id,()=>writeVaultCase(value,remove));
 }
+/** Genetic results and drafts share the case write queue with other modules. */
+export async function persistGeneticsResult(caseId:string,files:readonly CaseFile[],turn?:GeneticsDiscussionTurn):Promise<ClinicalCase>{
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt)throw Error('Случай не найден.');
+  const updated=mergeGeneticsIntoCase(current,files,turn);
+  if(updated!==current)await writeVaultCase(updated);
+  return updated;
+ });
+}
+export async function persistGeneticsDraft(caseId:string,draft:import('./genetics-case-handoff').GeneticsWorkspaceDraft):Promise<ClinicalCase>{
+ if(draft.discussion.some(turn=>turn.caseId&&turn.caseId!==caseId))throw Error('genetics_draft_case_mismatch');
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt)throw Error('case_not_active');
+  if(JSON.stringify(geneticsWorkspaceForCase(current))===JSON.stringify(draft))return current;
+  if(current.status==='closed')throw Error('case_not_active');
+  const updated={...current,updated:new Date().toISOString(),geneticsDraft:draft};
+  await writeVaultCase(updated);return updated;
+ });
+}
 /** Autosave snapshots can complete after newer analysis/attachment writes.
  * Never allow an older snapshot to overwrite newer physician work.
  * This preserves all current in-memory fields, unlike an editor-only patch.
@@ -178,6 +201,7 @@ export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
     caseSignature(latest)!==caseSignature(value)||
     latest.title!==value.title||
     latest.status!==value.status||
+    JSON.stringify(latest.geneticsDraft)!==JSON.stringify(value.geneticsDraft)||
     latest.analyses.length>value.analyses.length||
     latest.events.length>value.events.length||
     latest.files.length>value.files.length||
@@ -302,6 +326,7 @@ export function exportCase(value: ClinicalCase): string {
     '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
+    ...(value.geneticsDraft?['\n## Незавершённая генетическая консультация · не является заключением',value.geneticsDraft.context,value.geneticsDraft.question,...value.geneticsDraft.files.map(file=>file.name),...value.geneticsDraft.discussion.map(turn=>turn.question+'\n'+turn.result.draft.summary)]:[]),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
     ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');

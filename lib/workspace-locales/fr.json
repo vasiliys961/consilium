@@ -1234,5 +1234,6 @@
   "Языковые версии протокола": "Versions linguistiques du compte rendu",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "L’analyse clinique enregistrée n’est pas relancée. Créez et enregistrez une version dans chaque langue ; la génération du texte dans le module peut être facturée.",
   "Сохранён": "Enregistré",
-  "Не создан": "Non créé"
+  "Не создан": "Non créé",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Le brouillon n’a pas pu être enregistré. Restez sur cette page et enregistrez vos documents."
 }
