@@ -28,7 +28,7 @@ const CHEST_PAIN=/болит\s+сердц|бол[ьи]\s+в\s+груд|боль\
 export function suggestClinicalDestination(input:string):ClinicalDestination|null{
  const text=input.trim().slice(0,1500);
  if(!text||NOT_CLINICAL.test(text))return null;
- const hit=rules.find(rule=>rule.test(text));
+ const hit=rules.find(rule=>rule.test.test(text));
  if(!hit&&!CLINICAL_GENERAL.test(text))return null;
  const choice=hit??{id:'universal' as SpecialistId,label:'Терапия'};
  return {
