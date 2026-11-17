@@ -10,8 +10,10 @@ const STRUCTURED_PERSON=/\b[A-Z][a-z'-]{2,}\s+[A-Z][a-z'-]{2,}\b|(?<![\p{L}])[А
 const SAFE_NAMED_SYSTEMS=/^(?:Doctor Opus|Opus Copilot|OpenRouter|Claude Opus|Gemini Flash|GPT Sol)$/i;
 export function copilotNeedsPrivacyReview(text:string):boolean{
  if(!text.trim())return false;
- if(redactText(text).removed>0||IDENTIFIER_CONTEXT.test(text))return true;
- const words=text.match(STRUCTURED_PERSON);
+ // Common product and model names are not patient identities.
+ const noProductNames=text.replace(/\b(?:Doctor Opus|Opus Copilot|Claude Opus|Gemini Flash|Gemini Argon|OpenRouter|GPT-6\.1 Sol)\b/gi,'[product]');
+ if(redactText(noProductNames).removed>0||IDENTIFIER_CONTEXT.test(text))return true;
+ const words=noProductNames.match(STRUCTURED_PERSON);
  if(words&&!SAFE_NAMED_SYSTEMS.test(words[0]))return true;
  // Case-file references and pasted local paths are not for the lightweight chat.
  if(/(?:[A-Za-z]:\\|\/Users\/|\/home\/|(?:[\w-]+\.(?:pdf|docx|dcm|jpg|png|vcf))\b)/i.test(text))return true;
