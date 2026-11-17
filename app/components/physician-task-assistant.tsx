@@ -120,7 +120,12 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const {allowed,hint}=availability(tool);
   if(!allowed){setAgentError(hint);return}
   if(tool==='specialist'){
-   if(question.trim()&&!storeCopilotConsultDraft(question)){
+   // A navigation command like "Открой специалиста" is not a clinical question.
+   // Prefer the doctor's last actual question; never auto-send it to a model.
+   const isOnlyCommand=copilotRequestedOpen(question)==='specialist';
+   const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text??'';
+   const draft=isOnlyCommand?lastQuestion:question;
+   if(draft.trim()&&!storeCopilotConsultDraft(draft)){
     setAgentError('Не удалось передать вопрос. Откройте специалиста и введите его вручную.');
     return;
    }
