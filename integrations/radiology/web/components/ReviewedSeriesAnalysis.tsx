@@ -81,7 +81,6 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     const [budget, setBudget] = useState(2), [connected, setConnected] = useState(false);
     const [connectionAttempt, setConnectionAttempt] = useState(0);
     const [singleSliceTest, setSingleSliceTest] = useState(false);
-    const [checkingBeforeReview, setCheckingBeforeReview] = useState(false);
     const [connectionDiagnostic, setConnectionDiagnostic] = useState('');
     const [receipts, setReceipts] = useState<LocalVolumeReceipt[]>([]), [report, setReport] = useState('');
     const ctl = useRef<AbortController | null>(null), sending = useRef(false);
@@ -213,35 +212,15 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             return;
         if (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))
             return;
-        // Do not decode/OCR an entire series when the server will refuse cloud release.
-        // GET is non-billable and creates the reviewed-frame cookie only if opted-in.
-        if (checkingBeforeReview) return;
-        setCheckingBeforeReview(true);
-        try {
-            const response = await fetch('/api/ai/deidentified-openrouter-review', {
-                cache: 'no-store', credentials: 'same-origin'
-            });
-            const status = response.ok ? await response.json() : null;
-            const ready = reviewedConnectionReady(status);
-            const diagnostic = reviewedConnectionNotice(status);
-            setConnected(ready);
-            setConnectionDiagnostic(diagnostic);
-            if (!ready) {
-                setNotice(diagnostic + ' Анализ не запущен; повторять проверку снимков не нужно.');
-                return;
-            }
-            const c = new AbortController();
-            ctl.current = c;
-            setStage('review');
-            setNotice(singleSliceTest
-                ? 'Подготавливается один срез локально. Проверьте копию, затем дайте одно разрешение на платный Gemini.'
-                : 'Подготавливаются снимки локально. После просмотра разрешите отправку один раз.');
-        } catch {
-            setConnected(false);
-            setNotice('Связь с Radiology недоступна. Подготовка не запускалась, снимки не передавались.');
-        } finally {
-            setCheckingBeforeReview(false);
-        }
+        // All image preparation and OCR stays local; an offline provider must
+        // not prevent the physician reviewing the prepared frames.
+        // The single explicit SEND action rechecks the server before any paid call.
+        const c = new AbortController();
+        ctl.current = c;
+        setStage('review');
+        setNotice(singleSliceTest
+            ? 'Подготавливается один срез локально. После проверки нажмите кнопку отправки для платного Gemini.'
+            : 'Подготавливаются снимки локально. После проверки нажмите одну кнопку отправки.');
     }
     async function finalize(done: LocalVolumeReceipt[], signal: AbortSignal, executionPlan = plan) {
         const plan = executionPlan;
@@ -324,8 +303,27 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         setNotice('Заключение готово. Проверьте его по исходным изображениям.');
     }
     async function submitAll(packets: VisionPrivacyPacket[], resume = false) {
-        if (!plan || !connected || sending.current || (!resume && stage !== 'review') || packets.length !== plan.batches.length)
+        if (!plan || sending.current || (!resume && stage !== 'review') || packets.length !== plan.batches.length)
             throw Error('Отправка не началась: конфигурация анализа или подготовленные кадры изменились. Снимки не передавались.');
+        // A fresh same-origin GET establishes/renews only the signed local
+        // reviewed-frame cookie. It never sends images or spends tokens.
+        // Do not trust stale React 'connected' state after configuration changes.
+        let probe: Response | null = null;
+        try {
+            probe = await fetch('/api/ai/deidentified-openrouter-review', {
+                cache: 'no-store', credentials: 'same-origin'
+            });
+        } catch {
+            setConnected(false);
+            setConnectionDiagnostic('Сервер Radiology не отвечает. Снимки остаются локально.');
+            throw Error('Сервер Radiology не отвечает. Снимки остаются локально.');
+        }
+        const connection = probe.ok ? await probe.json().catch(() => null) : null;
+        const permitted = reviewedConnectionReady(connection);
+        const reason = reviewedConnectionNotice(connection);
+        setConnected(permitted);
+        setConnectionDiagnostic(reason);
+        if (!permitted) throw Error(reason);
         let execution: {
             packets: VisionPrivacyPacket[];
             batches: VisionBatch[];
@@ -528,7 +526,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
    <p><LocalizedUi value={"Выбрано"}/><LocalizedUi value={plan.budget.overviewIndices.length}/><LocalizedUi value={"срезов,"}/><LocalizedUi value={basePlan?.batches.length}/><LocalizedUi value={"групп подготовки. В одном запросе — до 4 срезов, для крупных копий меньше. После обзора — предварительное заключение Opus. Перевод и обсуждение доступны по готовому заключению."}/></p>
    <LocalizedUi value={plan.budget.overviewIndices.length > 40 && <p role="status"><LocalizedUi value={"Выбрано"}/><LocalizedUi value={plan.budget.overviewIndices.length}/><LocalizedUi value={"срезов и"}/><LocalizedUi value={basePlan?.batches.length ?? plan.batches.length}/><LocalizedUi value={"групп локальной подготовки. Копии будут видны по мере готовности. Отправка начнётся только после просмотра всех групп."}/></p>}/>
    <LocalizedUi value={physicianSelection.error && <p role="alert"><LocalizedUi value={physicianSelection.error}/></p>}/>
-   <button type="button" disabled={checkingBeforeReview || !!selectionResult.error || (visualEnabled && !!physicianSelection.error) || (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))} onClick={() => void start()}><LocalizedUi value={checkingBeforeReview ? 'Проверяем подключение без оплаты…' : singleSliceTest ? 'Проверить подключение и один срез' : selection === 'custom' ? 'Проверить подключение и выбранные срезы' : 'Проверить подключение и исследование'}/></button>
+   <button type="button" disabled={!!selectionResult.error || (visualEnabled && !!physicianSelection.error) || (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))} onClick={() => void start()}><LocalizedUi value={singleSliceTest ? 'Подготовить один срез' : selection === 'custom' ? 'Подготовить выбранные срезы' : 'Подготовить исследование'}/></button>
   </>}/>
   <LocalizedUi value={stage === 'review' && <button type="button" onClick={() => { ctl.current?.abort(); setSelection('custom'); setStage('idle'); setNotice('Подготовка папки остановлена. Укажите номера срезов и нажмите «Подготовить указанные срезы». Отправка не выполнялась.'); }}><LocalizedUi value={"Остановить и выбрать отдельные срезы"}/></button>}/>
   <LocalizedUi value={(stage === 'review' || stage === 'gemini' || stage === 'opus') && <StudyPrivacyReview count={plan.batches.length} modality={series.modality as 'CT' | 'MR'} load={prepare} onReady={submitAll} canRelease={connected} connectionNotice={connectionDiagnostic} singleSliceTest={singleSliceTest} releaseNotice={singleSliceTest ? 'Пробный анализ: один проверенный PNG-срез → один платный Gemini. Другие модели не запускаются; DICOM остаётся локально.' : "Flash просматривает выбранные срезы; Argon составляет протокол по JSON и подборке изображений. Opus — при существенном расхождении или по кнопке. Лимит обзора Flash: $" + budget.toFixed(2) + "; Argon и второе мнение оплачиваются отдельно."} onOpenSlice={inspect} windows={series.modality === 'CT' ? { primary: CT_REVIEW_WINDOWS[reviewWindow].label, ...(additionalWindow !== 'NONE' && (windowPlan.delivery === 'paired' || separate) ? { additional: CT_REVIEW_WINDOWS[additionalWindow].label, ...(separate ? { separateAfter: plan.batches.filter(b => b.pass === 'overview').length } : {}) } : {}) } : undefined} clinicalContext={clinicalContext} sourceNumbers={plan.batches.map(b => b.indices.map(i => i + 1))} sourceIds={plan.batches.map(b => b.indices.map(i => series.members[i].id))}/>}/>
