@@ -1,5 +1,19 @@
 # Doctor Opus Clinical Intelligence / Consilium — состояние для нового чата
 
+## Codex W4 document checkpoint — 17 November 2026
+
+Independent branch `codex/w4-document-continuity`, base `9443e67`: exact saved-note
+reopening, durable structured drafts, serialized saves/revisions, complete original
+clinical print content. Actual browser path passed: encrypted synthetic import →
+selected note → edit → leave/reopen → save → DOCX download → prior-version history.
+1141 local tests pass; model/ECGFounder/native child execution is not claimed.
+Details and replay: [W4 document continuity](W4-DOCUMENT-CONTINUITY-2026-11-17.md).
+Previous work [PR #86](https://github.com/vasiliys961/consilium/pull/86) passed CI
+but remains a separate unmerged branch, as do #75/#76/#83–85. No change to main,
+3107/3207, secrets, real cases, Radiology or Hub. Next: genetics and native-module
+continuity; Gate remains pending.
+
+
 **Снимок:** 16 ноября 2026. Состояние GitHub проверять перед каждым новым этапом.
 
 ## Репозиторий и безопасные ветки

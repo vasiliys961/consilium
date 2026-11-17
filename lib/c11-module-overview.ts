@@ -10,9 +10,14 @@ export function radiologySourceStatus(value:ClinicalCase,report:RadiologyModuleR
  return report.fileKeys.every(key=>keys.has(key.toLowerCase()))?'linked':'stale';
 }
 
-export function protocolEditorHref(caseId:string,document:Pick<ProtocolDocument,'locale'|'edition'>):string{
- const query=new URLSearchParams({case:caseId,locale:document.edition==='ru'?'ru':document.locale});
- return '/protocol/case?'+query.toString();
+export function protocolEditorHref(caseId:string,document:Pick<ProtocolDocument,'id'|'locale'|'edition'>):string{
+ const query=new URLSearchParams({case:caseId,locale:document.edition==='ru'?'ru':document.locale,document:document.id});
+ return (document.edition?'/protocol/case?':'/protocol/structured?')+query.toString();
+}
+
+/** A missing or wrong-language ID never falls back to a different saved note. */
+export function requestedProtocol(documents:readonly ProtocolDocument[]|undefined,id:string,locale:string,edition?:ProtocolDocument['edition']):ProtocolDocument|undefined{
+ return documents?.find(doc=>doc.id===id&&doc.locale===locale&&doc.edition===edition);
 }
 
 export function earlierProtocolVersions(value:ClinicalCase,document:ProtocolDocument){

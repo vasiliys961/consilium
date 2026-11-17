@@ -10,6 +10,7 @@ type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualRea
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
 export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
 export type ClinicalCase = {
+  structuredProtocolDrafts?:Record<string,{source:string;document:import('../packages/protocol/document').ProtocolDocument|null;at:string}>;
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
   workspaceDraft?:{question:string;note:string;decision:string;tab:string};
   moduleReports?:RadiologyModuleReport[];
@@ -163,6 +164,34 @@ async function serialCaseWrite<T>(id:string,writer:()=>Promise<T>):Promise<T>{
 export async function persistCase(value:ClinicalCase,remove=false):Promise<void>{
  return serialCaseWrite(value.id,()=>writeVaultCase(value,remove));
 }
+/** Structured notes use the same case write queue as native module returns.
+ * Only protocol fields change; case facts, analyses and physician decisions survive. */
+export async function persistStructuredProtocol(caseId:string,document:import('../packages/protocol/document').ProtocolDocument,draftKey?:string,now=new Date().toISOString()):Promise<ClinicalCase>{
+ if(document.edition||!document.id||!document.sections.length||document.sections.every(section=>!section.text.trim()))throw Error('invalid_structured_protocol');
+ return serialCaseWrite(caseId,async()=>{
+  const value=await readVaultCaseById(caseId);
+  if(!value||value.deletedAt||value.status==='closed')throw Error('case_not_active');
+  const previous=value.protocols?.find(item=>item.id===document.id);
+  if(previous&&(previous.edition||previous.locale!==document.locale||previous.kind!==document.kind))throw Error('protocol_identity_mismatch');
+  const drafts={...value.structuredProtocolDrafts};
+  if(draftKey)delete drafts[draftKey];
+  const changed=previous&&JSON.stringify(previous)!==JSON.stringify(document);
+  const updated:ClinicalCase={...value,updated:now,structuredProtocolDrafts:drafts,
+   protocols:[document,...(value.protocols??[]).filter(item=>item.id!==document.id)],
+   ...(changed?{protocolRevisions:[...(value.protocolRevisions??[]),{savedAt:now,document:previous}]}:{}),
+  };
+  await writeVaultCase(updated);return updated;
+ });
+}
+/** Drafts are editable work, never approved protocol records. */
+export async function persistStructuredProtocolDraft(caseId:string,key:string,draft:NonNullable<ClinicalCase['structuredProtocolDrafts']>[string]):Promise<ClinicalCase>{
+ return serialCaseWrite(caseId,async()=>{
+  const value=await readVaultCaseById(caseId);
+  if(!value||value.deletedAt||value.status==='closed')throw Error('case_not_active');
+  const updated={...value,updated:value.updated>draft.at?value.updated:draft.at,structuredProtocolDrafts:{...value.structuredProtocolDrafts,[key]:draft}};
+  await writeVaultCase(updated);return updated;
+ });
+}
 /** Autosave snapshots can complete after newer analysis/attachment writes.
  * Never allow an older snapshot to overwrite newer physician work.
  * This preserves all current in-memory fields, unlike an editor-only patch.
@@ -302,6 +331,7 @@ export function exportCase(value: ClinicalCase): string {
     '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
+    ...Object.values(value.structuredProtocolDrafts??{}).map(draft=>'\n## Незавершённый протокол · не является утверждённым документом\n'+[draft.source,...(draft.document?.sections.map(part=>part.title+'\n'+part.text)??[])].join('\n\n')),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
     ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
