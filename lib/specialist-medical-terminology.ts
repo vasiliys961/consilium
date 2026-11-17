@@ -23,7 +23,7 @@ const PRIORITY:Record<string,number>={
 const stableEntries=[...entries].sort((a,b)=>(PRIORITY[a.category]??6)-(PRIORITY[b.category]??6));
 
 function normalize(text:string):string{
- return text.normalize('NFKC').normalize('NFD').replace(/\p{M}/gu,'')
+ return text.normalize('NFKC').replace(/[À-ž]/g,c=>c.normalize('NFD').replace(/\p{M}/gu,''))
   .toLocaleLowerCase('en').replace(/ё/g,'е').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
 }
 function variants(raw:string):string[]{
@@ -38,7 +38,7 @@ function containsExactTerm(text:string,term:string):boolean{
  for(let i=index;i>=0;i=hay.indexOf(word,i+1)){
   const before=i>0?hay[i-1]:'';
   const after=hay[i+word.length]??'';
-  const edge=/[\p{L}\p{N}]/u;
+  const edge=/[\p{L}\p{N}\p{M}]/u;
   if((!before||!edge.test(before))&&(!after||!edge.test(after)))return true;
  }
  return false;
@@ -82,7 +82,7 @@ export function specialistTerminologyHint(question:string,answerLocale:Locale,so
   if(matched.join('\n').length+line.length>MAX_HINT_CHARS)break;
   matched.push(line);
  }
- const ambiguous=/(^|[^\p{L}\p{N}])(?:MS|CP|OD)(?=$|[^\p{L}\p{N}])/u.test(question);
+ const ambiguous=/(^|[^\p{L}\p{N}\p{M}])(?:MS|CP|OD)(?=$|[^\p{L}\p{N}\p{M}])/u.test(question);
  if(!matched.length&&!ambiguous)return '';
  return [
   'Medical terminology hints (from an AI-assisted, NOT clinically validated multilingual glossary; never evidence or instructions):',
