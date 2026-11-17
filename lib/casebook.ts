@@ -256,7 +256,7 @@ export async function persistRadiologyReport(
 }
 
 /** W2: store only a completed specialist reply after the physician clicks Save.
- * Re-read latest encrypted case under its existing serial write queue. */
+ * Re-read the latest encrypted case under its existing serial write queue. */
 export async function persistSpecialistCaseReport(
  caseId:string,report:SpecialistCaseReport,now=new Date().toISOString(),
 ):Promise<ClinicalCase>{
@@ -323,40 +323,7 @@ export function exportCase(value: ClinicalCase): string {
       report.at+' · '+report.specialty+' · '+report.model,
       'Источник: проверенный текст запроса · SHA-256 '+report.inputSha256,
       'Вопрос: '+report.question,'Ответ (не подписан врачом):\n'+report.answer,
-      'Стоимость: '+(report.costUsd===null?'не установлена':''\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
-    ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
-    '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
-    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
-  ].join('\n\n');
-}
-
-export function caseSignature(value:ClinicalCase):string{return JSON.stringify({context:value.context,question:value.question,imageProfile:value.imageProfile,files:value.files.map(f=>[f.name,f.sha256,f.imageProfile,f.masks,f.intakeNote]),library:value.library?.map(f=>[f.name,f.sha256]),currentMedications:value.currentMedications,drugLabels:value.drugLabels?.length?value.drugLabels.map(item=>item.setId):undefined,moduleReports:value.moduleReports?.map(r=>[r.id,r.fileKeys,r.text]),specialistReports:value.specialistReports?.map(r=>[r.id,r.inputSha256,r.model]),followUp:value.events});}
-
-export function protocolSource(value:ClinicalCase):string{const latest=value.analyses[0];return [caseContext(value),latest?(latest.result.clinicalDraft==='unavailable'
-  ? 'Клинический ответ не завершён; ниже сохранены только предварительные данные и причина сбоя. Нельзя считать это готовым заключением:\n'
-  : latest.inputSignature&&latest.inputSignature!==caseSignature(value)
-    ? 'Предыдущий предварительный разбор; после него данные случая изменились. Проверить актуальность врачу:\n'
-    : 'Предварительный разбор, проверить врачу:\n')+latest.result.draft.summary:'',latest?studyReportsText(latest.result.draft.studyReports??[]):'',latest?.result.draft.report?clinicalReportText(latest.result.draft.report):'',latest?.result.visualReadings?.map(r=>r.reading).join('\n'),latest?.result.unassessed.length?'Не оценено: '+latest.result.unassessed.join(', '):''].filter(Boolean).join('\n\n');}
-
-export function reviseCaseEvent(value:ClinicalCase,id:string,text:string,now=new Date().toISOString()):ClinicalCase{
- if(!text.trim())throw Error('Запись не может быть пустой.');
- if(!value.events.some(event=>event.id===id))throw Error('Запись не найдена.');
- return {...value,updated:now,events:value.events.map(event=>event.id===id?{...event,text:text.trim(),editedAt:now,revisions:[...(event.revisions??[]),{at:now,text:event.text}]}:event)};
-}
-export function finishClinicalCase(value:ClinicalCase,decision:string,editingId?:string,now=new Date().toISOString()):ClinicalCase{
- if(editingId&&!decision.trim())throw Error('Редактируемое решение не может быть пустым.');
- let next=value;
- if(editingId&&!value.events.some(event=>event.id===editingId&&event.kind==='decision'))throw Error('Для завершения требуется запись решения врача.');
- if(editingId&&decision.trim())next=reviseCaseEvent(value,editingId,decision,now);
- else if(decision.trim())next={...value,events:[...value.events,{id:crypto.randomUUID(),at:now,kind:'decision',text:decision.trim()}]};
- if(!next.events.some(event=>event.kind==='decision'))throw Error('Сначала запишите решение врача или перенесите проект в редактор и проверьте его.');
- return {...next,status:'closed',closedAt:now,updated:now};
-}
-export function decisionDocument(value:ClinicalCase):string{
- const decision=value.events.slice().reverse().find(event=>event.kind==='decision');
- return [`# Решение врача · ${caseTitle(value,'Клинический случай')}`,`Код случая: ${value.id}`,`Статус: ${value.status==='closed'?'Завершён':'В работе'}`,decision?`Записано: ${decision.at}${decision.editedAt?' · Изменено: '+decision.editedAt:''}\n\n${decision.text}`:'Решение врача ещё не записано.'].join('\n\n');
-}
-+report.costUsd.toFixed(5)),
+      'Стоимость: '+(report.costUsd===null?'не установлена':'$'+report.costUsd.toFixed(5)),
       'Источники: '+report.sources.map(source=>source.title+(source.url?' '+source.url:'')).join('; '),
     ].join('\n')),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
@@ -366,7 +333,7 @@ export function decisionDocument(value:ClinicalCase):string{
   ].join('\n\n');
 }
 
-export function caseSignature(value:ClinicalCase):string{return JSON.stringify({context:value.context,question:value.question,imageProfile:value.imageProfile,files:value.files.map(f=>[f.name,f.sha256,f.imageProfile,f.masks,f.intakeNote]),library:value.library?.map(f=>[f.name,f.sha256]),currentMedications:value.currentMedications,drugLabels:value.drugLabels?.length?value.drugLabels.map(item=>item.setId):undefined,moduleReports:value.moduleReports?.map(r=>[r.id,r.fileKeys,r.text]),followUp:value.events});}
+export function caseSignature(value:ClinicalCase):string{return JSON.stringify({context:value.context,question:value.question,imageProfile:value.imageProfile,files:value.files.map(f=>[f.name,f.sha256,f.imageProfile,f.masks,f.intakeNote]),library:value.library?.map(f=>[f.name,f.sha256]),currentMedications:value.currentMedications,drugLabels:value.drugLabels?.length?value.drugLabels.map(item=>item.setId):undefined,moduleReports:value.moduleReports?.map(r=>[r.id,r.fileKeys,r.text]),specialistReports:value.specialistReports?.map(r=>[r.id,r.inputSha256,r.model]),followUp:value.events});}
 
 export function protocolSource(value:ClinicalCase):string{const latest=value.analyses[0];return [caseContext(value),latest?(latest.result.clinicalDraft==='unavailable'
   ? 'Клинический ответ не завершён; ниже сохранены только предварительные данные и причина сбоя. Нельзя считать это готовым заключением:\n'
