@@ -1,6 +1,7 @@
 'use client';
 import type {ClinicalCase} from '@/lib/casebook';
 import {SPECIALIST_PROFILES} from '@/lib/specialist-profiles';
+import {copilotText} from '@/lib/copilot-i18n';
 import {useWorkspaceLanguage} from './workspace-language';
 
 /** Read-only view of previously executed specialist requests. No inference occurs here. */
@@ -17,7 +18,7 @@ export function SpecialistCaseResults({value}:{value:ClinicalCase}){
       :'Completed consultations saved in this case. These are unsigned AI replies; a physician must review them and separately approve clinical decisions.'}
   </p>
   {reports.map(report=><details key={report.id} style={{padding:'8px 0',borderTop:'1px solid #d8e3d8'}} data-testid="specialist-case-report">
-   <summary><strong>{SPECIALIST_PROFILES.find(x=>x.id===report.specialty)?.label??report.specialty}</strong>
+   <summary><strong>{copilotText(language,SPECIALIST_PROFILES.find(x=>x.id===report.specialty)?.label??report.specialty)}</strong>
     {' · '}<time dateTime={report.at}>{new Date(report.at).toLocaleString(language)}</time></summary>
    <p><strong>{ru?'Вопрос':'Question'}:</strong> {report.question}</p>
    <p style={{whiteSpace:'pre-wrap'}}>{report.answer}</p>
