@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,validCouncilSpecialty} from './adaptive-council.ts';
 import {runConsilium,CONSILIUM_ROLES} from './consilium.ts';
@@ -68,7 +69,6 @@ test('C13 adaptive council: radiology, dermatology and histology evidence guide 
 });
 
 test('C13 adaptive council: input option is passed to existing case runner, no extra specialist endpoint',()=>{
- const {readFileSync}=require('node:fs') as typeof import('node:fs');
  const ui=readFileSync('app/components/clinical-workspace.tsx','utf8');
  const server=readFileSync('lib/analyze-case.ts','utf8');
  assert.match(ui,/councilSpecialty:withCouncil\?councilSpecialty:'auto'/);
