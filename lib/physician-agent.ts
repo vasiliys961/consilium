@@ -92,20 +92,20 @@ export function clinicalFirstResponse(text:string,locale:Locale,parsed:AgentJson
  // writing a protocol solely because the clinician stated a symptom.
  const tools=(['clinical',...parsed.tools.filter(tool=>tool!=='clinical'&&tool!=='protocol'&&tool!=='ambient')] as PhysicianTool[]).slice(0,4);
  const generic=/(?:возможност|функци|созда.*протокол|состав.*протокол|перейд.*протокол|выбер.*модул|наши инструмент|our tools|capabilit|write.*protocol|create.*note)/i.test(parsed.reply);
- const english=locale==='en';
- const defaultReply=english
-   ? 'For cough and breathlessness, open Clinical Review. SpO₂ and respiratory rate help assess urgency; severe breathing difficulty needs urgent care.'
-   : 'При кашле и одышке предлагаю открыть «Клинический разбор». Для оценки срочности нужны SpO₂ и ЧДД; при тяжёлом нарушении дыхания — срочная очная помощь.';
- const defaultQuestion=english
-   ? 'Do you have SpO₂ and respiratory rate measurements?'
-   : 'Есть данные SpO₂ и частоты дыхания?';
- // A generic marketing/feature answer is never allowed to replace triage.
- // Leave other languages to the selected-language LLM response: never replace
- // Spanish/Arabic/Chinese clinical prose with a Russian fallback.
- const localizedDefault=locale==='ru'||locale==='en';
- return {...parsed,
-  reply:generic&&localizedDefault?defaultReply:parsed.reply,
-  question:parsed.question||(localizedDefault?defaultQuestion:null),
+ const englishReply='For cough and breathlessness, open Clinical Review. SpO₂ and respiratory rate help assess urgency; severe breathing difficulty needs urgent care.';
+ const russianReply='При кашле и одышке предлагаю открыть «Клинический разбор». Для оценки срочности нужны SpO₂ и ЧДД; при тяжёлом нарушении дыхания — срочная очная помощь.';
+ const englishQuestion='Do you have SpO₂ and respiratory rate measurements?';
+ const russianQuestion='Есть данные SpO₂ и частоты дыхания?';
+ // Preserve the international English first line even when correcting a
+ // Russian model-generated marketing answer. An RU correction must be paired
+ // with a true English baseline, not Russian followed by Russian.
+ return {
+  ...parsed,
+  reply:generic?englishReply:parsed.reply,
+  translatedReply:generic&&locale==='ru'?russianReply:parsed.translatedReply,
+  question:generic?englishQuestion:(parsed.question??englishQuestion),
+  translatedQuestion:generic&&locale==='ru'?russianQuestion:
+   locale==='ru'&&!parsed.question?russianQuestion:parsed.translatedQuestion,
   tools,
  };
 }
@@ -174,13 +174,17 @@ export async function converseWithPhysician(
   specialty:plan.steps[0]?.tool==='specialist'?specialty?.label:undefined,
   urgent:Boolean(specialty?.urgentHint),
  });
- const message=locale==='en'?clinicallyPrioritized.reply:
-   clinicallyPrioritized.translatedReply
-    ?clinicallyPrioritized.reply+'\n'+clinicallyPrioritized.translatedReply:route;
- const question=locale==='en'?clinicallyPrioritized.question:
+ // A non-Latin first line cannot be the English international baseline.
+ // If an LLM replies in another script, use the free reviewed workflow.
+ const badEnglish=/[\p{Script=Cyrillic}\p{Script=Arabic}\p{Script=Devanagari}\p{Script=Han}]/u.test(clinicallyPrioritized.reply);
+ const hasPairedTranslation=Boolean(clinicallyPrioritized.translatedReply?.trim());
+ const useLocal=badEnglish||(locale!=='en'&&!hasPairedTranslation);
+ const message=useLocal?route:locale==='en'?clinicallyPrioritized.reply:
+   clinicallyPrioritized.reply+'\n'+clinicallyPrioritized.translatedReply;
+ const question=useLocal?null:locale==='en'?clinicallyPrioritized.question:
    clinicallyPrioritized.question&&clinicallyPrioritized.translatedQuestion
     ?clinicallyPrioritized.question+'\n'+clinicallyPrioritized.translatedQuestion
-    :clinicallyPrioritized.question;
+    :null;
  return {message,question,plan,usedModel:true,
   model:result.model,estimatedUsd:costKnown?priceUsd(result.model,result.inputTokens,result.outputTokens):null,warning:null};
 }
