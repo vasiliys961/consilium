@@ -4,7 +4,7 @@
  * The entries are NOT clinically validated. Never medical evidence or a finding.
  * No external API; never send the whole dictionary to a model.
  */
-import glossary from '../integrations/translator/lib/medical-translate/dialogue-glossary.json';
+import glossary from '../integrations/translator/lib/medical-translate/dialogue-glossary.json' with {type:'json'};
 import {ENGLISH_MEDICAL_VARIANTS} from '../integrations/translator/lib/medical-translate/english-reference.ts';
 import type {Locale} from './locale.ts';
 
