@@ -271,10 +271,10 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
     <input type="checkbox" checked={voiceConsent} onChange={event=>{setVoiceConsent(event.target.checked);if(!event.target.checked)voiceRef.current?.stop()}}/>
     {ct('Разрешаю голосовой ввод. Распознавание может выполняться службой браузера. Вопрос перед отправкой можно исправить.')}
    </label>}
-   {voiceError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{t(voiceError)}</p>}
+   {voiceError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{ct(voiceError)}</p>}
   </form>
   {agentBusy&&<p role="status" style={{fontSize:12,color:'#456a53'}}>{ct('Подбираю инструменты…')}</p>}
-  {agentError&&<p role="alert" style={{fontSize:12,color:'#8a2b17'}}>{t(agentError)} {ct('Маршрут доступен ниже.')}</p>}
+  {agentError&&<p role="alert" style={{fontSize:12,color:'#8a2b17'}}>{ct(agentError)} {ct('Маршрут доступен ниже.')}</p>}
   {dialogue.length>0&&<details style={{marginTop:10}}><summary>{ct('История разговора')} · {dialogue.length}</summary>
    <div style={{maxHeight:200,overflowY:'auto',padding:8}}>
     {dialogue.map((turn,index)=><p key={index} dir="auto" style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><strong>{turn.role==='physician'?ct('Врач'):ct('Copilot')}:</strong> {turn.text}</p>)}
@@ -286,11 +286,14 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   <div aria-label={ct('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
    <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')} style={{border:'1px solid #6c9981',background:'#e8f4ed',padding:'8px 12px',borderRadius:8,fontWeight:600}}>{ct('Показать возможности')}</button>
    <details><summary>{ct('Примеры задач')}</summary>
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{t(example)}</button>)}</div>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{ct(example)}</button>)}</div>
    </details>
   </div>
   {(request.trim()||agentReply)&&<section id="opus-copilot-result" aria-label={ct('Предлагаемый маршрут')} aria-live="polite" style={{marginTop:12}}>
-   {agentReply?.message?<p dir="auto">{agentReply.message}</p>:<p>{t(displayedPlan.message)}</p>}
+   {agentReply?.message?<p dir="auto" style={{whiteSpace:'pre-line'}}>{agentReply.message}</p>:<div>
+      <p lang="en">{workflow.english}</p>
+      {workflow.localized&&<p lang={language} dir="auto" style={{marginTop:4}}>{workflow.localized}</p>}
+     </div>}
    {agentReply?.question&&<p dir="auto" style={{fontWeight:600}}>{agentReply.question}</p>}
    {displayedPlan.steps.length>0&&(displayedPlan.intent==='help'
     ? <ul style={{margin:'10px 0',paddingLeft:20}}>
@@ -299,8 +302,8 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        return <li key={step.tool} style={{marginBottom:7}}>
         <button type="button" disabled={!allowed} title={ct(hint)} onClick={()=>openTool(step.tool,request)}
          style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
-         {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}</button>
-        <span style={{fontSize:13}}>{t(step.reason)}</span>
+         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}</button>
+        <span style={{fontSize:13}}>{copilotToolReason(language,step.tool)}</span>
        </li>;
       })}
      </ul>
@@ -309,7 +312,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        const {allowed,hint}=availability(step.tool);
        return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
         style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-        {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}
+        {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}
        </button>;
       })}
      </div>
