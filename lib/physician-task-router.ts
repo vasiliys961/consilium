@@ -30,21 +30,24 @@ export function physicianToolSteps(ids:readonly PhysicianTool[]):PhysicianStep[]
  return steps;
 }
 const word=(s:string)=>new RegExp('(?:^|[^a-zа-яё])(?:'+s+')(?![a-zа-яё])','i');
-const RAD=word('кт|мрт|кт\\/мрт|рентген|dicom|ct|mri|xray|x-ray');
+const RAD=word('кт|мрт|кт\\/мрт|рентген|dicom|ct|mri|xray|x-ray|tomografía|tomografia|scanner|irm|tomografia|tomografi');
 const ECG=/экг|электрокарди|ecg|ekg/i;
 const US=word('узи|сонограф|эхокардиограф|эхокг|ultrasound|echo');
 const GEN=/генет|геном|vcf|фармакогеном|вариантов.*днк/i;
-const MED=/лекарств|препарат|полипрагмаз|взаимодейств|дозиров|назначен|антикоагуля|совместимост|побочн.*эффект/i;
-const GUIDE=/рекомендаци|гайдлайн|guideline|руководств|источник|литератур|доказательн|публикаци/i;
-const SPECIALIST=/специалист|консультаци|консультант|врач.*консультаци|consult specialist|ask specialist/i;
+const MED=/medicamentos|medicamento|medicación|médicaments|médicament|medication|medicamentos|medicamento|farmaci|obat|ilaç|دواء|दवा|药物|лекарств|препарат|полипрагмаз|взаимодейств|дозиров|назначен|антикоагуля|совместимост|побочн.*эффект/i;
+const GUIDE=/guías? clínicas?|recommandations?|diretrizes|panduan klinis|kılavuz|الإرشادات|指南|रिशानिर्देश|рекомендаци|гайдлайн|guideline|руководств|источник|литератур|доказательн|публикаци/i;
+const SPECIALIST=/especialista|spécialiste|specialist|especialista|spesialis|uzman|اختصاصي|विशेषज्ञ|专家|специалист|консультаци|консультант|врач.*консультаци|consult specialist|ask specialist/i;
 const CLIN=/консилиум|комплексн|дифференциал|разбор|тактик|диагноз|сопостав|клиническ.*случай|second opinion/i;
-const PROTO=/протокол|soap|(?:подготов|созд|состав|оформ|напис|сгенер|сдел).{0,35}заключен|документир|оформлен.*прием|запис.*в карт/i;
-const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
-const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц');
+const PROTO=/protocolo|compte rendu|clinical note|nota clínica|relatório clínico|catatan klinis|klinik not|تقرير طبي|临床记录|प्रोटोकॉल|протокол|soap|(?:подготов|созд|состав|оформ|напис|сгенер|сдел).{0,35}заключен|документир|оформлен.*прием|запис.*в карт/i;
+const AMBIENT=/ambient|grabar (?:la )?consulta|enregistrer (?:la )?consultation|record (?:the )?(?:visit|encounter)|gravar (?:a )?consulta|rekam konsultasi|muayeneyi kaydet|تسجيل الزيارة|录制问诊|परामर्श रिकॉर्ड|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
+const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц|laboratorio|documentos|document|documents|lab|bloodwork');
 const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
 const CARDIAC=/(?:болит\s+сердц|боль\s+(?:в|за)\s+(?:груд|грудин|сердц)|бол[ьи]\s+(?:в\s+)?груд|давит\s+(?:в\s+)?груд|дискомфорт\s+(?:в\s+)?груд|chest\s+(?:pain|tightness|discomfort)|heart\s+pain)/i;
 export const isCardiacPresentation=(value:string)=>CARDIAC.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
-export const isCopilotHelpQuery=(value:string)=>/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?(?:функции|возможности)|help|what can you do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$)/i.test(value.trim());
+export const isCopilotHelpQuery=(value:string)=>{
+ const query=value.trim().replace(/^[¿¡؟\s]+/u,'');
+ return /^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?(?:функции|возможности)|help|what can you do|what can doctor opus do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$|(?:qué|que) puede hacer doctor opus|que peut faire doctor opus|o que (?:o )?doctor opus pode fazer|apa yang bisa dilakukan doctor opus|doctor opus neler yapabilir|ماذا يمكن أن يفعل|doctor opus क्या|doctor opus 能做什么)/i.test(query);
+};
 
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
@@ -69,7 +72,10 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(MED.test(value))add('medications');
  if(GUIDE.test(value))add('guidelines');
  if(SPECIALIST.test(value))add('specialist');
- if(CLIN.test(value)||!tools.length&&!(PROTO.test(value)||AMBIENT.test(value)))add('clinical');
+ if(CLIN.test(value))add('clinical');
+ // Unclear natural-language question: offer General Internal Medicine first,
+ // then a full case review. The doctor chooses the clinical specialty.
+ if(!tools.length&&!(PROTO.test(value)||AMBIENT.test(value))){add('specialist');add('clinical');}
  if(AMBIENT.test(value))add('ambient');
  if(PROTO.test(value))add('protocol');
  if(tools.length>1&&!tools.includes('clinical')&&tools.some(x=>['ecg','radiology','ultrasound','genetics'].includes(x)))tools.splice(tools.findIndex(x=>x==='protocol'||x==='ambient')<0?tools.length:tools.findIndex(x=>x==='protocol'||x==='ambient'),0,'clinical');
@@ -88,7 +94,7 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  */
 export function copilotRequestedOpen(task:string):PhysicianTool|null{
  const phrase=task.trim();
- if(!/^(?:открой|открыть|перейди|перейти|покажи|open|go to)\s+/i.test(phrase))return null;
+ if(!/^(?:открой|открыть|перейди|перейти|покажи|open|go to|abre|abrir|ouvre|ouvrir|ouvrir|abra|abrir|buka|aç|فتح|افتح|खोलें|打开)\s+/i.test(phrase))return null;
  if(!/(?:\b(?:ecg|ekg|ct|mri|radiology|protocol|ambient|ultrasound|genetics|guidelines|documents)\b|экг|кт|мрт|специалист|консультаци|протокол|при[её]м|разбор|консилиум|радиологи|узи|генетик|лекарств|рекомендаци|документ)/i.test(phrase))
   return null;
  const plan=planPhysicianTask(phrase);
