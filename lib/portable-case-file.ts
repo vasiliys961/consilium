@@ -1,4 +1,5 @@
 import type {ClinicalCase} from './casebook.ts';
+import {validateSpecialistCaseReport,type SpecialistCaseReport} from './specialist-case-report.ts';
 import {flushVault,readVaultCaseById,insertVaultCaseIfAbsent} from './local-vault.ts';
 import {deriveVaultKey,seal,unseal,fromBase64,toBase64,type Sealed} from './vault-crypto.ts';
 
@@ -26,6 +27,7 @@ function validCase(value:unknown):value is ClinicalCase{
  ||!Array.isArray(value.analyses)||value.analyses.length>1500
  ||value.library!==undefined&&(!Array.isArray(value.library)||value.library.length>400)
  ||value.moduleReports!==undefined&&(!Array.isArray(value.moduleReports)||value.moduleReports.length>1500)
+  ||value.specialistReports!==undefined&&(!Array.isArray(value.specialistReports)||value.specialistReports.length>1000)
  ||value.protocols!==undefined&&(!Array.isArray(value.protocols)||value.protocols.length>250))
  return false;
  if(value.files.some(file=>!isRecord(file)||typeof file.name!=='string'||file.name.length>1000||
@@ -34,6 +36,8 @@ function validCase(value:unknown):value is ClinicalCase{
    ||!['note','question','decision'].includes(String(ev.kind))))return false;
  if(value.analyses.some(a=>!isRecord(a)||typeof a.id!=='string'||!isDate(a.at)||typeof a.context!=='string'
    ||!isRecord(a.result)||!isRecord(a.result.draft)||!Array.isArray(a.result.citations)))return false;
+ if((value.specialistReports as unknown[]|undefined)?.some(report=>
+  !isRecord(report)||!validateSpecialistCaseReport(report as unknown as SpecialistCaseReport)))return false;
  return true;
 }
 function decodeCaseFile(text:string):CaseEnvelope{
