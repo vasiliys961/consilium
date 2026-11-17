@@ -40,26 +40,29 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     {result.visualReadings?.filter(a=>a.secondOpinion).map(a=><section key={a.source}><h4>{t('Второе мнение')} · {imageModelLabel(a.secondOpinion?.model??'')} · {a.source}</h4>{a.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{a.secondOpinion?.status==='completed'?a.secondOpinion.reading:t('Второе мнение не получено. Основное заключение сохранено.')}</p><small>{t('Сопоставьте мнения по исходному изображению. Окончательное решение принимает врач.')}</small></section>)}
     {result.validationWarnings?.map((warning,i)=><p role="alert" key={i}>{warning}</p>)}
     {analysis.reusedSources?.length ? <small>{t('Использованы ранее прочитанные исследования:')} {analysis.reusedSources.join(', ')}. {t('Повторное чтение изображений не выполнялось.')}</small>:null}
-    {result.voices.length>0&&<section aria-label={t('Итог консилиума')}>
-       {result.voices.some(v=>v.clinicalPerspective)&&<small style={{display:'block',marginBottom:7}}>
-        {language==='ru'?'Профили консилиума — роли ИИ-моделей, а не заключения независимых врачей.':'Council specialties are AI model perspectives, not independent human physician consultations.'}
-       </small>}
-      <h4>{t('Итог консилиума')}</h4>
-      <p className={styles.voiceText} style={{fontSize:12}} data-testid="council-actual-models">
-        {language==='ru'?'Фактический состав ИИ: ':'Actual AI models: '}
-        {result.voices.map(v=>t(roleNames[v.id])+' — '+(v.status==='done'?(v.model??'unknown'):(language==='ru'?'не ответил':'no opinion'))+
-          (v.fallbackFrom?(language==='ru'?' (резерв вместо ':' (backup for ')+v.fallbackFrom+')':'')).join(' · ')}
-      </p>
-      {final?.status==='done'?<p className={styles.voiceText}>{final.text}</p>:<p role="status">{t('Итог консилиума не получен. Отдельные мнения сохранены ниже; обсуждение нельзя считать завершённым.')}</p>}
-      {missing.length>0&&<p>{t('Не завершили ответ:')} {missing.map(voice=>t(roleNames[voice.id])).join(', ')}.</p>}
-      {newest&&missing.length>0&&<button disabled={busy} onClick={onCouncil}>{t('Повторить консилиум')}</button>}
-      <details><summary>{t('Отдельные мнения')} · {result.voices.filter(voice=>voice.status==='done').length}/{result.voices.length}</summary>{result.voices.filter(voice=>voice.id!=='checklist').map(voice=><section key={voice.id}><h4>{t(roleNames[voice.id])}</h4>
-          {voice.clinicalPerspective&&<small style={{display:'block',marginBottom:4}}>
-           {language==='ru'?'Клинический ракурс ИИ':'AI clinical perspective'}: {councilPerspectiveLabel(voice.clinicalPerspective,language)}
-           {voice.status==='done'&&voice.model?' · '+voice.model+(voice.fallbackFrom?' (backup for '+voice.fallbackFrom+')':''):''}
-          </small>}
-          <p className={styles.voiceText}>{voice.status==='done'?voice.text:t(voice.failure==='deadline'?'Время ответа истекло':voice.failure==='truncated'?'Ответ не завершён: достигнут лимит':'Ответ не получен')}</p></section>)}</details>
-    </section>}
+     {result.voices.length>0&&<section aria-label={t('Итог консилиума')}>
+       <h4>{t('Итог консилиума')}</h4>
+       {final?.status==='done'?<p className={styles.voiceText}>{final.text}</p>:<p role="status">{t('Итог консилиума не получен. Сохранённые мнения можно посмотреть ниже; обсуждение нельзя считать завершённым.')}</p>}
+       {missing.length>0&&<p role="status">{t('Требуется дополнительная оценка:')} {missing.map(voice=>t(roleNames[voice.id])).join(', ')}.</p>}
+       {newest&&missing.length>0&&<button disabled={busy} onClick={onCouncil}>{language==='ru'?'Повторить весь консилиум (платно)':'Repeat entire council (paid)'}</button>}
+       <details data-testid="council-clinical-opinions">
+         <summary>{language==='ru'?'Мнения и клинические проверки':'Clinical perspectives and checks'} · {result.voices.filter(voice=>voice.status==='done').length}/{result.voices.length}</summary>
+         {result.voices.some(v=>v.clinicalPerspective)&&<small style={{display:'block',marginBottom:8}}>
+           {language==='ru'?'Это ракурсы анализа ИИ; не отдельные консультации врачей.':'These are AI clinical perspectives, not independent human physician consultations.'}
+         </small>}
+         {result.voices.filter(voice=>voice.id!=='checklist').map(voice=><section key={voice.id}>
+           <h4>{t(roleNames[voice.id])}{voice.clinicalPerspective?' · '+councilPerspectiveLabel(voice.clinicalPerspective,language):''}</h4>
+           <p className={styles.voiceText}>{voice.status==='done'?voice.text:t(voice.failure==='deadline'?'Время ответа истекло':voice.failure==='truncated'?'Ответ не завершён: достигнут лимит':'Ответ не получен')}</p>
+         </section>)}
+         <details data-testid="council-technical-models">
+           <summary>{language==='ru'?'Технические сведения: модели и резервирование':'Technical details: models and fallback'}</summary>
+           <p className={styles.voiceText} style={{fontSize:15}} data-testid="council-actual-models">
+             {result.voices.map(v=>t(roleNames[v.id])+' — '+(v.status==='done'?(v.model??'unknown'):(language==='ru'?'не ответил':'no opinion'))+
+               (v.fallbackFrom?(language==='ru'?' (резерв вместо ':' (backup for ')+v.fallbackFrom+')':'')).join(' · ')}
+           </p>
+         </details>
+       </details>
+     </section>}
     {result.ledger.filter(entry=>entry.genetics?.review).map(entry=><details key={entry.source}><summary>{entry.source} · {t('Генетический разбор')}</summary><GenomicReviewView finding={entry.genetics!}/></details>)}
     {result.medicationReview&&<details><summary>{t('Проверка инструкций к препаратам')}</summary><MedicationReviewView review={result.medicationReview}/></details>}
     {analysis.kind==='summary'&&result.draft.report&&<section aria-label={t('Краткое резюме')}><h4>{t('Следующий шаг')}</h4><p>{result.draft.report.tactics?.nextStep||result.draft.report.problem}</p>{result.draft.report.questions.length>0&&<><h4>{t('Уточнить перед решением')}</h4><ul>{result.draft.report.questions.map((question,i)=><li key={i}>{question}</li>)}</ul></>}</section>}
