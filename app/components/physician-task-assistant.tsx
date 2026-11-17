@@ -188,7 +188,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const local=planPhysicianTask(utterance);
   // Clinical complaints go to actual specialists; capability questions are
   // free and immediate. Neither requires a separate paid navigation answer.
-  if(local.intent==='help'||local.steps[0]?.tool==='specialist'||suggestClinicalDestination(utterance)){
+  if(local.intent==='help'||suggestClinicalDestination(utterance)){
    setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
    return;
   }
