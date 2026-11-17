@@ -67,7 +67,7 @@ test('C13: specialist handoff is a prepared local draft, never an automatic clin
  const copilot=file('app/components/physician-task-assistant.tsx');
  const specialist=file('app/consult/page.tsx');
  const handoff=file('lib/copilot-consult-handoff.ts');
- assert.match(copilot,/storeCopilotConsultDraft\(question\)/);
+ assert.match(copilot,/storeCopilotConsultDraft\(draft\)/);
  assert.match(copilot,/router\.push\('\/consult'\)/);
  assert.match(specialist,/consumeCopilotConsultDraft\(\)/);
  assert.match(specialist,/setDrafts\(current=>/);
