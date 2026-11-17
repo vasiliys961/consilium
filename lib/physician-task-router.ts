@@ -73,9 +73,10 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(GUIDE.test(value))add('guidelines');
  if(SPECIALIST.test(value))add('specialist');
  if(CLIN.test(value))add('clinical');
- // Unclear natural-language question: offer General Internal Medicine first,
- // then a full case review. The doctor chooses the clinical specialty.
- if(!tools.length&&!(PROTO.test(value)||AMBIENT.test(value))){add('specialist');add('clinical');}
+ // If clinical intent is recognized, the earlier specialty router offers General
+ // Internal Medicine. Completely unrecognized app tasks stay with Copilot so a
+ // navigation question is not automatically misclassified as a medical complaint.
+ if(!tools.length&&!(PROTO.test(value)||AMBIENT.test(value)))add('clinical');
  if(AMBIENT.test(value))add('ambient');
  if(PROTO.test(value))add('protocol');
  if(tools.length>1&&!tools.includes('clinical')&&tools.some(x=>['ecg','radiology','ultrasound','genetics'].includes(x)))tools.splice(tools.findIndex(x=>x==='protocol'||x==='ambient')<0?tools.length:tools.findIndex(x=>x==='protocol'||x==='ambient'),0,'clinical');
