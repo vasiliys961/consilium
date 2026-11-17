@@ -1,5 +1,20 @@
 # Doctor Opus Clinical Intelligence / Consilium — состояние для нового чата
 
+## Current Codex checkpoint — 17 November 2026
+
+Development continues from `chatgpt-dev` (`9443e67`) in independent branch
+`codex/w4-workstation-safety`. The current priority is physician workflow,
+case/editor preservation, factual medication context and clear clinical results.
+Radiology AI is deferred and does not block Gate; Hub requires a later decision.
+Existing PR #75–77/#83–85 remain open drafts, not merged. Do not interpret the
+historical statuses below as current acceptance.
+
+Implemented changes, verified PR/CI state, test commands, browser evidence and the
+next work packages: [Codex workstation checkpoint](CODEX-WORKSTATION-CHECKPOINT-2026-11-17.md).
+Gate remains pending: [acceptance matrix](G-WORKSTATION-ACCEPTANCE.md).
+No changes to main/3107, existing Preview, secrets or patient data; no paid calls.
+
+
 **Снимок:** 16 ноября 2026. Состояние GitHub проверять перед каждым новым этапом.
 
 ## Репозиторий и безопасные ветки

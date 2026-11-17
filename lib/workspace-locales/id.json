@@ -1234,5 +1234,18 @@
   "Языковые версии протокола": "Versi laporan berdasarkan bahasa",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Analisis klinis yang disimpan tidak diulang. Buat dan simpan versi terpisah untuk setiap bahasa; pembuatan teks dalam modul mungkin dikenai biaya.",
   "Сохранён": "Tersimpan",
-  "Не создан": "Belum dibuat"
+  "Не создан": "Belum dibuat",
+  "Служебные настройки": "Pengaturan layanan",
+  "Книги и руководства": "Buku dan pedoman",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Tinjau rekaman EKG digital dan foto, lalu simpan laporan dalam kasus.",
+  "Руководства и клинические источники": "Pedoman dan sumber klinis",
+  "Взаимодействия и ограничения терапии": "Interaksi dan tindakan pencegahan terapi",
+  "● Разбор доступен": "● Analisis tersedia",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "Analisis saat ini tidak tersedia. Anda dapat melanjutkan penyuntingan data dan menyimpan kasus.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "Perubahan tidak dapat disimpan. Tetap di kasus ini dan coba simpan lagi.",
+  "Сведения о модели и расходах": "Detail model dan biaya",
+  "Помощник Doctor Opus": "Asisten Doctor Opus",
+  "Перенести случай · зашифрованный файл": "Transfer kasus · berkas terenkripsi",
+  "Модели Doctor Opus и их задачи": "Model Doctor Opus dan perannya",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Data kasus berubah setelah analisis ini. Tinjau informasi baru sebelum mengambil keputusan; jawaban sebelumnya belum diperbarui."
 }
