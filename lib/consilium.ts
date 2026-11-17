@@ -33,6 +33,8 @@ export interface ConsiliumVoice {
   id: ConsiliumRole["id"];
   /** An AI prompt perspective, NOT a real independent physician consultation. */
   clinicalPerspective?: string;
+  /** Non-billed-unavailability fallback only; source model was not returned. */
+  fallbackFrom?: string;
   model: string | null;
   status: "done" | "not_assessed";
   text: string;
@@ -97,6 +99,7 @@ type ConsiliumInput = {
   focus?: string;
   modalities?: readonly string[];
   requestedSpecialty?: CouncilSpecialty;
+  allowModelFallback?: boolean;
 };
 
 function treatmentContext(report?: ClinicalReport): string {
@@ -151,6 +154,11 @@ function packet(input: ConsiliumInput, prior: ConsiliumVoice[], lenses:ReturnTyp
   ].filter(Boolean).join("\n");
 }
 
+/** One role's backup is available only if the selected primary model is explicitly unavailable. */
+const COUNCIL_BACKUP_MODELS:Record<ConsiliumRole['id'],string>={
+ hypothesis:MODELS.hydrogen,testChooser:MODELS.terra,
+ challenger:MODELS.sol,stewardship:MODELS.terra,checklist:MODELS.sol,
+};
 async function ask(
   env: Record<string, string | undefined>,
   role: ConsiliumRole,
@@ -158,6 +166,7 @@ async function ask(
   allowed: Set<string>,
   fetchImpl: typeof fetch,
   lenses:ReturnType<typeof planAdaptiveCouncil>,
+  allowFallback:boolean,
 ): Promise<ConsiliumVoice> {
   let failure:ModelFailure|undefined;
   const signal=AbortSignal.timeout(role.id==='checklist'?48000:40000);
@@ -165,6 +174,7 @@ async function ask(
     role.id === "hypothesis" ? {...env, GEMINI_MODEL: MODELS.pro} : env,
     {
       model: role.model,
+      ...(allowFallback?{fallbackModel:COUNCIL_BACKUP_MODELS[role.id],fallbackOnlyIfUnavailable:true}:{}),
       maxTokens: 3500,
       timeoutMs: 38000,
       signal,
@@ -184,6 +194,7 @@ async function ask(
   return {
     id: role.id,
     model: turn.model,
+    ...(allowFallback&&turn.model!==role.model?{fallbackFrom:role.model}:{}),
     status: "done",
     text: spoken.text,
     memory: spoken.memory,
@@ -210,7 +221,7 @@ export async function runConsilium(
   // A missing opinion is not a negative finding and must never erase the draft.
   const safelyAsk = async (item: ConsiliumRole, prompt: string): Promise<ConsiliumVoice> => {
     try {
-      return await ask(env, item, prompt, allowed, fetchImpl,lenses);
+      return await ask(env, item, prompt, allowed, fetchImpl,lenses,input.allowModelFallback===true);
     } catch (error) {
       return {
         ...quiet(item),
