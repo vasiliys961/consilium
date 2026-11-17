@@ -7,12 +7,13 @@ import { reviewPreparedStudy } from '../lib/review-prepared-study';
 import VisionPrivacyPreparation from './VisionPrivacyPreparation';
 // Compressed copies only, ephemeral tab memory. No IndexedDB, disk or source DICOM copy.
 const MAX_REVIEW_MEMORY = 96 * 1024 * 1024;
-export default function StudyPrivacyReview({ count, modality, load, onReady, onOpenSlice, sourceIds, sourceNumbers, clinicalContext, canRelease = false, releaseNotice, connectionNotice, windows }: {
+export default function StudyPrivacyReview({ count, modality, load, onReady, onOpenSlice, sourceIds, sourceNumbers, clinicalContext, canRelease = false, releaseNotice, connectionNotice, singleSliceTest = false, windows }: {
     clinicalContext?: string;
     sourceNumbers?: number[][];
     canRelease?: boolean;
     releaseNotice?: string;
     connectionNotice?: string;
+    singleSliceTest?: boolean;
     count: number;
     modality: 'CT' | 'MR';
     load: (index: number, signal: AbortSignal) => Promise<string[]>;
@@ -59,7 +60,7 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
                 setNotice('Готово групп: ' + prepared.length + ' из ' + count + '. Уже можно смотреть копии. Отправка начнётся только после всех групп и отдельного разрешения.');
             }
             c.signal.throwIfAborted();
-            setNotice('Подготовка завершена. Просмотрите копии и разберите отмеченные кадры. Затем разрешите отправку всей серии один раз.');
+            setNotice('Снимки подготовлены локально. Проверьте изображение и надписи, один раз подтвердите передачу ниже.');
         })().catch(e => {
             if (!c.signal.aborted)
                 setError(e instanceof Error ? e.message : 'Подготовка не завершена.');
@@ -110,8 +111,8 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
     <figcaption><button type="button" onClick={() => onOpenSlice(sourceIds[index][i])}><LocalizedUi value={"\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0441\u0440\u0435\u0437"}/><LocalizedUi value={sourceNumbers?.[index]?.[i] ?? index * 4 + i + 1}/></button></figcaption>
    </figure>)}/></div>
    <LocalizedUi value={expanded !== null && group.frames[expanded] && <section aria-label={__ui("\u041A\u043E\u043F\u0438\u044F \u0434\u043B\u044F \u0418\u0418 \u0432 \u043F\u043E\u043B\u043D\u043E\u043C \u0440\u0430\u0437\u043C\u0435\u0440\u0435")}><button type="button" onClick={() => setExpanded(null)}><LocalizedUi value={"\u0417\u0430\u043A\u0440\u044B\u0442\u044C \u043F\u043E\u043B\u043D\u044B\u0439 \u0440\u0430\u0437\u043C\u0435\u0440"}/></button><div style={{ overflow: 'auto', maxHeight: '75vh' }}><img style={{ maxWidth: 'none' }} src={'data:image/png;base64,' + group.frames[expanded].pngBase64} width={group.frames[expanded].width} height={group.frames[expanded].height} alt={__ui("\u0422\u043E\u0447\u043D\u0430\u044F \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u0430\u044F \u043A\u043E\u043F\u0438\u044F \u0434\u043B\u044F \u0418\u0418, \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u044F\u0440\u043A\u043E\u0441\u0442\u0438 \u043F\u0440\u0438 \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435")}/></div></section>}/>
-   <LocalizedUi value={suspects.length > 0 && <button type="button" onClick={() => { setIndex(suspects[0]); setEditing(true); setApproved(false); }}><LocalizedUi value={"\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043A\u0430\u0434\u0440\u044B \u0441 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u044B\u043C\u0438 \u043D\u0430\u0434\u043F\u0438\u0441\u044F\u043C\u0438"}/></button>}/>
-   <button type="button" onClick={() => { setEditing(v => !v); setApproved(false); }}><LocalizedUi value={"\u0421\u043A\u0440\u044B\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438\u043B\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043D\u0430\u0434\u043F\u0438\u0441\u0438 \u043D\u0430 \u044D\u0442\u0438\u0445 \u043A\u0430\u0434\u0440\u0430\u0445"}/></button>
+   <LocalizedUi value={suspects.length > 0 && <button type="button" onClick={() => { setIndex(suspects[0]); setEditing(true); }}><LocalizedUi value={"\u0420\u0430\u0437\u043E\u0431\u0440\u0430\u0442\u044C \u043A\u0430\u0434\u0440\u044B \u0441 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u044B\u043C\u0438 \u043D\u0430\u0434\u043F\u0438\u0441\u044F\u043C\u0438"}/></button>}/>
+   <button type="button" onClick={() => { setEditing(v => !v); }}><LocalizedUi value={"\u0421\u043A\u0440\u044B\u0442\u044C \u0434\u0430\u043D\u043D\u044B\u0435 \u0438\u043B\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u043D\u0430\u0434\u043F\u0438\u0441\u0438 \u043D\u0430 \u044D\u0442\u0438\u0445 \u043A\u0430\u0434\u0440\u0430\u0445"}/></button>
    <LocalizedUi value={editing && <VisionPrivacyPreparation key={index} previews={group.frames.map(f => 'data:image/png;base64,' + f.pngBase64)} modality={modality} originalLocalFileIds={sourceIds[index]} onOpenOriginalSlice={onOpenSlice} initialPreparation={group} reviewedBatchLabel="Сохранить проверку этих кадров" onReviewedBatch={async (packet, preparation) => {
                     if (!preparation)
                         throw Error('Не сохранена история проверки кадров.');
@@ -126,7 +127,7 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
    <LocalizedUi value={!preparing && !canRelease && <p role="status"><LocalizedUi value={connectionNotice || "Передача недоступна: рабочее место ещё не разрешено администратором. Снимки остаются локально."}/></p>}/>
    <LocalizedUi value={!preparing && groups.length === count && !error && <>
     <label><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)}/><LocalizedUi value={"\u042F \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u043B \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438 \u0438 \u043A\u043B\u0438\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0442\u0435\u043A\u0441\u0442, \u0432\u043A\u043B\u044E\u0447\u0430\u044F \u0432\u0441\u0435 \u043E\u0442\u043C\u0435\u0442\u043A\u0438 OCR: \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0445 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u0438 \u0443\u0437\u043D\u0430\u0432\u0430\u0435\u043C\u044B\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u043D\u0435\u0442; \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u2014 \u043B\u043E\u0436\u043D\u044B\u0435 \u0441\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u043D\u0438\u044F \u0438\u043B\u0438 \u043D\u0435\u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0439 \u0442\u0435\u043A\u0441\u0442. \u0418\u043C\u0435\u044E \u043F\u0440\u0430\u0432\u043E \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u043B \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0441\u043A\u0438\u0445 \u0434\u0430\u043D\u043D\u044B\u0445. \u0420\u0430\u0437\u0440\u0435\u0448\u0430\u044E \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u044D\u0442\u0443 \u0441\u0435\u0440\u0438\u044E \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430."}/></label>
-    <button type="button" disabled={!canRelease || !approved} onClick={() => void release()}><LocalizedUi value={"\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u0432\u0441\u044E \u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043D\u0443\u044E \u0441\u0435\u0440\u0438\u044E \u0432 \u0430\u043D\u0430\u043B\u0438\u0437"}/></button>
+    <button type="button" disabled={!canRelease || !approved || sending || preparing} onClick={() => void release()}><LocalizedUi value={singleSliceTest ? "Отправить один проверенный срез в Gemini (платно)" : "Отправить проверенные снимки в анализ"}/></button>
    </>}/>
   </>}/>
  </section>;
