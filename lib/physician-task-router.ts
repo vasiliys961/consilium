@@ -38,6 +38,7 @@ const CLIN=/консилиум|комплексн|дифференциал|ра�
 const PROTO=/протокол|soap|заключен|документир|оформлен.*прием|запис.*в карт/i;
 const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
 const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц');
+const RESPIRATORY=/(?:кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
@@ -59,7 +60,12 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(tools.length>1&&!tools.includes('clinical')&&tools.some(x=>['ecg','radiology','ultrasound','genetics'].includes(x)))tools.splice(tools.findIndex(x=>x==='protocol'||x==='ambient')<0?tools.length:tools.findIndex(x=>x==='protocol'||x==='ambient'),0,'clinical');
  // Ambient already uses an original protocol editor: do not suggest duplicate editor.
  if(tools.includes('ambient')&&tools.includes('protocol'))tools.splice(tools.indexOf('protocol'),1);
- return {intent:'route',steps:tools.map(tool=>({tool,...catalog[tool]})),message:'Предлагаю последовательность по вашему запросу. Это навигация, а не диагностическое заключение. Каждый инструмент запускается только по вашему нажатию.'};
+ const respiratoryOnly=RESPIRATORY.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
+ if(respiratoryOnly&&!tools.includes('clinical'))tools.unshift('clinical');
+ const message=respiratoryOnly
+  ? 'При кашле с одышкой сначала оцените срочность: SpO₂, ЧДД, пульс, АД, температуру, давность симптомов и боль в груди. При выраженной дыхательной недостаточности, гипоксемии или нестабильности требуется срочная очная оценка. Каковы SpO₂, ЧДД и начало симптомов? После этого можно открыть клинический разбор.'
+  : 'Предлагаю последовательность по вашему запросу. Это навигация, а не диагностическое заключение. Каждый инструмент запускается только по вашему нажатию.';
+ return {intent:'route',steps:tools.map(tool=>({tool,...catalog[tool]})),message};
 }
 
 export function physicianTaskHref(tool:PhysicianTool,caseId?:string,locale='ru'):string{
