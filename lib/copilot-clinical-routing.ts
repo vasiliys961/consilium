@@ -20,10 +20,10 @@ const rules:Array<{id:SpecialistId;label:string;test:RegExp}>= [
  {id:'dermatology',label:'Дерматология',test:/сыпь|кожн|дермат|пятн.*на\s+кож|rash|dermat|eczema/i},
  {id:'traumatology',label:'Травматология и ортопедия',test:/травм|перелом|вывих|ортопед|растяжен|fracture|injury|orthop/i},
  {id:'oncology',label:'Онкология',test:/онкол|опухол|новообразован|метастаз|рак\s+(?:лёгк|легк|желуд|молоч)|tumou?r|cancer|metasta/i},
- {id:'radiology',label:'Лучевая диагностика',test:/расшифр.*(?:кт|мрт|рентген)|лучев.*диагност|radiolog|read\s+(?:ct|mri)/i},
+ {id:'radiology',label:'Лучевая диагностика',test:/лучев.*диагност|радиолог|radiolog/i},
 ];
 const CLINICAL_GENERAL=/\b(?:patient|symptom|diagnos|treat|clinical|consult|pain|fever)\b|пациент|боль|болит|болят|температур|лихорадк|слабост|недомоган|забол|симптом|жалоб|лечить|лечение|диагноз|дифдиагноз|посоветоваться\s+(?:с|по)\s+врач/i;
-const NOT_CLINICAL=/^(?:что умеет|что может|какие возможности|найди инструмент|покажи возможности|как открыть|открой|перейди|список модул|what can|show features)/i;
+const NOT_CLINICAL=/^(?:что умеет|что может|какие возможности|найди инструмент\??$|покажи возможности|как открыть|открой|перейди|список модул|what can|show features)/i;
 const CHEST_PAIN=/болит\s+сердц|бол[ьи]\s+в\s+груд|боль\s+(?:в|за)\s+грудин|давит\s+в\s+груд|chest\s+(?:pain|pressure)/i;
 export function suggestClinicalDestination(input:string):ClinicalDestination|null{
  const text=input.trim().slice(0,1500);
