@@ -45,13 +45,18 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
         {language==='ru'?'Профили консилиума — роли ИИ-моделей, а не заключения независимых врачей.':'Council specialties are AI model perspectives, not independent human physician consultations.'}
        </small>}
       <h4>{t('Итог консилиума')}</h4>
+      <p className={styles.voiceText} style={{fontSize:12}} data-testid="council-actual-models">
+        {language==='ru'?'Фактический состав ИИ: ':'Actual AI models: '}
+        {result.voices.map(v=>t(roleNames[v.id])+' — '+(v.status==='done'?(v.model??'unknown'):(language==='ru'?'не ответил':'no opinion'))+
+          (v.fallbackFrom?(language==='ru'?' (резерв вместо ':' (backup for ')+v.fallbackFrom+')':'')).join(' · ')}
+      </p>
       {final?.status==='done'?<p className={styles.voiceText}>{final.text}</p>:<p role="status">{t('Итог консилиума не получен. Отдельные мнения сохранены ниже; обсуждение нельзя считать завершённым.')}</p>}
       {missing.length>0&&<p>{t('Не завершили ответ:')} {missing.map(voice=>t(roleNames[voice.id])).join(', ')}.</p>}
       {newest&&missing.length>0&&<button disabled={busy} onClick={onCouncil}>{t('Повторить консилиум')}</button>}
       <details><summary>{t('Отдельные мнения')} · {result.voices.filter(voice=>voice.status==='done').length}/{result.voices.length}</summary>{result.voices.filter(voice=>voice.id!=='checklist').map(voice=><section key={voice.id}><h4>{t(roleNames[voice.id])}</h4>
           {voice.clinicalPerspective&&<small style={{display:'block',marginBottom:4}}>
            {language==='ru'?'Клинический ракурс ИИ':'AI clinical perspective'}: {councilPerspectiveLabel(voice.clinicalPerspective,language)}
-           {voice.status==='done'&&voice.model?' · '+voice.model:''}
+           {voice.status==='done'&&voice.model?' · '+voice.model+(voice.fallbackFrom?' (backup for '+voice.fallbackFrom+')':''):''}
           </small>}
           <p className={styles.voiceText}>{voice.status==='done'?voice.text:t(voice.failure==='deadline'?'Время ответа истекло':voice.failure==='truncated'?'Ответ не завершён: достигнут лимит':'Ответ не получен')}</p></section>)}</details>
     </section>}
