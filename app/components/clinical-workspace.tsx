@@ -36,8 +36,8 @@ import { workflowGuide } from "@/lib/workflow-guide";
 import { WorkflowGuideView } from "@/app/components/workflow-guide";
 import {DrugLabelPicker} from './drug-label-picker';
 import {DrugInteractionChecker} from './drug-interaction-checker';
-import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,type CouncilSpecialty} from '@/lib/adaptive-council';
-import {copilotText} from '@/lib/copilot-i18n';
+import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,councilSpecialtyLabel,type CouncilSpecialty} from '@/lib/adaptive-council';
+
 import type {MedicationContext} from '@/lib/drug-interaction-rules';
 import {medicationCopy} from '@/lib/medication-copy';
 import { useEffect, useRef, useState } from 'react';
@@ -437,12 +437,12 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
         </div>
 <details><summary>{t("Настройки разбора и источников")}</summary><p className={styles.muted}>{t("Разбор учитывает контекст, материалы и записи о динамике.")}</p><label>{t("Задача")}<select value={task} disabled={busy} onChange={e => setTask(e.target.value as CaseTask | 'auto')}><option value="auto">{t("Определить по вопросу")}</option><option value="interpret">{t("Разобрать материалы")}</option><option value="clinical">{t("Диагностический разбор")}</option><option value="management">{t("Лечебная тактика")}</option><option value="evidence">{t("Поиск доказательств")}</option></select><small>{t("Если не уверены, оставьте «Определить по вопросу». Для начала достаточно одного ясного вопроса и нужных материалов.")}</small></label><ImageProfileSelect value={current.imageProfile??"auto"} onChange={imageProfile=>update({imageProfile})} disabled={busy}/><label className={styles.check}><input type="checkbox" checked={externalSearch} disabled={busy} onChange={e => setExternalSearch(e.target.checked)}/>{t("Разрешить поиск в публичных источниках, если он нужен для задачи")}</label><label className={styles.check}><input type="checkbox" checked={imageSecondOpinion} disabled={busy} onChange={e=>setImageSecondOpinion(e.target.checked)}/>{t("Второе мнение по исходным изображениям")}</label><label className={styles.check}><input type="checkbox" checked={consilium} disabled={busy} onChange={e => setConsilium(e.target.checked)}/>{t("Подключить консилиум")}</label><small>{t("Необязательно: добавляет отдельные мнения моделей, увеличивает время и расход. Для обычного чтения файла начните без консилиума.")}</small>{consilium&&<label style={{display:'block',marginBlock:8}}>{t('Клинический профиль консилиума')}
  <select disabled={busy} value={councilSpecialty} onChange={event=>setCouncilSpecialty(event.target.value as CouncilSpecialty)}>
-  {COUNCIL_SPECIALTIES.map(option=><option key={option.id} value={option.id}>{option.id==='auto'?t('Определить по вопросу'):copilotText(language,option.name)}</option>)}
+  {COUNCIL_SPECIALTIES.map(option=><option key={option.id} value={option.id}>{option.id==='auto'?t('Определить по вопросу'):councilSpecialtyLabel(option.id,language)}</option>)}
  </select>
  <small>{t('По умолчанию система выбирает профиль автоматически. Это изменяет задачи существующих моделей, а не добавляет новых участников.')}</small>
  <p style={{fontSize:13,margin:'6px 0'}}>{language==='ru'
-   ? 'Клинический фокус: '+councilPlan.lead+'; независимый ракурс: '+councilPlan.secondary+'. Критик, безопасность лекарств и синтез — прежние роли. Всего до 5 вызовов LLM; сумма зависит от объёма ответа.'
-   : 'Clinical focus: '+councilPlan.lead+'; second perspective: '+councilPlan.secondary+'. Independent critic, medication safety and synthesis remain. Up to 5 LLM calls; cost depends on token usage.'}</p>
+   ? 'Клинический фокус: '+councilSpecialtyLabel(councilPlan.lead,language)+'; независимый ракурс: '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Критик, безопасность лекарств и синтез — прежние роли. Всего до 5 вызовов LLM; сумма зависит от объёма ответа.'
+   : 'Clinical focus: '+councilSpecialtyLabel(councilPlan.lead,language)+'; second perspective: '+councilSpecialtyLabel(councilPlan.secondary,language)+'. Independent critic, medication safety and synthesis remain. Up to 5 LLM calls; cost depends on token usage.'}</p>
  </label>}{!configured && <p className={styles.muted}>{t("Если разбор недоступен, откройте «Инструкцию для врача» и раздел «Если не получается начать».")}</p>}{payloadTooLarge && <p role="alert">{t("Объём запроса превышает 12 МБ. Удалите часть материалов.")}</p>}<small>{t("Результат — черновик. Проверяйте диагнозы, дозы, противопоказания и ссылки.")}</small></details>
         {current.analyses.length>0&&<label className={styles.check}><input type="checkbox" disabled={busy} checked={rereadImages} onChange={event=>setRereadImages(event.target.checked)}/>{t('Повторно прочитать прежние изображения')}</label>}
       </section>
