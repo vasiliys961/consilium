@@ -2,6 +2,7 @@ import {validImageProfile} from '../packages/medical-images/profiles.ts';
 import type { ConductInput } from './conductor.ts';
 import {validDrugSelections} from './drug-labels.ts';
 import {parseLocale} from './locale.ts';
+import {validCouncilSpecialty} from './adaptive-council.ts';
 const record=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==='object'&&!Array.isArray(value);
 const optionalString=(value:unknown)=>value===undefined||typeof value==='string';
 function librarySource(value:unknown):boolean{if(value===undefined)return true;return record(value)&&['documentId','chunkId','title'].every(key=>typeof value[key]==='string'&&String(value[key]).length>0&&String(value[key]).length<=500)&&Number.isInteger(value.page)&&Number(value.page)>0&&Number(value.page)<=100000;}
@@ -16,6 +17,7 @@ export function validCaseInput(value:unknown):value is ConductInput {
  if(value.imageProfile!==undefined&&!validImageProfile(value.imageProfile))return false;
  if(value.sourceLocale!==undefined&&parseLocale(value.sourceLocale)!==value.sourceLocale)return false;
  if(value.drugLabels!==undefined&&!validDrugSelections(value.drugLabels))return false;
+ if(value.councilSpecialty!==undefined&&!validCouncilSpecialty(value.councilSpecialty))return false;
  if(value.task!==undefined&&!['interpret','clinical','management','evidence'].includes(String(value.task)))return false;
  if(value.speech!==undefined&&(!record(value.speech)||!optionalString(value.speech.text)||!optionalString(value.speech.audio)))return false;
  if(record(value.speech)&&value.speech.target!==undefined&&parseLocale(value.speech.target)!==value.speech.target)return false;

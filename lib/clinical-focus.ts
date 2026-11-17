@@ -17,7 +17,7 @@ type Rule = {
 const RULES: readonly Rule[] = [
   {
     domain: 'cardiology',
-    text: /сердечн|карди|ишеми|инфаркт|аритми|фибрилляци|ортопноэ|стенокарди|тропонин|nt.?probnp|cardiac|cardio|heart\s+fail|orthopn|troponin|myocard|arrhythm|atrial\s+fibrill|chest\s+pain/iu,
+    text: /сердечн|карди|ишеми|инфаркт|аритми|фибрилляци|(?:^|[\s(])фп(?=[\s,.;)])|ортопноэ|стенокарди|тропонин|nt.?probnp|cardiac|cardio|heart\s+fail|orthopn|troponin|myocard|arrhythm|atrial\s+fibrill|chest\s+pain/iu,
     modalities: ['ecg'],
   },
   {
@@ -26,7 +26,7 @@ const RULES: readonly Rule[] = [
   },
   {
     domain: 'nephrology',
-    text: /креатинин|почечн|почк|олигури|анури|альбуминури|протеинури|гематури|\bскф\b|renal|creatinin|kidney|nephr|\begfr\b|\baki\b|\bckd\b|proteinuri|hematuri/iu,
+    text: /креатинин|почечн|почк|олигури|анури|альбуминури|протеинури|гематури|(?:^|[\s(])скф(?=[\s,.;)])|renal|creatinin|kidney|nephr|\begfr\b|\baki\b|\bckd\b|proteinuri|hematuri/iu,
   },
   {
     domain: 'clinical pharmacology',
@@ -80,7 +80,7 @@ export function chooseClinicalFocus(note: string, modalities: readonly string[])
   for (const rule of RULES) {
     const fromModality = rule.modalities?.some(modality => normalizedModalities.has(modality)) ?? false;
     if (fromModality || rule.text.test(note)) {
-      selected.push({ domain: rule.domain, reason: fromModality ? 'input-modality' : 'clinical-text' });
+      selected.push({ domain: rule.domain, reason: rule.text.test(note) ? 'clinical-text' : 'input-modality' });
       if (selected.length >= MAX_DOMAINS + 1) break;
     }
   }

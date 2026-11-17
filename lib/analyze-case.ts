@@ -530,6 +530,8 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       citations,
       record: observation || null,
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
+      modalities: ledger.filter(entry=>entry.status==='read').map(entry=>entry.modality),
+      requestedSpecialty: body.councilSpecialty,
     }, councilFetch).catch(() => {
       coordinatorFailed = true;
       emit('stage.failed',{stage:'consilium'});
