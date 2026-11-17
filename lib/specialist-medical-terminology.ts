@@ -21,6 +21,12 @@ const PRIORITY:Record<string,number>={
  symptoms:3,terms:3,anatomy:4,examinations:4,diagnoses:5,care:5,phrases:5,
 };
 const stableEntries=[...entries].sort((a,b)=>(PRIORITY[a.category]??6)-(PRIORITY[b.category]??6));
+/** Common spoken dosage units are abbreviated even when the glossary is not. */
+const CLINICAL_ABBREVIATIONS:Record<string,readonly string[]>={
+ mg:['mg','мг'],mcg:['mcg','µg','мкг'],ml:['ml','мл'],g:['г'],
+ mmhg:['mmhg','мм рт ст','мм рт. ст.'],spo2:['SpO2','SpO₂'],
+};
+
 
 function normalize(text:string):string{
  return text.normalize('NFKC').replace(/[À-ž]/g,c=>c.normalize('NFD').replace(/\p{M}/gu,''))
@@ -34,6 +40,8 @@ function containsExactTerm(text:string,term:string):boolean{
  if(word.length<2||word.length>80)return false;
  const index=hay.indexOf(word);
  if(index<0)return false;
+ // Chinese script does not separate medical words with whitespace.
+ if(/\p{Script=Han}/u.test(word))return [...word].length>=2&&hay.includes(word);
  // Unicode boundaries: MS in names and mg in image are not medical terms.
  for(let i=index;i>=0;i=hay.indexOf(word,i+1)){
   const before=i>0?hay[i-1]:'';
@@ -56,6 +64,7 @@ function evidenceOfTerm(text:string,entry:LexiconEntry,languages:string[]):boole
  const forms=[
   ...languages.flatMap(code=>variants(entry.terms[code]??'')),
   ...(ENGLISH_MEDICAL_VARIANTS[entry.id]??[]),
+  ...(CLINICAL_ABBREVIATIONS[entry.id]??[]),
  ];
  return forms.some(x=>containsExactTerm(text,x));
 }
