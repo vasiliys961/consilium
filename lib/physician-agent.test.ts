@@ -39,7 +39,7 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
   assert.equal(payload.stream,undefined);
   assert.match(payload.messages[0].content,/not a clinical expert or diagnostician/);
   assert.match(payload.messages[0].content,/Never claim to have run a module/);
-  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'Откройте анализ ЭКГ и затем клинический разбор.',question:'Есть ли запись ЭКГ?',tools:['ecg','clinical']})}}],usage:{prompt_tokens:180,completion_tokens:115}});
+  return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'Open ECG analysis and then Clinical Review.',translatedReply:'Откройте анализ ЭКГ и затем клинический разбор.',question:'Is the ECG available?',translatedQuestion:'Есть ли запись ЭКГ?',tools:['ecg','clinical']})}}],usage:{prompt_tokens:180,completion_tokens:115}});
  };
  const result=await converseWithPhysician({text:'[PHYSICIAN]\nЕсть жалобы и ЭКГ, что делать?',locale:'ru'},{...process.env,OPENROUTER_API_KEY:'synthetic-test'},fakeFetch);
  assert.equal(calls,1);
@@ -48,7 +48,8 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
  assert.equal(result.model,MODELS.flash);
  assert.deepEqual(result.plan.steps.map(s=>s.tool),['ecg','clinical']);
  assert.ok(result.estimatedUsd!==null&&result.estimatedUsd>0);
- assert.equal(result.question,'Есть ли запись ЭКГ?');
+ assert.equal(result.question,'Is the ECG available?\nЕсть ли запись ЭКГ?');
+ assert.match(result.message,/^Open ECG analysis and then Clinical Review\.\nОткройте/);
 });
 test('C13: provider or invalid output has local fallback, no silent retry or invented success',async()=>{
  let calls=0;
