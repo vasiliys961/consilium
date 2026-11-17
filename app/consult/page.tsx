@@ -29,6 +29,8 @@ import styles from './consult.module.css';
 
 type Turn = ConsultReply & { question: string; transcript: string; verification?: ConsultReply };
 type Dialogue = { transcript: string; turns: Turn[] };
+type VoiceCostRecord={model:string;cost:number;source:'openrouter'|'estimate';seconds:number};
+type VoiceResponse = ConsultReply & {sttCost?:number;sttBillingSource?:'openrouter'|'estimate';seconds?:number};
 type Action = { kind: 'ask' | 'transcribe' } | { kind: 'verify'; index: number };
 const EMPTY_DIALOGUE: Dialogue = { transcript: '', turns: [] };
 
@@ -84,6 +86,7 @@ export default function ConsultPage() {
   const [working, setWorking] = useState(false);
   const [mic, setMic] = useState<'opening' | 'recording'>();
   const [clip, setClip] = useState<string>();
+  const [voiceCosts,setVoiceCosts]=useState<Partial<Record<SpecialistId,{total:number;last:VoiceCostRecord}>>>({});
   const [editedCopy, setEditedCopy] = useState<{ original: string; text: string }>();
   const [sourceCaseId,setSourceCaseId]=useState<string>();
   const [attachmentPreview,setAttachmentPreview]=useState<{name:string;text:string}>();
@@ -173,7 +176,7 @@ export default function ConsultPage() {
       }
       setPending(approvedQuestion);
       setWorking(true);
-      const result = await requestStreamedJson<ConsultReply>('/api/specialist-chat', {
+      const result = await requestStreamedJson<VoiceResponse>('/api/specialist-chat', {
         specialty, reviewed, intent: next.kind, model: turn ? reviewModelFor(turn.model) : model,
         depth: turn ? 'detailed' : depth,
       }, {
@@ -188,6 +191,12 @@ export default function ConsultPage() {
       request.signal.throwIfAborted();
 
       if (next.kind === 'transcribe') {
+        if(typeof result.sttCost==='number'&&result.sttCost>=0&&Number.isFinite(result.sttCost)){
+          setVoiceCosts(current=>{
+            const last:VoiceCostRecord={model:result.model,cost:result.sttCost!,source:result.sttBillingSource==='openrouter'?'openrouter':'estimate',seconds:result.seconds??0};
+            return {...current,[specialty]:{total:(current[specialty]?.total??0)+last.cost,last}};
+          });
+        }
         setDrafts(current => ({
           ...current,
           [specialty]: [current[specialty]?.trim(), result.text].filter(Boolean).join('\n').slice(0, QUESTION_LIMIT),
@@ -361,6 +370,7 @@ export default function ConsultPage() {
           setDrafts(current => ({ ...current, [specialty]: '' }));
           setClip(undefined);
           setEditedCopy(undefined);
+          setVoiceCosts(current=>({...current,[specialty]:undefined}));
           setCasePromptDismissed(current=>({...current,[specialty]:false}));
           setPreparedDocuments(current=>({...current,[specialty]:false}));
           setError('');
@@ -455,6 +465,52 @@ export default function ConsultPage() {
         {academic && <p className={styles.hint}>{t('При академическом поиске в Europe PMC отправляется короткая тема, выделенная из текста.')}</p>}
         {configured === false && <p role="status">{t('Для ответа подключите модель в настройках локального сервера.')}</p>}
         {error && <p role="alert">{t(error)}</p>}
+        {voiceCosts[specialty]&&<p className={styles.hint} role="status" data-testid="specialist-stt-cost">
+          {language==='ru'?'Распознавание речи':'Voice transcription'} · Whisper Large V3 Turbo ·
+          {voiceCosts[specialty]!.last.source==='openrouter'
+            ? (language==='ru'?' фактически OpenRouter':' actual OpenRouter')
+            : (language==='ru'?' оценка':' estimate')}
+          {' 
+          <audio controls src={`data:audio/wav;base64,${clip}`} />
+          <button type="button" disabled={busy || configured === false} onClick={() => void execute({ kind: 'transcribe' })}>
+            {t(action?.kind === 'transcribe' && working ? 'Расшифровываем запись…' : 'Расшифровать запись')}
+          </button>
+        </div>}
+        <div className={styles.actions}>
+          <button className={styles.primary} disabled={busy || !outgoingQuestion || configured === false}>
+            {t(action?.kind === 'ask' && working ? 'Готовим ответ…' : 'Задать вопрос')}
+          </button>
+          <button type="button" disabled={Boolean(action) || mic === 'opening'} onClick={() => void toggleRecording()}>
+            {t(mic === 'recording' ? 'Остановить запись' : 'Записать голосом')}
+          </button>
+          {working && <button type="button" onClick={() => controller.current?.abort()}>{t('Остановить ответ')}</button>}
+        </div>
+      </form>
+    </section>
+  </main>;
+}
++voiceCosts[specialty]!.last.cost.toFixed(7)}
+          {' · '+(language==='ru'?'Сумма STT':'STT total')+' 
+          <audio controls src={`data:audio/wav;base64,${clip}`} />
+          <button type="button" disabled={busy || configured === false} onClick={() => void execute({ kind: 'transcribe' })}>
+            {t(action?.kind === 'transcribe' && working ? 'Расшифровываем запись…' : 'Расшифровать запись')}
+          </button>
+        </div>}
+        <div className={styles.actions}>
+          <button className={styles.primary} disabled={busy || !outgoingQuestion || configured === false}>
+            {t(action?.kind === 'ask' && working ? 'Готовим ответ…' : 'Задать вопрос')}
+          </button>
+          <button type="button" disabled={Boolean(action) || mic === 'opening'} onClick={() => void toggleRecording()}>
+            {t(mic === 'recording' ? 'Остановить запись' : 'Записать голосом')}
+          </button>
+          {working && <button type="button" onClick={() => controller.current?.abort()}>{t('Остановить ответ')}</button>}
+        </div>
+      </form>
+    </section>
+  </main>;
+}
++voiceCosts[specialty]!.total.toFixed(7)}
+        </p>}
         {clip && <div className={styles.recording}>
           <audio controls src={`data:audio/wav;base64,${clip}`} />
           <button type="button" disabled={busy || configured === false} onClick={() => void execute({ kind: 'transcribe' })}>
