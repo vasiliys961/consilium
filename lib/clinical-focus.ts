@@ -26,7 +26,7 @@ const RULES: readonly Rule[] = [
   },
   {
     domain: 'nephrology',
-    text: /креатинин|почечн|почк|олигури|анури|альбуминури|протеинури|гематури|\bскф\b|renal|creatinin|kidney|nephr|\begfr\b|\baki\b|\bckd\b|proteinuri|hematuri/iu,
+    text: /креатинин|почечн|почк|олигури|анури|альбуминури|протеинури|гематури|(?:^|[\s(])скф(?=[\s,.;)])|renal|creatinin|kidney|nephr|\begfr\b|\baki\b|\bckd\b|proteinuri|hematuri/iu,
   },
   {
     domain: 'clinical pharmacology',
