@@ -69,6 +69,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
 
  const plan=planPhysicianTask(request);
  const displayedPlan=agentReply?.plan??plan;
+ const selectedSpecialty=suggestClinicalDestination(request);
+ const workflow=copilotWorkflowMessage(language,displayedPlan,{
+  specialty:displayedPlan.steps[0]?.tool==='specialist'?selectedSpecialty?.label:undefined,
+  urgent:Boolean(selectedSpecialty?.urgentHint),
+ });
  useEffect(()=>{
   if(typeof window==='undefined')return;
   try{setCopilotEnabled(window.localStorage.getItem(COPILOT_PREF)==='yes');}catch{}
