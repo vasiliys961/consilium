@@ -69,7 +69,7 @@ test('W4 clinical case keeps the source-bound ECGFounder result in its printable
   result:{
    clinicalDraft:'generated',ecgEvidence:ecg,unassessed:[],
    draft:{summary:'Синтетический предварительный разбор',studyReports:report,statements:[]},
-  } as ClinicalCase['analyses'][number]['result'],
+  } as unknown as ClinicalCase['analyses'][number]['result'],
  }];
  const text=completedClinicalEvidence(value);
  assert.ok(text);
