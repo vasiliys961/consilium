@@ -1,6 +1,6 @@
 import { consultSpecialist, readSpecialistRequest, readSpecialistVoiceRequest } from '@/lib/specialist-chat';
 import { operationStream } from '@/lib/stream-operation';
-import { hearClip } from '@/packages/translator/hear';
+import {transcribeSpecialistVoice} from '@/lib/specialist-voice-stt';
 import{geminiRequestEnv}from'@/lib/gemini-pricing';
 
 export const dynamic = 'force-dynamic';
@@ -25,11 +25,11 @@ export async function POST(request: Request) {
   if (body && typeof body === 'object' && 'intent' in body && body.intent === 'transcribe') {
     const parsed = readSpecialistVoiceRequest('reviewed' in body ? body.reviewed : undefined);
     if ('error' in parsed) return Response.json({ error: parsed.error }, { status: parsed.status });
-    if (!env.POLZA_API_KEY && !env.OPENROUTER_API_KEY) return Response.json({ error: 'gateway' }, { status: 503 });
+    if (!env.OPENROUTER_API_KEY) return Response.json({ error: 'gateway' }, { status: 503 });
     return operationStream(request, async (_fetch, quietFetch) => {
-      const heard = await hearClip(env, parsed.audio, quietFetch);
+      const heard = await transcribeSpecialistVoice(env, parsed.audio, quietFetch);
       if (!heard) throw new Error('SpecialistVoiceError');
-      return { text: heard.text, model: heard.model };
+      return heard;
     }, 'specialist-voice');
   }
   if (raw.length > 160_000) return Response.json({ error: 'size' }, { status: 413 });
