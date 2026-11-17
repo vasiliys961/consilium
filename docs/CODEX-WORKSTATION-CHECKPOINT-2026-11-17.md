@@ -9,6 +9,8 @@ The handoff is a reference checked against code, not a reason to restart W1.
 
 - Base: `origin/chatgpt-dev` = `9443e67ca01e04bc5e07c3c42dfc41f692d80b46`.
 - Independent branch: `codex/w4-workstation-safety`.
+- Runtime/test commit: `615d95c742c25a534d0b50669ee4fdf3735978ac`.
+- Draft PR: [#86](https://github.com/vasiliys961/consilium/pull/86), base `chatgpt-dev`; not merged.
 - Worktree: `/private/tmp/doctor-opus-w4`; independent repository:
   `/private/tmp/doctor-opus-codex-repository`. Temporary paths are not deployment paths;
   recover the branch from GitHub if the OS removes them.

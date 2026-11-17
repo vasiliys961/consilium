@@ -2,6 +2,7 @@
 
 17 November 2026. This is an evidence register, not approval for clinical use.
 Current implementation: `codex/w4-workstation-safety`, based on `9443e67`.
+Runtime/test commit `615d95c`; draft [PR #86](https://github.com/vasiliys961/consilium/pull/86), not merged.
 See [checkpoint](CODEX-WORKSTATION-CHECKPOINT-2026-11-17.md) for independent worktree,
 PR heads and reproducible commands. No unmerged PR is counted as part of the base.
 
