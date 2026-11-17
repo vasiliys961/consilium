@@ -74,7 +74,7 @@ test('W4: pending Radiology does NOT hijack clinical reasoning; ECG and labs rem
  assert.doesNotMatch(report.draft.summary,/снимок без патологии|normal chest radiograph/i);
  const workspace=readFileSync('app/components/clinical-workspace.tsx','utf8');
  assert.doesNotMatch(workspace,/if\(caseAnalysisInput\(snapshot\)\.pendingModules\.length\)\s*\{/);
- assert.match(workspace,/router\.push\(moduleHref\('radiology'/);
+ assert.match(workspace,/href=\{`\/radiology\?case=\$\{encodeURIComponent\(current\.id\)\}`\}/);
  // Standalone Radiology still opens from explicit module button; it cannot block clinical analysis.
 });
 
