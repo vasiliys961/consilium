@@ -195,7 +195,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    // Retain only sanitized turns, so past identifiers do not trigger a new
    // review dialog on every unrelated follow-up.
    const safeTurns:DialogueTurn[]=[...dialogue.slice(-14),{role:'physician',text:cleanChatText(utterance).text}];
-   setDialogue([...safeTurns,{role:'assistant',text:cleanChatText(reply).text}].slice(-14));
+   setDialogue([...safeTurns,{role:'assistant' as const,text:cleanChatText(reply).text}].slice(-14));
    setAgentReply(answer);setRequest(utterance);setText('');
   }catch(error){
    if(!controller.signal.aborted){
