@@ -129,7 +129,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  }
  function propose(value:string){setText(value);setRequest(value);setAgentReply(null);setAgentError('');}
 
- function openTool(tool:PhysicianTool,question:string){
+ function openTool(tool:PhysicianTool,question:string,manualSpecialist=false){
   const {allowed,hint}=availability(tool);
   if(!allowed){setAgentError(hint);return}
   if(tool==='specialist'){
@@ -139,7 +139,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text
     ??(!copilotRequestedOpen(request)?request:'');
    const draft=isOnlyCommand?lastQuestion:question;
-   const target=suggestClinicalDestination(draft);
+   const target=manualSpecialist?null:suggestClinicalDestination(draft);
    if(draft.trim()&&!storeCopilotConsultDraft(draft,Date.now(),{specialty:target?.specialty,caseId})){
     setAgentError('Не удалось передать вопрос. Откройте специалиста и введите его вручную.');
     return;
@@ -316,6 +316,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
       style={{marginTop:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8}}>
       {t('Обсудить со специалистом')}
    </button>}
+   {displayedPlan.steps.some(step=>step.tool==='specialist')&&displayedPlan.intent!=='help'&&
+    <button type="button" onClick={()=>openTool('specialist',request,true)}
+      style={{marginTop:8,marginLeft:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8,background:'#fff'}}>
+      {t('Выбрать специальность самостоятельно')}
+    </button>}
   </section>}
  </section>;
 }
