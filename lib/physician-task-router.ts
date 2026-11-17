@@ -68,6 +68,18 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  return {intent:'route',steps:tools.map(tool=>({tool,...catalog[tool]})),message};
 }
 
+/** A physician's explicit navigation instruction is permission to OPEN a page,
+ * never to perform a paid analysis or edit a case. LLM text is not accepted here.
+ */
+export function copilotRequestedOpen(task:string):PhysicianTool|null{
+ const phrase=task.trim();
+ if(!/^(?:открой|открыть|перейди|перейти|покажи|open|go to)\s+/i.test(phrase))return null;
+ if(!/(?:\b(?:ecg|ekg|ct|mri|radiology|protocol|ambient|ultrasound|genetics|guidelines|documents)\b|экг|кт|мрт|протокол|при[её]м|разбор|консилиум|радиологи|узи|генетик|лекарств|рекомендаци|документ)/i.test(phrase))
+  return null;
+ const plan=planPhysicianTask(phrase);
+ return plan.intent==='route'&&plan.steps.length===1?plan.steps[0].tool:null;
+}
+
 export function physicianTaskHref(tool:PhysicianTool,caseId?:string,locale='ru'):string{
  const path:Record<PhysicianTool,string>={
   radiology:'/radiology',ecg:'/ecg',ultrasound:'/ultrasound',genetics:'/genetics',
