@@ -86,6 +86,7 @@ export default function ConsultPage() {
   const [editedCopy, setEditedCopy] = useState<{ original: string; text: string }>();
   const [sourceCaseId,setSourceCaseId]=useState<string>();
   const [attachmentPreview,setAttachmentPreview]=useState<{name:string;text:string}>();
+  const [preparedDocuments,setPreparedDocuments]=useState<Partial<Record<SpecialistId,boolean>>>({});
   const [attachmentBusy,setAttachmentBusy]=useState(false);
   const [casePromptDismissed,setCasePromptDismissed]=useState<Partial<Record<SpecialistId,boolean>>>({});
 
@@ -250,6 +251,7 @@ export default function ConsultPage() {
       const inserted='\n\n[Фрагмент документа — проверьте извлечённый текст]\n'+attachmentPreview.text;
       return {...current,[specialty]:(old+inserted).trim().slice(0,QUESTION_LIMIT)};
     });
+    setPreparedDocuments(current=>({...current,[specialty]:true}));
     setAttachmentPreview(undefined);
   }
   function continueInClinicalCase(){
@@ -359,6 +361,7 @@ export default function ConsultPage() {
           setClip(undefined);
           setEditedCopy(undefined);
           setCasePromptDismissed(current=>({...current,[specialty]:false}));
+          setPreparedDocuments(current=>({...current,[specialty]:false}));
           setError('');
           promptInput.current?.focus();
         }}>{t('Новый диалог')}</button>
