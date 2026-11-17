@@ -7,7 +7,7 @@ import type { Citation } from "./literature.ts";
 import { languageName, type Locale } from "./locale.ts";
 import type { ClinicalReport } from './clinical-report.ts';
 import { clinicalFocusText } from './clinical-focus.ts';
-import {planAdaptiveCouncil,councilRoleDirective,type CouncilSpecialty} from './adaptive-council.ts';
+import {planAdaptiveCouncil,councilRoleDirective,councilRolePerspective,type CouncilSpecialty} from './adaptive-council.ts';
 
 export interface ConsiliumRole {
   id: "hypothesis" | "testChooser" | "challenger" | "stewardship" | "checklist";
@@ -31,6 +31,8 @@ export function consiliumFocus(note: string, modalities: string[]) {
 
 export interface ConsiliumVoice {
   id: ConsiliumRole["id"];
+  /** An AI prompt perspective, NOT a real independent physician consultation. */
+  clinicalPerspective?: string;
   model: string | null;
   status: "done" | "not_assessed";
   text: string;
@@ -223,5 +225,8 @@ export async function runConsilium(
     ? await safelyAsk(role("checklist"), packet(input, opinions))
     : quiet(role("checklist"));
   const spoken = new Map([...opinions, checklist].map((voice) => [voice.id, voice]));
-  return roles.map((item) => spoken.get(item.id) ?? quiet(item));
+  return roles.map(item=>({
+    ...(spoken.get(item.id)??quiet(item)),
+    clinicalPerspective:councilRolePerspective(item.id,lenses),
+  }));
 }
