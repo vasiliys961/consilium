@@ -34,6 +34,7 @@ export function SpecialistCaseResults({value}:{value:ClinicalCase}){
     <p>{ru?'SHA-256 проверенного текста запроса':'Approved request text SHA-256'}: <code>{report.inputSha256}</code></p>
     <p>{ru?'Стоимость':'Cost'}: {report.costUsd===null?(ru?'не установлена':'unknown'):'$'+report.costUsd.toFixed(5)}
      {!report.costComplete?' · '+(ru?'неполные данные':'incomplete usage'):''}</p>
+    <details><summary>{ru?'Проверенный текст запроса':'Approved request text'}</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{report.inputText}</pre></details>
     <p>{ru?'Хеш относится только к тексту запроса, а не к исходным PDF или изображениям.':'The hash refers to the approved request text, not original PDFs or images.'}</p>
    </details>
   </details>)}
