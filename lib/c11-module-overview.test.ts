@@ -18,8 +18,8 @@ test('C11: radiology provenance is verified by exact hashes, not file names',()=
 });
 test('C11: protocol reopening preserves edition and case identity',()=>{
  const id='11111111-2222-3333-4444-555555555555';
- assert.equal(protocolEditorHref(id,mkDoc('ru','ru')),'/protocol/case?case='+id+'&locale=ru');
- assert.equal(protocolEditorHref(id,mkDoc('en','global')),'/protocol/case?case='+id+'&locale=en');
+ assert.equal(protocolEditorHref(id,mkDoc('ru','ru')),'/protocol/case?case='+id+'&locale=ru&document=doc-1');
+ assert.equal(protocolEditorHref(id,mkDoc('en','global')),'/protocol/case?case='+id+'&locale=en&document=doc-1');
 });
 test('C11: earlier document versions remain visible only for matching edition and language',()=>{
  const value=newCase(),ru=mkDoc('ru','ru'),en=mkDoc('en','global');

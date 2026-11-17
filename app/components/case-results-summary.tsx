@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type {ClinicalCase} from '@/lib/casebook';
 import {radiologyEvidenceText} from '@/lib/module-evidence';
 import {radiologySourceStatus,protocolEditorHref,earlierProtocolVersions} from '@/lib/c11-module-overview';
-import {protocolText} from '@/packages/protocol/document';
+import {PROTOCOL_KINDS,protocolText} from '@/packages/protocol/document';
 import {useWorkspaceLanguage} from './workspace-language';
 
 /** C11: records remain readable after a module closes; no analysis or network call here. */
@@ -18,7 +18,7 @@ export function CaseResultsSummary({record}:{record:ClinicalCase}){
   {protocols.map(document=>{
    const revisions=earlierProtocolVersions(record,document);
    return <details key={document.id+document.locale} style={{marginBottom:10}}>
-    <summary>{t('Протокол')} · {t(document.kind)} · {document.locale.toUpperCase()} · {document.created.slice(0,10)}</summary>
+    <summary>{t('Протокол')} · {t(PROTOCOL_KINDS.find(([id])=>id===document.kind)?.[1]??'Протокол')} · {document.locale.toUpperCase()} · {document.created.slice(0,10)}</summary>
     <p><Link href={protocolEditorHref(record.id,document)}>{t('Открыть сохранённый протокол в редакторе')}</Link></p>
     <p style={{whiteSpace:'pre-wrap',maxHeight:300,overflow:'auto'}}>{protocolText(document)}</p>
     {document.ambientSource?.segments.length ? <details><summary>{t('Исходная расшифровка приёма')} · {document.ambientSource.segments.length} {t('фрагментов')}</summary>
