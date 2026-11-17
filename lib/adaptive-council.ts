@@ -1,7 +1,7 @@
 /**
- * Cost-neutral selection of clinical lenses for the five existing council roles.
- * One hypothesis role + one investigation role, never additional LLM calls.
- * Image readers and clinical AI lenses are distinct; never invent specialist votes.
+ * C13: cost-neutral adaptive clinical perspectives for the EXISTING five-role
+ * AI consilium. It never starts another model, reopens imaging, or diagnoses.
+ * Module conclusions are provisional source material, not specialist votes.
  */
 import {chooseClinicalFocus} from './clinical-focus.ts';
 
@@ -20,48 +20,122 @@ export const COUNCIL_SPECIALTIES=[
  {id:'radiology and medical imaging',name:'Medical imaging'},
  {id:'clinical genetics',name:'Clinical genetics'},
  {id:'clinical pharmacology',name:'Clinical pharmacology'},
+ {id:'dermatology',name:'Dermatology'},
+ {id:'histopathology',name:'Histopathology'},
+ {id:'oncology',name:'Oncology'},
+ {id:'pediatrics',name:'Pediatrics'},
+ {id:'ophthalmology',name:'Ophthalmology'},
 ] as const;
+
 export type CouncilSpecialty=typeof COUNCIL_SPECIALTIES[number]['id'];
-const candidate=new Set<string>(COUNCIL_SPECIALTIES.map(entry=>entry.id));
+type ClinicalSpecialty=Exclude<CouncilSpecialty,'auto'>;
+const allowed=new Set<string>(COUNCIL_SPECIALTIES.map(item=>item.id));
+const labels=Object.fromEntries(COUNCIL_SPECIALTIES.map(item=>[item.id,item.name])) as Record<CouncilSpecialty,string>;
+const ruNames:Record<CouncilSpecialty,string>={
+ 'auto':'Автоматически','internal medicine':'Терапия / внутренняя медицина',
+ 'cardiology':'Кардиология','pulmonology':'Пульмонология',
+ 'nephrology':'Нефрология','neurology':'Неврология',
+ 'endocrinology':'Эндокринология','infectious diseases':'Инфекционные болезни',
+ 'hematology':'Гематология','gastroenterology and hepatology':'Гастроэнтерология / гепатология',
+ 'obstetrics and gynecology':'Акушерство / гинекология',
+ 'radiology and medical imaging':'Лучевая диагностика',
+ 'clinical genetics':'Медицинская генетика','clinical pharmacology':'Клиническая фармакология',
+ 'dermatology':'Дерматология','histopathology':'Гистопатология',
+ 'oncology':'Онкология','pediatrics':'Педиатрия','ophthalmology':'Офтальмология',
+};
+export function councilSpecialtyLabel(id:string,locale:string):string{
+ if(!allowed.has(id))return locale==='ru'?'Неизвестный профиль':'Unknown specialty';
+ return locale==='ru'?ruNames[id as CouncilSpecialty]:labels[id as CouncilSpecialty];
+}
 export function validCouncilSpecialty(value:unknown):value is CouncilSpecialty{
- return typeof value==='string'&&candidate.has(value);
+ return typeof value==='string'&&allowed.has(value);
 }
 
 export interface CouncilLensPlan{
- lead:string;
- secondary:string;
- suggested:string[];
+ lead:ClinicalSpecialty;
+ /** Second role is still the existing test chooser, not an extra consultant. */
+ secondary:ClinicalSpecialty;
+ suggested:ClinicalSpecialty[];
  manual:boolean;
  description:string;
 }
-/** Only evidence domains; no diagnosis and no payment. */
+function distinct<T>(values:T[]):T[]{return [...new Set(values)];}
+function isModality(modalities:readonly string[],id:string):boolean{
+ return modalities.some(item=>item.toLowerCase()===id);
+}
+/** Deterministic planning, before spending anything; recommendations only. */
 export function planAdaptiveCouncil(note:string,modalities:readonly string[],requested:CouncilSpecialty='auto'):CouncilLensPlan{
- const detected=chooseClinicalFocus(note,modalities).map(item=>item.domain)
-  .filter(domain=>domain!=='internal medicine'&&domain!=='clinical pharmacology');
- // A performed ECG or radiology interpretation is *evidence*, not an
- // independent specialist vote. Select the clinical context to reason about it.
- const preferred=detected.filter(x=>x!=='radiology and medical imaging');
- const automatic=[...preferred,...detected.filter(x=>!preferred.includes(x))];
- const lead=requested!=='auto'?requested:(automatic[0]??'internal medicine');
- const secondary=automatic.find(x=>x!==lead)??(lead==='internal medicine'?'diagnostic medicine':'internal medicine');
+ const excerpt=note.slice(0,14000);
+ const base=chooseClinicalFocus(excerpt,modalities).map(item=>item.domain).filter(
+  (domain):domain is ClinicalSpecialty=>allowed.has(domain)&&domain!=='auto'&&domain!=='internal medicine'&&domain!=='clinical pharmacology'
+ );
+ // Reuse specialist image-read conclusions as EVIDENCE. The council does not
+ // claim to have inspected histology pixels, dermatoscopy, retinal scans, etc.
+ const imageContext:ClinicalSpecialty[]=[];
+ if(isModality(modalities,'dermatology'))imageContext.push('dermatology');
+ if(isModality(modalities,'histology'))imageContext.push('histopathology');
+ if(isModality(modalities,'ultrasound')&&!base.some(s=>s==='radiology and medical imaging'))
+  imageContext.push('radiology and medical imaging');
+ if(/\b(?:pediatric|paediatric|infant|child)\b|реб[её]нок|детск|младен/i.test(excerpt))imageContext.push('pediatrics');
+ if(/онколог|опухол|новообразован|метастаз|злокачеств|malignan|neoplas|metasta|oncolog|melanoma|меланом/iu.test(excerpt))imageContext.push('oncology');
+ if(/кож[аныеи]|сыпь|дермат|skin lesion|skin rash|dermatolog/iu.test(excerpt))imageContext.push('dermatology');
+ if(/биопс|гистолог|патоморфолог|histolog|patholog(?:y|ical)|biopsy/iu.test(excerpt))imageContext.push('histopathology');
+ if(/сетчатк|глазн.*дн|retina|retinal|fundoscop/iu.test(excerpt))imageContext.push('ophthalmology');
+ // Do not put imaging as the lead over an identifiable clinical problem.
+ const first=distinct([...imageContext.filter(s=>s!=='radiology and medical imaging'),...base.filter(s=>s!=='radiology and medical imaging'),...imageContext,...base]);
+ const lead:ClinicalSpecialty=requested!=='auto'?requested:(first[0]??'internal medicine');
+ const secondary=first.find(item=>item!==lead)??(lead==='internal medicine'?'radiology and medical imaging':'internal medicine');
  return {
-  lead,secondary,
-  suggested:[...new Set([lead,...automatic])].slice(0,4),
+  lead,secondary,suggested:distinct([lead,...first]).slice(0,5),
   manual:requested!=='auto',
-  description:'The existing AI opinion roles use clinical specialty perspectives. Imaging, ECG and detector outputs remain evidence, not separate votes.',
+  description:'Fixed AI role count; clinical specialty perspectives use previously derived evidence, and do not constitute independent physician consultations.',
  };
 }
-export function councilRoleDirective(role:'hypothesis'|'testChooser'|'challenger'|'stewardship'|'checklist',plan:CouncilLensPlan):string{
+
+const SPECIALTY_TASKS:Partial<Record<ClinicalSpecialty,string>>={
+ 'internal medicine':'Reconcile multimorbidity and competing syndromes; distinguish symptoms, observed signs and confirmed diagnoses.',
+ cardiology:'Use available digital ECG measurements and cardiology interpretation as distinct evidence. Check rhythm, conduction, haemodynamics and clinical relevance; never infer missing leads or calibrated intervals from an image alone.',
+ pulmonology:'Correlate respiratory history, oxygenation, imaging descriptions and clinical urgency. Do not convert a CT report into observed negative findings beyond its verified coverage.',
+ nephrology:'Consider eGFR/creatinine trends and AKI/CKD uncertainty; identify which renal function data are needed before medication decisions.',
+ dermatology:'Link the clinician description and any provisional dermoscopy reading with differential diagnoses. Do not claim direct visual access to pixels not supplied to this council.',
+ histopathology:'Differentiate morphology described in a provisional image reading from a verified pathology diagnosis, sampling, stains and immunohistochemistry. Never invent biopsy grade or markers.',
+ oncology:'Separate suspected malignancy, biopsy confirmation, stage, site-specific imaging and proposed staging tests.',
+ pediatrics:'Apply age-dependent reasoning only when age is documented; do not invent pediatric vitals or dose.',
+ ophthalmology:'Relate retinal/fundus imaging descriptions to symptoms, examination and urgent referral signs; no invented fundus findings.',
+ neurology:'Correlate documented focal signs, chronology and neurological examination; distinguish ischemic vs hemorrhagic hypotheses when evidence warrants.',
+ 'clinical genetics':'Separate observed variant data and clinical diagnosis; preserve variant classification and missing segregation evidence.',
+ 'clinical pharmacology':'Evaluate interacting drugs, dose units, renal/hepatic adjustments and contraindication uncertainty.',
+};
+export type CouncilRoleId='hypothesis'|'testChooser'|'challenger'|'stewardship'|'checklist';
+export function councilRolePerspective(role:CouncilRoleId,plan:CouncilLensPlan):string{
+ return role==='hypothesis'?plan.lead:
+  role==='testChooser'?plan.secondary:
+  role==='challenger'?'multidisciplinary critic':
+  role==='stewardship'?'medication safety':'clinical synthesis';
+}
+export function councilRoleDirective(role:CouncilRoleId,plan:CouncilLensPlan):string{
  if(role==='hypothesis')return [
-  'You are taking the '+plan.lead+' clinical perspective for differential hypotheses.',
-  'Reason from documented findings and the physician question, including important problems outside your field. An ECGFounder score, radiology module output, and image reader opinion are unverified evidence, never your own direct observation or a separate physician vote.',
-  'Preserve the role task: list hypotheses, including a dangerous alternative; no new treatment orders.',
+  'Use a '+plan.lead+' clinical perspective to generate differential hypotheses; this is an AI role, NOT an independent human consultant.',
+  SPECIALTY_TASKS[plan.lead]??'Reason from the available clinical syndrome; identify critical uncertainty.',
+  'Use documented findings from ECGFounder, Gemini/Opus radiology and image-specific readers only as provisional, source-labelled evidence, not as independently verified opinions or your direct observations.',
+  'Still address dangerous alternatives outside the specialty and preserve the fixed hypothesis task.',
  ].join(' ');
  if(role==='testChooser')return [
-  'You are taking the '+plan.secondary+' clinical perspective when deciding which investigations discriminate hypotheses.',
-  'Do not recast a model-generated image description or ECG score as a verified consultant opinion. Ask for unavailable primary measurements rather than inventing them. No additional images are analyzed here.',
+  'Use a '+plan.secondary+' clinical perspective for discriminating investigations and clinical reasoning; this is the existing AI investigation role, not an additional specialist call.',
+  SPECIALTY_TASKS[plan.secondary]??'Focus on clinically decisive unanswered questions.',
+  'Do not re-run imaging or ECG, infer new image findings, assume an absent examination was normal, or present model observations as signed radiology or pathology reports.',
  ].join(' ');
- if(role==='challenger')return 'You are an independent multidisciplinary clinical critic, NOT another organ-specific image reader. Seek contradictions between '+plan.lead+' and '+plan.secondary+' assumptions, treatment risks, missing critical findings and alternatives; do not invent votes.';
- if(role==='stewardship')return 'You are the clinical pharmacology / medication safety reviewer for all relevant organ functions. Preserve contraindications, interactions, dosing prerequisites and uncertainty. No new diagnosis.';
- return 'Synthesize the existing hypothesis, investigation, critic and safety-role opinions; distinguish actual model roles from prior module reports and missing expert consultations. Do not claim independent specialty votes not performed.';
+ if(role==='challenger')return [
+  'You are the INDEPENDENT multidisciplinary clinical critic, not an organ-specific image reader.',
+  'Examine contradictions between the '+plan.lead+' and '+plan.secondary+' perspectives, uncertain data, alternative diagnoses, missing emergencies, negative findings, and inappropriate management. Do not invent separate specialty votes.',
+ ].join(' ');
+ if(role==='stewardship')return [
+  'You are the existing clinical pharmacology and treatment safety role, not a newly recruited consultant.',
+  'Preserve drug names, dose and unit provenance, known interactions, allergies, organ function and their uncertainty. Distinguish previously taken drugs from a proposed prescription.',
+ ].join(' ');
+ return [
+  'Synthesize the four existing AI roles without manufacturing agreement.',
+  'Clearly distinguish model perspectives, provisional module reports, and physician-confirmed clinical findings. A specialty perspective is NOT a human expert consultation.',
+  'Name unresolved questions, uncertainty, contradictions and reasons for urgent review.',
+ ].join(' ');
 }
