@@ -67,3 +67,18 @@
 .outgoing details[open] { padding: 8px 10px; border: 1px solid #d8e3d8; border-radius: 7px; }
 .outgoing details label, .outgoing details button { margin-block-start: 8px; }
 .outgoing summary { cursor: pointer; }
+
+
+/* Specialist conversation is the centre of the screen, not a narrow card
+   with two unusable empty gutters. Scales on tablet/mobile. */
+.shell{width:100%;max-width:1560px;margin-inline:auto;padding:clamp(16px,2.8vw,42px);font-size:18px;line-height:1.7}
+.chat{width:100%}
+.chat textarea,.chat select,.chat button{font-size:17px;line-height:1.6}
+.conversation{max-height:65vh}
+.question,.answer{font-size:18px;line-height:1.75}
+.question{margin-inline-start:clamp(0px,4vw,52px)}
+.answer{margin-inline-end:clamp(0px,4vw,52px)}
+.hint,.turn small{font-size:16px}
+.markdown{font-size:18px;line-height:1.7}
+.markdown table{font-size:16px}
+@media(max-width:700px){.shell{padding:14px}.question,.answer{margin-inline:0;font-size:17px}.settings,.composer{padding:16px}}

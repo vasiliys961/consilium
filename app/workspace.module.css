@@ -65,3 +65,19 @@
 
 .caseComposer .actions{flex-direction:row}.caseComposer .actions button{flex:1 1 160px}
 .caseListRow{display:flex;align-items:center;gap:10px}.caseListRow>button:first-child{flex:1;min-width:0}.caseListRow>button:last-child{flex:none}.caseListRow button:disabled{cursor:default}
+
+
+/* C11 physician-first layout: one wide work surface. Assistance is available
+   from the existing help button / optional Copilot, not a permanent right rail. */
+.content{max-width:1760px;width:100%;padding-inline:clamp(20px,2.5vw,48px)}
+.caseGrid{grid-template-columns:minmax(0,1fr);max-width:100%}
+.caseGrid>.panel{width:100%;padding:clamp(20px,2.4vw,40px)}
+.shell{font-size:18px;line-height:1.65}
+.shell small,.shell .muted,.caseComposer small{font-size:16px;line-height:1.65}
+.shell label,.shell .check,.shell textarea,.shell input,.shell select{font-size:17px}
+.shell textarea{line-height:1.7}
+.feedEntry>small,.feedIndex small,.shell .feedHeader{font-size:15px}
+.feedAnswer p,.voiceText{font-size:18px;line-height:1.75}
+@media(max-width:1150px){.caseGrid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:850px){.content{padding-inline:18px}.caseGrid>.panel{padding:20px}}
+@media(max-width:540px){.content{padding-inline:12px}.caseGrid>.panel{padding:16px}}
