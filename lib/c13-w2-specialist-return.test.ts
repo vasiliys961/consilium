@@ -22,6 +22,7 @@ test('W2: only a completed specialist reply generates a bounded, hash-bound resu
   '[QUESTION]\\nSynthetic patient with chest pain',syntheticReply,'2026-11-17T14:00:00Z');
  assert.equal(validateSpecialistCaseReport(answer),true);
  assert.equal(answer.inputSha256.length,64);
+ assert.equal(answer.inputText,'[QUESTION]\\nSynthetic patient with chest pain');
  assert.equal(answer.module,'specialist-chat');
  assert.equal(answer.status,'completed-unsigned');
  assert.equal(answer.model,syntheticReply.model);
