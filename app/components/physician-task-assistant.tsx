@@ -8,6 +8,7 @@ import {cleanChatText} from '@/lib/privacy-chat';
 import {storeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
 import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
+import {suggestClinicalDestination} from '@/lib/copilot-clinical-routing';
 import {useWorkspaceLanguage} from './workspace-language';
 
 type IntegrationSnapshot={
@@ -80,14 +81,26 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   setDialogue([]);setAgentReply(null);setText('');setRequest('');setAgentBusy(false);setAgentError('');
  },[caseId]);
  useEffect(()=>()=>{requestController.current?.abort();voiceRef.current?.stop();},[]);
+ // Health checks can start child dev servers and cause latency on an 8 GB Mac.
+ // Defer them until the physician actually requests a route.
+ const routeRequested=Boolean(request.trim());
  useEffect(()=>{
+  if(!routeRequested)return;
   let active=true;
-  fetch('/api/integrations',{cache:'no-store'}).then(response=>{
-   if(!response.ok)throw Error('status');
-   return response.json() as Promise<IntegrationSnapshot>;
-  }).then(value=>{if(active)setIntegration(value)}).catch(()=>{if(active)setHealthError(true)});
-  return()=>{active=false};
- },[]);
+  const controller=new AbortController();
+  const timer=setTimeout(()=>{
+   fetch('/api/integrations',{cache:'no-store',signal:controller.signal}).then(response=>{
+    if(!response.ok)throw Error('status');
+    return response.json() as Promise<IntegrationSnapshot>;
+   }).then(value=>{if(active)setIntegration(value)})
+    .catch(()=>{if(active&&!controller.signal.aborted)setHealthError(true)});
+  },250);
+  return()=>{active=false;clearTimeout(timer);controller.abort()};
+ },[routeRequested]);
+ useEffect(()=>{
+  if(request.trim())requestAnimationFrame(()=>
+   document.getElementById('opus-copilot-result')?.scrollIntoView({block:'nearest',behavior:'smooth'}));
+ },[request]);
 
  function availability(tool:PhysicianTool):{allowed:boolean;hint:string}{
   if(!integration)return {allowed:true,hint:healthError?'Наличие инструмента будет проверено при открытии.':'Проверяем подключение.'};
@@ -123,9 +136,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    // A navigation command like "Открой специалиста" is not a clinical question.
    // Prefer the doctor's last actual question; never auto-send it to a model.
    const isOnlyCommand=copilotRequestedOpen(question)==='specialist';
-   const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text??'';
+   const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text
+    ??(!copilotRequestedOpen(request)?request:'');
    const draft=isOnlyCommand?lastQuestion:question;
-   if(draft.trim()&&!storeCopilotConsultDraft(draft)){
+   const target=suggestClinicalDestination(draft);
+   if(draft.trim()&&!storeCopilotConsultDraft(draft,Date.now(),{specialty:target?.specialty,caseId})){
     setAgentError('Не удалось передать вопрос. Откройте специалиста и введите его вручную.');
     return;
    }
@@ -163,6 +178,15 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   if(!utterance||agentBusy)return;
   const direct=copilotRequestedOpen(utterance);
   if(direct){openTool(direct,utterance);return}
+  const local=planPhysicianTask(utterance);
+  // Clinical complaints go to actual specialists; capability questions are
+  // free and immediate. Neither requires a separate paid navigation answer.
+  if(local.intent==='help'||suggestClinicalDestination(utterance)){
+   setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
+   return;
+  }
+  // Show a useful route immediately, even when the provider is slow or fails.
+  setRequest(utterance);setAgentReply(null);
   setAgentBusy(true);setAgentError('');
   const controller=new AbortController();
   requestController.current=controller;
@@ -247,7 +271,8 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    </label>}
    {voiceError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{t(voiceError)}</p>}
   </form>
-  {agentError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{t(agentError)} {t('Вы можете открыть нужный модуль ниже.')}</p>}
+  {agentBusy&&<p role="status" style={{fontSize:12,color:'#456a53'}}>{t('Подбираю инструменты…')}</p>}
+  {agentError&&<p role="alert" style={{fontSize:12,color:'#8a2b17'}}>{t(agentError)} {t('Маршрут доступен ниже.')}</p>}
   {dialogue.length>0&&<details style={{marginTop:10}}><summary>{t('История разговора')} · {dialogue.length}</summary>
    <div style={{maxHeight:200,overflowY:'auto',padding:8}}>
     {dialogue.map((turn,index)=><p key={index} dir="auto" style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Copilot')}:</strong> {turn.text}</p>)}
@@ -262,7 +287,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
     <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{t(example)}</button>)}</div>
    </details>
   </div>
-  {(request.trim()||agentReply)&&<section aria-label={t('Предлагаемый маршрут')} style={{marginTop:12}}>
+  {(request.trim()||agentReply)&&<section id="opus-copilot-result" aria-label={t('Предлагаемый маршрут')} aria-live="polite" style={{marginTop:12}}>
    {agentReply?.message?<p dir="auto">{agentReply.message}</p>:<p>{t(displayedPlan.message)}</p>}
    {agentReply?.question&&<p dir="auto" style={{fontWeight:600}}>{agentReply.question}</p>}
    {displayedPlan.steps.length>0&&(displayedPlan.intent==='help'
@@ -272,7 +297,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        return <li key={step.tool} style={{marginBottom:7}}>
         <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
          style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
-         {t(step.title)}</button>
+         {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}</button>
         <span style={{fontSize:13}}>{t(step.reason)}</span>
        </li>;
       })}
@@ -282,12 +307,12 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        const {allowed,hint}=availability(step.tool);
        return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
         style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-        {t(step.title)}
+        {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}
        </button>;
       })}
      </div>
    )}
-   {displayedPlan.steps.some(step=>step.tool==='clinical')&&<button type="button" onClick={()=>openTool('specialist',request)}
+   {displayedPlan.steps.some(step=>step.tool==='clinical')&&!displayedPlan.steps.some(step=>step.tool==='specialist')&&<button type="button" onClick={()=>openTool('specialist',request)}
       style={{marginTop:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8}}>
       {t('Обсудить со специалистом')}
    </button>}
