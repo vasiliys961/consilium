@@ -399,7 +399,7 @@ export default function ConsultPage() {
             <ReplyContent reply={turn} />
             {sourceCaseId&&<button type="button" className={styles.verifyButton}
               disabled={busy} onClick={()=>void saveCompletedSpecialistReply(index)}>
-              {t(savingReport===index?'Сохраняем ответ…':'Сохранить этот ответ в клинический случай')}
+              {language==='ru'?(savingReport===index?'Сохраняем ответ…':'Сохранить этот ответ в клинический случай'):(savingReport===index?'Saving response…':'Save this response to case')}
             </button>}
             {turn.verification ? <section className={styles.verification} aria-label={t('Проверка другой моделью')}>
               <strong>{t('Проверка другой моделью')}</strong>
