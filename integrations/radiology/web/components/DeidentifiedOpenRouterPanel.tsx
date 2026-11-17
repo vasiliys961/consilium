@@ -42,7 +42,6 @@ type Ready = {
 export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, autoConnect = false, primaryAnalysisStage = "idle", exactReviewedHashes, prepareReviewedPacket, originalLocalFileIds, onOpenOriginalSlice, specialistFacts, specialistLocalBinding, localLaa950, originalDetectorEvidence = null, frameRelativeClnEvidence = null, originalCxrEvidence = null, }: Props) {
     const __ui = useUiTranslator();
     const [server, setServer] = useState<Ready | null>(null), [token, setToken] = useState("");
-    const [transferAuthorized, setTransferAuthorized] = useState(false);
     const [working, setWorking] = useState(false), [error, setError] = useState("");
     const [readinessNote, setReadinessNote] = useState("");
     const [includeSpecialist, setIncludeSpecialist] = useState(false);
@@ -76,7 +75,7 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
     useEffect(() => {
         if (!modelPathSettled) {
             ctl.current?.abort();
-            setTransferAuthorized(false);
+            
             setResult(null);
             setIntegratedDraft("");
         }
@@ -87,12 +86,12 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
     // before any new external call, and invalidate only prior late reconciliation.
     useEffect(() => {
         setIncludeDetectors(true);
-        setTransferAuthorized(false);
+        
         setLateReview(null);
         setLateDraft("");
         setLateConsent(false);
     }, [originalDetectorEvidence]);
-    useEffect(() => { setResult(null); setIncludeCxr(true); setTransferAuthorized(false); setDecisions({}); setClinicalSynthesis(""); setIntegratedDraft(""); }, [originalCxrEvidence]);
+    useEffect(() => { setResult(null); setIncludeCxr(true);  setDecisions({}); setClinicalSynthesis(""); setIntegratedDraft(""); }, [originalCxrEvidence]);
     const checkReadiness = useCallback(async (parentSignal?: AbortSignal) => {
         readinessCtl.current?.abort();
         const controller = new AbortController();
@@ -143,8 +142,7 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
         return () => controller.abort();
     }, [autoConnect, checkReadiness]);
     async function send() {
-        if (working || lateWorking || !enabledByLocalChecks || !modelPathSettled ||
-            (!server?.workstationConnected && token.length < 24) || !transferAuthorized)
+        if (working || lateWorking || !enabledByLocalChecks || !modelPathSettled)
             return;
         setError("");
         setResult(null);
@@ -161,19 +159,19 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
         try {
             // One approved physician action verifies server readiness and then
             // performs the two paid calls; opening the study never sends images.
-            let ready = server;
-            if (!ready?.enabled) {
-                const probe = await fetch("/api/ai/deidentified-openrouter-review", {
-                    method: "GET", cache: "no-store", signal: controller.signal, credentials: "same-origin",
-                });
-                if (!probe.ok)
-                    throw Error("OpenRouter недоступен на локальном сервере.");
-                ready = await probe.json() as Ready;
-                if (ready.schema !== "opus-deidentified-openrouter-pilot-readiness/v1" ||
-                    ready.productionPatientCloudRelease !== false || ready.enabled !== true)
-                    throw Error("OpenRouter не разрешён настройками локального исследовательского сервера.");
-                setServer(ready);
-            }
+            // Reconnect once during the physician's explicit paid SEND action.
+            // This GET never sends pixels and never triggers a provider charge.
+            const probe = await fetch("/api/ai/deidentified-openrouter-review", {
+                method: "GET", cache: "no-store", signal: controller.signal, credentials: "same-origin",
+            });
+            if (!probe.ok) throw Error("OpenRouter недоступен на локальном сервере.");
+            const ready = await probe.json() as Ready;
+            if (ready.schema !== "opus-deidentified-openrouter-pilot-readiness/v1" ||
+                ready.productionPatientCloudRelease !== false || ready.enabled !== true)
+                throw Error("OpenRouter не разрешён настройками локального исследовательского сервера.");
+            setServer(ready);
+            if (!ready.workstationConnected && token.length < 24)
+                throw Error("Рабочее место не подключено. Проверьте однократное разрешение Preview.");
             const packet = prepareReviewedPacket(); // local exact copy + signed action journal check
             if (packet.frames.some((f, i) => f.frameId !== exactReviewedHashes[i]?.imageId ||
                 f.sha256 !== exactReviewedHashes[i]?.sha256))
@@ -411,7 +409,7 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
     <details><summary><LocalizedUi value={"Дополнительно · пароль оператора"}/></summary>
     <label><LocalizedUi value={"Локальный пароль оператора"}/><input type="password" value={token} autoComplete="off" maxLength={512} disabled={working} onChange={e => setToken(e.target.value)} placeholder={__ui("Только локальный сервер")}/></label>
     </details>
-    <label><input type="checkbox" disabled={working || !enabledByLocalChecks} checked={transferAuthorized} onChange={e => setTransferAuthorized(e.target.checked)}/><LocalizedUi value={"Разрешаю передать проверенные обезличенные кадры в OpenRouter для Gemini и Opus. Имею право на передачу и проверил условия обработки. Разрешаю два платных запроса."}/></label>
+    <p role="note"><LocalizedUi value={"Нажатие кнопки подтверждает разрешение врача передать проверенные обезличенные кадры в OpenRouter и выполнить платный анализ. Повторная галочка не требуется."}/></p>
     <LocalizedUi value={specialistFacts && <label><input type="checkbox" disabled={working} checked={includeSpecialist} onChange={e => { setIncludeSpecialist(e.target.checked); setResult(null); }}/><LocalizedUi value={"Дополнительно передать обеим LLM только измерения из локального R231 той же КТ: правая маска"}/><LocalizedUi value={specialistFacts.rightLungMaskMl.toFixed(1)}/><LocalizedUi value={"мл, левая"}/><LocalizedUi value={specialistFacts.leftLungMaskMl.toFixed(1)}/><LocalizedUi value={"мл,"}/><LocalizedUi value={specialistFacts.frameCount}/><LocalizedUi value={"срезов. Маска, UID и путь исходных DICOM не передаются. Модель R231 размечает лёгкие, но не детектирует патологию."}/></label>}/>
     <LocalizedUi value={originalCxrEvidence && <label><input type="checkbox" checked={includeCxr} disabled={working} onChange={e => { setIncludeCxr(e.target.checked); setResult(null); }}/><LocalizedUi value={"Разрешаю передать шесть некалиброванных показателей TorchXRayVision только Claude Opus ПОСЛЕ независимого разбора рентгенограммы Gemini Vision. Это не диагноз и не вероятность заболевания."}/></label>}/>
     <LocalizedUi value={originalDetectorEvidence && validateSanitizedDetectorBundle(originalDetectorEvidence) && primaryAnalysisStage !== "idle" &&
@@ -422,9 +420,8 @@ export default function DeidentifiedOpenRouterPanel({ enabledByLocalChecks, auto
                     setResult(null);
                 }}/><LocalizedUi value={"Дополнительно передать Gemini Vision и Opus ТОЛЬКО числовые модельные находки текущей DICOM-серии: завершено"}/><LocalizedUi value={originalDetectorEvidence.facts.filter(f => f.status === "completed").length}/><LocalizedUi value={"из"}/><LocalizedUi value={originalDetectorEvidence.facts.length}/><LocalizedUi value={"задач. Исходные UID, SHA, координаты и сами маски не передаются."}/></label>}/>
     <div className="ora-evidence-actions">
-      <button type="button" disabled={working || lateWorking || !enabledByLocalChecks || !modelPathSettled ||
-            (!server?.workstationConnected && token.length < 24) || !transferAuthorized} onClick={() => void send()}><LocalizedUi value={working ? "Gemini → Opus анализируют кадры…" :
-            "Запустить анализ и получить заключение"}/></button>
+      <button type="button" disabled={working || lateWorking || !enabledByLocalChecks || !modelPathSettled } onClick={() => void send()}><LocalizedUi value={working ? "Gemini → Opus анализируют кадры…" :
+            "Отправить проверенные кадры в анализ (платно)"}/></button>
       <LocalizedUi value={working && <button type="button" onClick={() => ctl.current?.abort()}><LocalizedUi value={"Отменить"}/></button>}/>
     </div>
     <LocalizedUi value={readinessNote && <p role="status"><LocalizedUi value={readinessNote}/></p>}/>

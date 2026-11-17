@@ -31,7 +31,7 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
     const [groups, setGroups] = useState<AutomaticPrivacyPreparation[]>([]), [index, setIndex] = useState(0);
     const [notice, setNotice] = useState(''), [preparing, setPreparing] = useState(true), [error, setError] = useState('');
     const [resolved, setResolved] = useState<Set<number>>(new Set()), [editing, setEditing] = useState(false);
-    const [approved, setApproved] = useState(false), [sending, setSending] = useState(false);
+    const [sending, setSending] = useState(false);
     const [released, setReleased] = useState(false), [releaseError, setReleaseError] = useState('');
     const [attempt, setAttempt] = useState(0);
     const cancel = useRef<AbortController | null>(null), started = useRef(false);
@@ -43,7 +43,6 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
         setReleaseError('');
         setGroups([]);
         setResolved(new Set());
-        setApproved(false);
         setPreparing(true);
         setError('');
         void (async () => {
@@ -79,16 +78,17 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
     const suspects = groups.flatMap((g, i) => g.unresolved > 0 && !resolved.has(i) ? [i] : []);
     const group = groups[index];
     async function release() {
-        if (!canRelease || !approved || preparing || error || started.current || groups.length !== count)
+        if (preparing || error || started.current || groups.length !== count)
             return;
         started.current = true;
         setReleased(true);
         setReleaseError('');
         setSending(true);
         try {
-            // This is the physician's ONE explicit attestation of these exact copies,
-            // not an inference from OCR absence or thumbnail loading.
-            const reviewed = reviewPreparedStudy(groups, approved);
+            // The physician's single explicit SEND click attests to the exact
+            // displayed copies and authorizes paid processing. OCR/thumbnail
+            // rendering alone never grants study-specific authorization.
+            const reviewed = reviewPreparedStudy(groups, true);
             setGroups(previous => previous.map((g, i) => ({ ...g, journal: reviewed[i].journal, frames: reviewed[i].packet.frames })));
             await onReady(reviewed.map(g => g.packet));
         }
@@ -127,16 +127,15 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
                         throw Error('Не сохранена история проверки кадров.');
                     setGroups(previous => previous.map((g, i) => i === index ? { ...preparation, frames: packet.frames } : g));
                     setResolved(previous => new Set([...previous, index]));
-                    setApproved(false);
-                    setEditing(false);
+                                setEditing(false);
                 }}/>}/>
    <LocalizedUi value={preparing && <p role="status"><LocalizedUi value={"\u041A\u043D\u043E\u043F\u043A\u0430 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438 \u043F\u043E\u043A\u0430 \u043D\u0435 \u043D\u0430\u0436\u0438\u043C\u0430\u0435\u0442\u0441\u044F: \u043E\u0441\u0442\u0430\u043B\u044C\u043D\u044B\u0435 \u0433\u0440\u0443\u043F\u043F\u044B \u0435\u0449\u0451 \u0433\u043E\u0442\u043E\u0432\u044F\u0442\u0441\u044F \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E. \u041E\u043D\u0430 \u043F\u043E\u044F\u0432\u0438\u0442\u0441\u044F \u043F\u043E\u0441\u043B\u0435 \u0432\u0441\u0435\u0445 \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0445 \u0441\u0440\u0435\u0437\u043E\u0432 \u0438 \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438."}/></p>}/>
    <LocalizedUi value={!preparing && clinicalContext && <p style={{ whiteSpace: 'pre-wrap' }}><LocalizedUi value={"\u041A\u043B\u0438\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0438:"}/><LocalizedUi value={clinicalContext}/></p>}/>
    <LocalizedUi value={!preparing && releaseNotice && <p><LocalizedUi value={releaseNotice}/></p>}/>
-   <LocalizedUi value={!preparing && !canRelease && <p role="status"><LocalizedUi value={connectionNotice || "Передача недоступна: рабочее место ещё не разрешено администратором. Снимки остаются локально."}/></p>}/>
+   <LocalizedUi value={!preparing && !canRelease && <p role="status"><LocalizedUi value={(connectionNotice || "Подключение не подтверждено.") + " Кнопка отправки перепроверит подключение без оплаты. Если оно отсутствует, снимки останутся локально."}/></p>}/>
    <LocalizedUi value={!preparing && groups.length === count && !error && <>
-    <label><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)}/><LocalizedUi value={"\u042F \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u043B \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438 \u0438 \u043A\u043B\u0438\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0442\u0435\u043A\u0441\u0442, \u0432\u043A\u043B\u044E\u0447\u0430\u044F \u0432\u0441\u0435 \u043E\u0442\u043C\u0435\u0442\u043A\u0438 OCR: \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0445 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u0438 \u0443\u0437\u043D\u0430\u0432\u0430\u0435\u043C\u044B\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u043D\u0435\u0442; \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u2014 \u043B\u043E\u0436\u043D\u044B\u0435 \u0441\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u043D\u0438\u044F \u0438\u043B\u0438 \u043D\u0435\u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0439 \u0442\u0435\u043A\u0441\u0442. \u0418\u043C\u0435\u044E \u043F\u0440\u0430\u0432\u043E \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u043B \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0441\u043A\u0438\u0445 \u0434\u0430\u043D\u043D\u044B\u0445. \u0420\u0430\u0437\u0440\u0435\u0448\u0430\u044E \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u044D\u0442\u0443 \u0441\u0435\u0440\u0438\u044E \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430."}/></label>
-    <button type="button" disabled={!canRelease || !approved || sending || preparing || released} onClick={() => void release()}><LocalizedUi value={released ? "Запрос передан; повторная оплата заблокирована" : singleSliceTest ? "Отправить один проверенный срез в Gemini (платно)" : "Отправить проверенные снимки в анализ"}/></button>
+    <p role="note"><LocalizedUi value={"Нажимая кнопку, врач подтверждает проверку подготовленных кадров и надписей, право передачи этих копий в OpenRouter и разрешение на платный анализ. Исходные DICOM остаются локально."}/></p>
+    <button type="button" disabled={sending || preparing || released || !!error || groups.length !== count} onClick={() => void release()}><LocalizedUi value={released ? "Запрос передан; повторная оплата заблокирована" : singleSliceTest ? "Проверил снимок · отправить в Gemini (платно)" : "Проверил снимки · отправить в анализ (платно)"}/></button>
    </>}/>
   </>}/>
  </section>;
