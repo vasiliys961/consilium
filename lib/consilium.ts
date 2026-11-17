@@ -122,7 +122,7 @@ function treatmentContext(report?: ClinicalReport): string {
   ].filter(Boolean).join('\n\n');
 }
 
-function packet(input: ConsiliumInput, prior: ConsiliumVoice[]): string {
+function packet(input: ConsiliumInput, prior: ConsiliumVoice[], lenses:ReturnType<typeof planAdaptiveCouncil>): string {
   // Exact duplicate reference excerpts waste tokens in all five role prompts.
   // Keep every distinct source statement unchanged; deduplicate only identical lines.
   const sources = [...new Set(input.citations
@@ -131,11 +131,13 @@ function packet(input: ConsiliumInput, prior: ConsiliumVoice[]): string {
     .join("\n");
   const earlier = prior
     .map((voice) => voice.status === "done" && voice.text
-      ? `${voice.id}: ${voice.text}`
-      : `${voice.id}: NOT ASSESSED — no opinion returned. Do not infer agreement or a clinical finding from this missing role.`)
+      ? `${voice.id} [AI clinical perspective: ${councilRolePerspective(voice.id,lenses)}; NOT a human specialist vote]: ${voice.text}`
+      : `${voice.id} [AI clinical perspective: ${councilRolePerspective(voice.id,lenses)}]: NOT ASSESSED — no opinion returned. Do not infer agreement or a clinical finding from this missing role.`)
     .join("\n");
   return [
     `Write in ${languageName(input.locale)}.`,
+    `Council role allocation (existing five AI roles, not five independent clinicians): hypothesis = ${lenses.lead}; testChooser = ${lenses.secondary}; challenger = multidisciplinary critic; stewardship = medication safety; checklist = clinical synthesis. Clinical perspectives do not mean direct access to any image, ECG source, or pathology slide.`,
+    'Use the actual attached evidence and its provenance. A provisional ECGFounder score, radiology report, dermatoscopy or histopathology image-reading is not an additional independent specialist vote. When material reports conflict, state the discrepancy, source, and missing confirmation rather than manufacture a consensus.',
     "Reply with JSON only: {\"text\":\"string\",\"source\":\"listed source key or null\"}.",
     "Use a listed source key only for a claim supported by the supplied excerpt or abstract. Bibliographic records are search leads. Otherwise set source to null.",
     "Do not invent doses or measurements. A laboratory number or a document number in the case record stays as copied.",
@@ -203,7 +205,7 @@ export async function runConsilium(
   const allowed = sourceKeys(input.citations);
   const role = (id: ConsiliumRole["id"]) => roles.find((item) => item.id === id)!;
   const lenses=planAdaptiveCouncil(input.note,input.modalities??[],input.requestedSpecialty??'auto');
-  const context = packet(input, []);
+  const context = packet(input, [],lenses);
   // Preserve each completed opinion even if another provider throws unexpectedly.
   // A missing opinion is not a negative finding and must never erase the draft.
   const safelyAsk = async (item: ConsiliumRole, prompt: string): Promise<ConsiliumVoice> => {
@@ -222,7 +224,7 @@ export async function runConsilium(
   // The fifth model cannot reconcile votes that do not exist. Save an explicit
   // unavailable state instead of paying for an invented consensus.
   const checklist = opinions.some(voice => voice.status === 'done')
-    ? await safelyAsk(role("checklist"), packet(input, opinions))
+    ? await safelyAsk(role("checklist"), packet(input, opinions,lenses))
     : quiet(role("checklist"));
   const spoken = new Map([...opinions, checklist].map((voice) => [voice.id, voice]));
   return roles.map(item=>({
