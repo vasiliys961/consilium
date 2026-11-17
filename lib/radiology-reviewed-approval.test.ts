@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+// @ts-expect-error Tested JavaScript installer exports a runtime ESM helper without a TypeScript declaration.
 import {approvedRadiologyPreviewEnv} from '../scripts/approve-radiology-preview.mjs';
 import {reviewedConnectionNotice} from '../integrations/radiology/web/lib/reviewed-connection-notice.ts';
 
