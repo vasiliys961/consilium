@@ -6,8 +6,9 @@ import {prepareChatSend,reviewBeforeSending} from '@/lib/privacy-client';
 import {copilotNeedsPrivacyReview} from '@/lib/copilot-privacy';
 import {cleanChatText} from '@/lib/privacy-chat';
 import {storeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
+import {appendLocalCopilotTurn,composeCopilotSpecialistDraft} from '@/lib/copilot-conversation';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
-import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
+import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,isCopilotToolDiscoveryQuery,type PhysicianTool} from '@/lib/physician-task-router';
 import {suggestClinicalDestination} from '@/lib/copilot-clinical-routing';
 import {copilotText,copilotToolTitle,copilotToolReason,copilotWorkflowMessage} from '@/lib/copilot-i18n';
 import {useWorkspaceLanguage} from './workspace-language';
@@ -129,7 +130,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    const isOnlyCommand=copilotRequestedOpen(question)==='specialist';
    const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text
     ??(!copilotRequestedOpen(request)?request:'');
-   const draft=isOnlyCommand?lastQuestion:question;
+   const draft=composeCopilotSpecialistDraft(dialogue,isOnlyCommand?lastQuestion:question);
    const target=manualSpecialist?null:suggestClinicalDestination(draft);
    if(draft.trim()&&!storeCopilotConsultDraft(draft,Date.now(),{specialty:target?.specialty,caseId})){
     setAgentError('Не удалось передать вопрос. Откройте специалиста и введите его вручную.');
@@ -172,8 +173,9 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const local=planPhysicianTask(utterance);
   // Clinical complaints go to actual specialists; capability questions are
   // free and immediate. Neither requires a separate paid navigation answer.
-  if(local.intent==='help'||suggestClinicalDestination(utterance)){
+  if(local.intent==='help'||suggestClinicalDestination(utterance)||isCopilotToolDiscoveryQuery(utterance)){
    setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
+   setDialogue(previous=>appendLocalCopilotTurn(previous,utterance,local.message));
    return;
   }
   // Show a useful route immediately, even when the provider is slow or fails.
@@ -232,6 +234,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const direct=copilotRequestedOpen(phrase);
   if(direct){openTool(direct,phrase);return}
   setRequest(phrase);setAgentReply(null);setAgentError('');
+  setDialogue(previous=>appendLocalCopilotTurn(previous,phrase,planPhysicianTask(phrase).message));
  }
  function resetDialogue(){
   requestController.current?.abort();requestController.current=null;
