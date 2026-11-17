@@ -1,7 +1,8 @@
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
-import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,validCouncilSpecialty} from './adaptive-council.ts';
+import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,validCouncilSpecialty,councilSpecialtyLabel,councilRoleDirective,councilPerspectiveLabel} from './adaptive-council.ts';
+import {readFileSync} from 'node:fs';
 import {runConsilium,CONSILIUM_ROLES} from './consilium.ts';
 import {validCaseInput} from './input-validation.ts';
 import {runOptionsKey} from './repeat-analysis.ts';
@@ -76,4 +77,46 @@ test('C13 adaptive council: input option is passed to existing case runner, no e
  assert.match(server,/requestedSpecialty: body\.councilSpecialty/);
  assert.match(server,/modalities: ledger\.filter/);
  assert.doesNotMatch(server,/runAdditionalSpecialty|startSpecialtyConsultation/);
+});
+
+
+test('C13 mixed case: text-driven cardiopulmonary concerns outrank radiology-only evidence',()=>{
+ const plan=planAdaptiveCouncil('Мужчина с ФП, кашлем, одышкой и сниженной СКФ.','ecg radiology'.split(' '));
+ assert.deepEqual([plan.lead,plan.secondary],['cardiology','pulmonology']);
+ assert.ok(plan.suggested.includes('nephrology'));
+ assert.notEqual(plan.lead,'radiology and medical imaging');
+ assert.match(councilRoleDirective('stewardship',plan),/dose and unit provenance/);
+ assert.match(councilRoleDirective('challenger',plan),/INDEPENDENT multidisciplinary/);
+});
+
+test('C13 isolated images: dermatology and histopathology are perspectives on completed readings, not extra image reads',()=>{
+ const derm=planAdaptiveCouncil('Synthetic skin image read', ['dermatology']);
+ assert.equal(derm.lead,'dermatology');
+ assert.equal(derm.secondary,'internal medicine');
+ const slide=planAdaptiveCouncil('Нужен разбор результата биопсии', ['histology']);
+ assert.equal(slide.lead,'histopathology');
+ assert.match(councilRoleDirective('hypothesis',derm),/not as independently verified opinions/);
+ assert.match(councilRoleDirective('testChooser',slide),/Do not re-run imaging or ECG/);
+ const pediatric=planAdaptiveCouncil('Ребёнок с жалобами на боли в животе',[]);
+ assert.equal(pediatric.lead,'pediatrics');
+ const oncology=planAdaptiveCouncil('Patient with melanoma biopsy result',[]);
+ assert.ok(oncology.suggested.includes('oncology'));
+ assert.ok(oncology.suggested.includes('histopathology'));
+ assert.equal(councilSpecialtyLabel('cardiology','ru'),'Кардиология');
+ assert.equal(councilPerspectiveLabel('multidisciplinary critic','ru'),'Междисциплинарный критик');
+ assert.equal(councilPerspectiveLabel('clinical synthesis','en'),'Clinical synthesis');
+});
+
+test('C13 visible UI records provenance and truly submits physician council choice',()=>{
+ const ui=readFileSync('app/components/clinical-workspace.tsx','utf8');
+ const feed=readFileSync('app/components/case-feed.tsx','utf8');
+ const analyze=readFileSync('lib/analyze-case.ts','utf8');
+ assert.match(ui,/councilSpecialty:withCouncil\?councilSpecialty:'auto',secondOpinion/);
+ assert.match(ui,/autoCouncilPlan\.suggested/);
+ assert.match(ui,/priorCouncilBilled/);
+ assert.match(ui,/Стоимость следующего обсуждения заранее не гарантирована/);
+ assert.match(analyze,/requestedSpecialty: body\.councilSpecialty/);
+ assert.match(feed,/voice\.clinicalPerspective/);
+ assert.match(feed,/AI clinical perspective/);
+ assert.match(feed,/not independent human physician consultations/);
 });
