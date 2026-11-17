@@ -119,7 +119,7 @@ export default function ConsultPage() {
     // before the specialist's ordinary consent and model action.
     const received=consumeCopilotConsultDraft();
     const queryCase=new URLSearchParams(window.location.search).get('case');
-    const caseId=queryCase&&/^[\\w-]{1,80}$/.test(queryCase)?queryCase:undefined;
+    const caseId=queryCase&&/^[\w-]{1,80}$/.test(queryCase)?queryCase:undefined;
     setSourceCaseId(received?.caseId??caseId);
     if(received){
       setSpecialty(received.specialty);
