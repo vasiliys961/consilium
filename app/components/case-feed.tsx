@@ -8,6 +8,7 @@ import {MedicationReviewView} from './drug-label-picker';
 import {StudyReports} from './study-reports';
 import {ClinicalSourcesPanel} from './clinical-sources-panel';
 import {medicationRisksForFeed} from '@/lib/clinical-feed-risks';
+import {councilPerspectiveLabel} from '@/lib/adaptive-council';
 import {useWorkspaceLanguage} from './workspace-language';
 import styles from '@/app/workspace.module.css';
 
@@ -40,11 +41,19 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     {result.validationWarnings?.map((warning,i)=><p role="alert" key={i}>{warning}</p>)}
     {analysis.reusedSources?.length ? <small>{t('Использованы ранее прочитанные исследования:')} {analysis.reusedSources.join(', ')}. {t('Повторное чтение изображений не выполнялось.')}</small>:null}
     {result.voices.length>0&&<section aria-label={t('Итог консилиума')}>
+       {result.voices.some(v=>v.clinicalPerspective)&&<small style={{display:'block',marginBottom:7}}>
+        {language==='ru'?'Профили консилиума — роли ИИ-моделей, а не заключения независимых врачей.':'Council specialties are AI model perspectives, not independent human physician consultations.'}
+       </small>}
       <h4>{t('Итог консилиума')}</h4>
       {final?.status==='done'?<p className={styles.voiceText}>{final.text}</p>:<p role="status">{t('Итог консилиума не получен. Отдельные мнения сохранены ниже; обсуждение нельзя считать завершённым.')}</p>}
       {missing.length>0&&<p>{t('Не завершили ответ:')} {missing.map(voice=>t(roleNames[voice.id])).join(', ')}.</p>}
       {newest&&missing.length>0&&<button disabled={busy} onClick={onCouncil}>{t('Повторить консилиум')}</button>}
-      <details><summary>{t('Отдельные мнения')} · {result.voices.filter(voice=>voice.status==='done').length}/{result.voices.length}</summary>{result.voices.filter(voice=>voice.id!=='checklist').map(voice=><section key={voice.id}><h4>{t(roleNames[voice.id])}</h4><p className={styles.voiceText}>{voice.status==='done'?voice.text:t(voice.failure==='deadline'?'Время ответа истекло':voice.failure==='truncated'?'Ответ не завершён: достигнут лимит':'Ответ не получен')}</p></section>)}</details>
+      <details><summary>{t('Отдельные мнения')} · {result.voices.filter(voice=>voice.status==='done').length}/{result.voices.length}</summary>{result.voices.filter(voice=>voice.id!=='checklist').map(voice=><section key={voice.id}><h4>{t(roleNames[voice.id])}</h4>
+          {voice.clinicalPerspective&&<small style={{display:'block',marginBottom:4}}>
+           {language==='ru'?'Клинический ракурс ИИ':'AI clinical perspective'}: {councilPerspectiveLabel(voice.clinicalPerspective,language)}
+           {voice.status==='done'&&voice.model?' · '+voice.model:''}
+          </small>}
+          <p className={styles.voiceText}>{voice.status==='done'?voice.text:t(voice.failure==='deadline'?'Время ответа истекло':voice.failure==='truncated'?'Ответ не завершён: достигнут лимит':'Ответ не получен')}</p></section>)}</details>
     </section>}
     {result.ledger.filter(entry=>entry.genetics?.review).map(entry=><details key={entry.source}><summary>{entry.source} · {t('Генетический разбор')}</summary><GenomicReviewView finding={entry.genetics!}/></details>)}
     {result.medicationReview&&<details><summary>{t('Проверка инструкций к препаратам')}</summary><MedicationReviewView review={result.medicationReview}/></details>}
