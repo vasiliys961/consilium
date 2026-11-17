@@ -1,5 +1,5 @@
 import{openRouterRuntime}from'./provider-runtime.ts';
-import {isPreviewInstance,localOrigin,localPorts} from './local-ports.ts';
+import {isPreviewInstance,localOrigin,localPorts,reservedLocalPorts} from './local-ports.ts';
 import {protocolStatus} from './protocol-integration.ts';
 import {radiologyTelemetry} from './radiology-telemetry.ts';
 import {writeTerminalEvent} from './telemetry.ts';
@@ -36,7 +36,7 @@ export function radiologyStandaloneUrl():string|null{
   if(url.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||!url.port||url.username||url.password||url.search||url.hash||url.pathname!=='/')return null;
   if(!/^[0-9]{2,5}$/.test(url.port))return null;
   const port=Number(url.port);
-  if(port<1024||port>65535||Object.values(localPorts()).includes(port))return null;
+  if(port<1024||port>65535||reservedLocalPorts().includes(port))return null;
   return url.origin;
  }catch{return null;}
 }
