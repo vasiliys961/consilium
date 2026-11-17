@@ -15,6 +15,8 @@ export interface SpecialistCaseReport{
  model:string;
  inputKind:'reviewed-text';
  inputSha256:string;
+ /** Exact physician-approved text sent to the specialist, stored only in encrypted local case. */
+ inputText:string;
  costUsd:number|null;
  costComplete:boolean;
  sources:Array<{title:string;url?:string;year?:string;pmid?:string}>;
@@ -29,6 +31,7 @@ export function validateSpecialistCaseReport(value:SpecialistCaseReport):boolean
   &&typeof value.answer==='string'&&Boolean(value.answer.trim())&&value.answer.length<=48000
   &&typeof value.model==='string'&&value.model.length>0&&value.model.length<=200
   &&value.inputKind==='reviewed-text'&&SHA.test(value.inputSha256)
+  &&typeof value.inputText==='string'&&Boolean(value.inputText.trim())&&value.inputText.length<=13000
   &&Number.isFinite(Date.parse(value.at))
   &&(value.costUsd===null||(Number.isFinite(value.costUsd)&&value.costUsd>=0))
   &&typeof value.costComplete==='boolean'
@@ -45,7 +48,8 @@ export async function specialistCaseReport(
 ):Promise<SpecialistCaseReport>{
  const cleanQuestion=cleanChatText(question).text.trim().slice(0,3000);
  const cleanAnswer=cleanChatText(reply.text).text.trim().slice(0,48000);
- if(!cleanQuestion||!cleanAnswer||!approvedTranscript.trim())throw Error('Ответ специалиста или проверенный вопрос отсутствует.');
+ if(!cleanQuestion||!cleanAnswer||!approvedTranscript.trim()||approvedTranscript.length>13000)
+  throw Error('Ответ специалиста или проверенный текст запроса отсутствует или превышает допустимый размер.');
  const buffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(approvedTranscript));
  const hash=Array.from(new Uint8Array(buffer),byte=>byte.toString(16).padStart(2,'0')).join('');
  const idBuffer=await crypto.subtle.digest('SHA-256',new TextEncoder().encode([hash,reply.model,cleanAnswer].join('\n')));
@@ -53,7 +57,7 @@ export async function specialistCaseReport(
  const report:SpecialistCaseReport={
   id,module:'specialist-chat',status:'completed-unsigned',specialty,at,
   question:cleanQuestion,answer:cleanAnswer,model:reply.model,
-  inputKind:'reviewed-text',inputSha256:hash,
+  inputKind:'reviewed-text',inputSha256:hash,inputText:approvedTranscript,
   costUsd:reply.usageComplete&&Number.isFinite(reply.cost)&&reply.cost>=0?reply.cost:null,
   costComplete:reply.usageComplete,
   sources:reply.sources.slice(0,25).map(source=>({
