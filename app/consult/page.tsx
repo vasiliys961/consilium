@@ -13,6 +13,7 @@ import { recordConsultQuestion } from '@/lib/consult-recording';
 import {consumeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import {storeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
 import {suggestClinicalCase} from '@/lib/consult-case-suggestion';
+import {copilotText} from '@/lib/copilot-i18n';
 import { LOCALES, parseLocale, type Locale } from '@/lib/locale';
 import { cleanChatText } from '@/lib/privacy-chat';
 import { prepareChatSend, reviewBeforeSending } from '@/lib/privacy-client';
@@ -329,7 +330,7 @@ export default function ConsultPage() {
             setEditedCopy(undefined);
             setError('');
           }}>
-            {SPECIALIST_PROFILES.map(item => <option key={item.id} value={item.id}>{t(item.label)}</option>)}
+            {SPECIALIST_PROFILES.map(item => <option key={item.id} value={item.id}>{copilotText(language,item.label)}</option>)}
           </select>
         </label>
         <LanguageSwitcher disabled={busy}/>
@@ -371,7 +372,7 @@ export default function ConsultPage() {
         {dialogue.turns.map((turn, index) => <div className={styles.turn} key={index}>
           <article className={styles.question}><strong>{t('Ваш вопрос')}</strong><p>{turn.question}</p></article>
           <article className={styles.answer}>
-            <strong>{t(profile.label)} · {t('ИИ-помощник')}</strong>
+            <strong>{copilotText(language,profile.label)} · {t('ИИ-помощник')}</strong>
             <ReplyContent reply={turn} />
             {turn.verification ? <section className={styles.verification} aria-label={t('Проверка другой моделью')}>
               <strong>{t('Проверка другой моделью')}</strong>
@@ -388,7 +389,7 @@ export default function ConsultPage() {
         {pending && <div className={styles.turn}>
           <article className={styles.question}><strong>{t('Ваш вопрос')}</strong><p>{pending}</p></article>
           <article className={styles.answer} aria-busy="true">
-            <strong>{t(profile.label)} · {t('ИИ-помощник')}</strong>
+            <strong>{copilotText(language,profile.label)} · {t('ИИ-помощник')}</strong>
             {preview ? <AnswerMarkdown text={preview} streaming /> : <p role="status">{t(stageText)}</p>}
           </article>
         </div>}
