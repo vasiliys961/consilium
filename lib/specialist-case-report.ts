@@ -39,7 +39,7 @@ export function validateSpecialistCaseReport(value:SpecialistCaseReport):boolean
   &&value.sources.every(source=>typeof source.title==='string'&&source.title.length>0&&source.title.length<=500
    &&(source.url===undefined||(typeof source.url==='string'&&source.url.startsWith('https://')&&source.url.length<=2000))
    &&(source.year===undefined||(typeof source.year==='string'&&source.year.length<=20))
-   &&(source.pmid===undefined&&(typeof source.pmid==='string'&&source.pmid.length<=50)));
+   &&(source.pmid===undefined||(typeof source.pmid==='string'&&source.pmid.length<=50)));
 }
 
 export async function specialistCaseReport(
