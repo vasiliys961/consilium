@@ -12,6 +12,7 @@ import { requestStreamedJson } from '@/lib/analysis-stream';
 import { recordConsultQuestion } from '@/lib/consult-recording';
 import {consumeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import {storeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
+import {suggestClinicalCase} from '@/lib/consult-case-suggestion';
 import { LOCALES, parseLocale, type Locale } from '@/lib/locale';
 import { cleanChatText } from '@/lib/privacy-chat';
 import { prepareChatSend, reviewBeforeSending } from '@/lib/privacy-client';
@@ -86,6 +87,7 @@ export default function ConsultPage() {
   const [sourceCaseId,setSourceCaseId]=useState<string>();
   const [attachmentPreview,setAttachmentPreview]=useState<{name:string;text:string}>();
   const [attachmentBusy,setAttachmentBusy]=useState(false);
+  const [casePromptDismissed,setCasePromptDismissed]=useState<Partial<Record<SpecialistId,boolean>>>({});
 
   const controller = useRef<AbortController>();
   const recording = useRef<AbortController>();
@@ -95,6 +97,7 @@ export default function ConsultPage() {
   const conversation = useRef<HTMLDivElement>(null);
   const question = drafts[specialty] ?? '';
   const dialogue = dialogues[specialty] ?? EMPTY_DIALOGUE;
+  const offerCase= !casePromptDismissed[specialty]&&suggestClinicalCase(question,dialogue.turns.length,Boolean(attachmentPreview));
   const profile = SPECIALIST_PROFILES.find(item => item.id === specialty)!;
   const busy = Boolean(action || mic);
   const original = question.trim() ? consultationTranscript(dialogue.transcript, question) : '';
@@ -346,6 +349,7 @@ export default function ConsultPage() {
           setDrafts(current => ({ ...current, [specialty]: '' }));
           setClip(undefined);
           setEditedCopy(undefined);
+          setCasePromptDismissed(current=>({...current,[specialty]:false}));
           setError('');
           promptInput.current?.focus();
         }}>{t('Новый диалог')}</button>
@@ -378,6 +382,18 @@ export default function ConsultPage() {
         </div>}
       </div>}
 
+      {offerCase&&<section aria-label={t('Выбор дальнейшей работы')} role="status" style={{border:'1px solid #b8cdbb',borderRadius:10,padding:14,marginBottom:10,background:'#f6fbf5'}}>
+        <strong>{t('Вопрос стал объёмным. Продолжим разговор или оформим клинический случай?')}</strong>
+        <p style={{fontSize:13,margin:'6px 0'}}>{t('В диалоге можно уточнять отдельные вопросы. В клиническом случае удобнее собрать документы, результаты и подготовить полноценный разбор.')}</p>
+        <div className={styles.actions}>
+          <button type="button" disabled={busy} onClick={()=>setCasePromptDismissed(current=>({...current,[specialty]:true}))}>
+            {t('Продолжить диалог')}
+          </button>
+          <button type="button" disabled={busy} onClick={continueInClinicalCase}>
+            {t(sourceCaseId?'Продолжить в моём клиническом случае':'Сформировать клинический случай')}
+          </button>
+        </div>
+      </section>}
       <section className={styles.composer} aria-label={t('Материалы и переход в случай')} style={{borderTop:'1px solid #d8e3d8',paddingBlock:12}}>
         <div className={styles.actions}>
           <input ref={documentInput} hidden type="file" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" onChange={e=>{void prepareLocalDocument(e.target.files?.[0]);e.target.value='';}}/>
