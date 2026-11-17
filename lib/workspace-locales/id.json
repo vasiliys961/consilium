@@ -1234,5 +1234,6 @@
   "Языковые версии протокола": "Versi laporan berdasarkan bahasa",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Analisis klinis yang disimpan tidak diulang. Buat dan simpan versi terpisah untuk setiap bahasa; pembuatan teks dalam modul mungkin dikenai biaya.",
   "Сохранён": "Tersimpan",
-  "Не создан": "Belum dibuat"
+  "Не создан": "Belum dibuat",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Draf tidak dapat disimpan. Tetap di halaman ini dan simpan materi Anda."
 }

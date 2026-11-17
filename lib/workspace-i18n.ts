@@ -87,3 +87,5 @@ Object.assign(english,{
  'Сохранён':'Saved',
  'Не создан':'Not created'
 });
+
+Object.assign(english,{'Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.':'The draft could not be saved. Stay on this page and save your material.'});

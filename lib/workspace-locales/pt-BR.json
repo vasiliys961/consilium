@@ -1234,5 +1234,6 @@
   "Языковые версии протокола": "Versões do relatório por idioma",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "A análise clínica salva não será repetida. Crie e salve uma versão para cada idioma; a geração do texto no módulo pode ter custo.",
   "Сохранён": "Salvo",
-  "Не создан": "Não criado"
+  "Не создан": "Não criado",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Não foi possível salvar o rascunho. Permaneça nesta página e salve os materiais."
 }
