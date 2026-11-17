@@ -153,3 +153,24 @@ test('a valid WAV needs separate approval for transcription', () => {
     ...body, privacy: { consent: true, token: signPrivacy(body) },
   }), { audio });
 });
+
+
+test('C13: matching glossary terms become bounded guidance in the existing specialist call',async()=>{
+ const body={text:consultationTranscript('','Does acetaminophen interact with metoprolol 50 mg?'),locale:'en',externalSearch:false};
+ const reviewed={...body,privacy:{consent:true,token:signPrivacy(body)}};
+ const parsed=readSpecialistRequest({specialty:'universal',depth:'brief',reviewed});
+ assert.ok('input' in parsed);
+ let calls=0;
+ const answer=await consultSpecialist(parsed.input,{OPENROUTER_API_KEY:'synthetic'},async(_url,init)=>{
+  calls++;
+  const request=JSON.parse(String(init?.body));
+  assert.match(request.messages[0].content,/paracetamol/);
+  assert.match(request.messages[0].content,/metoprolol/);
+  assert.match(request.messages[0].content,/NOT clinically validated/);
+  assert.doesNotMatch(request.messages[0].content,/Does acetaminophen interact/);
+  assert.match(request.messages[1].content,/Does acetaminophen interact/);
+  return Response.json({choices:[{message:{content:'Synthetic reply'},finish_reason:'stop'}]});
+ });
+ assert.equal(answer.text,'Synthetic reply');
+ assert.equal(calls,1);
+});
