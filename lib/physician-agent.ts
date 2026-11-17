@@ -94,7 +94,14 @@ export function clinicalFirstResponse(text:string,locale:Locale,parsed:AgentJson
    ? 'What are the SpO₂, respiratory rate and symptom onset?'
    : 'Каковы SpO₂, ЧДД и когда начались симптомы?';
  // A generic marketing/feature answer is never allowed to replace triage.
- return {...parsed,reply:generic?defaultReply:parsed.reply,question:parsed.question||defaultQuestion,tools};
+ // Leave other languages to the selected-language LLM response: never replace
+ // Spanish/Arabic/Chinese clinical prose with a Russian fallback.
+ const localizedDefault=locale==='ru'||locale==='en';
+ return {...parsed,
+  reply:generic&&localizedDefault?defaultReply:parsed.reply,
+  question:parsed.question||(localizedDefault?defaultQuestion:null),
+  tools,
+ };
 }
 
 function localFallback(text:string,locale:Locale):PhysicianAgentResult{
