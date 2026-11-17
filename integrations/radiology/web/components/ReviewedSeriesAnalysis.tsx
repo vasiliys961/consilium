@@ -18,6 +18,7 @@ import { clnDetectorRecheck, type BoundDetectorRecheck } from '../lib/cln-detect
 import FindingMeasurementReview, { type AcceptedFindingMeasurement } from './FindingMeasurementReview';
 import MrSeriesComparison from './MrSeriesComparison';
 import StudyPrivacyReview from './StudyPrivacyReview';
+import {reviewedConnectionNotice} from '../lib/reviewed-connection-notice';
 import StudyReportDiscussion from './StudyReportDiscussion';
 import { estimateStudyCost, opusUsageEstimate, argonUsageEstimate } from '../lib/study-cost-estimate';
 import { splitReviewedTransport } from '../lib/reviewed-packet-transport';
@@ -78,6 +79,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     }, [stage, notice]);
     const [budget, setBudget] = useState(2), [connected, setConnected] = useState(false);
     const [connectionAttempt, setConnectionAttempt] = useState(0);
+    const [connectionDiagnostic, setConnectionDiagnostic] = useState('');
     const [receipts, setReceipts] = useState<LocalVolumeReceipt[]>([]), [report, setReport] = useState('');
     const ctl = useRef<AbortController | null>(null), sending = useRef(false);
     const detector = useRef({ stage: detectorStage, evidence: detectorEvidence });
@@ -149,12 +151,14 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             .then(d => {
             if (!c.signal.aborted) {
                 setConnected(d?.enabled === true && d?.workstationConnected === true);
-                setNotice(d?.enabled && d?.workstationConnected ? 'Локальное рабочее место подключено. Изображения передаются только после проверки и разрешения.' :
-                    'Рабочее место не подключено к Gemini/Opus. Проверьте подключение в технической панели.');
+                const diagnostic = reviewedConnectionNotice(d);
+                setConnectionDiagnostic(diagnostic);
+                setNotice(diagnostic);
             }
         })
             .catch(() => {
             if (!c.signal.aborted)
+                setConnectionDiagnostic('Локальный сервер подключения недоступен. Снимки остаются локально.');
                 setNotice('Локальный сервер подключения недоступен.');
         });
         return () => { c.abort(); ctl.current?.abort(); };
@@ -474,7 +478,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
    <button type="button" disabled={!!selectionResult.error || (visualEnabled && !!physicianSelection.error)} onClick={() => void start()}><LocalizedUi value={selection === 'custom' ? 'Подготовить указанные срезы' : 'Подготовить выбранные срезы к анализу'}/></button>
   </>}/>
   <LocalizedUi value={stage === 'review' && <button type="button" onClick={() => { ctl.current?.abort(); setSelection('custom'); setStage('idle'); setNotice('Подготовка папки остановлена. Укажите номера срезов и нажмите «Подготовить указанные срезы». Отправка не выполнялась.'); }}><LocalizedUi value={"Остановить и выбрать отдельные срезы"}/></button>}/>
-  <LocalizedUi value={(stage === 'review' || stage === 'gemini' || stage === 'opus') && <StudyPrivacyReview count={plan.batches.length} modality={series.modality as 'CT' | 'MR'} load={prepare} onReady={submitAll} canRelease={connected} releaseNotice={"Flash просматривает выбранные срезы; Argon составляет протокол по JSON и подборке изображений. Opus — при существенном расхождении или по кнопке. Лимит обзора Flash: $" + budget.toFixed(2) + "; Argon и второе мнение оплачиваются отдельно."} onOpenSlice={inspect} windows={series.modality === 'CT' ? { primary: CT_REVIEW_WINDOWS[reviewWindow].label, ...(additionalWindow !== 'NONE' && (windowPlan.delivery === 'paired' || separate) ? { additional: CT_REVIEW_WINDOWS[additionalWindow].label, ...(separate ? { separateAfter: plan.batches.filter(b => b.pass === 'overview').length } : {}) } : {}) } : undefined} clinicalContext={clinicalContext} sourceNumbers={plan.batches.map(b => b.indices.map(i => i + 1))} sourceIds={plan.batches.map(b => b.indices.map(i => series.members[i].id))}/>}/>
+  <LocalizedUi value={(stage === 'review' || stage === 'gemini' || stage === 'opus') && <StudyPrivacyReview count={plan.batches.length} modality={series.modality as 'CT' | 'MR'} load={prepare} onReady={submitAll} canRelease={connected} connectionNotice={connectionDiagnostic} releaseNotice={"Flash просматривает выбранные срезы; Argon составляет протокол по JSON и подборке изображений. Opus — при существенном расхождении или по кнопке. Лимит обзора Flash: $" + budget.toFixed(2) + "; Argon и второе мнение оплачиваются отдельно."} onOpenSlice={inspect} windows={series.modality === 'CT' ? { primary: CT_REVIEW_WINDOWS[reviewWindow].label, ...(additionalWindow !== 'NONE' && (windowPlan.delivery === 'paired' || separate) ? { additional: CT_REVIEW_WINDOWS[additionalWindow].label, ...(separate ? { separateAfter: plan.batches.filter(b => b.pass === 'overview').length } : {}) } : {}) } : undefined} clinicalContext={clinicalContext} sourceNumbers={plan.batches.map(b => b.indices.map(i => i + 1))} sourceIds={plan.batches.map(b => b.indices.map(i => series.members[i].id))}/>}/>
   <LocalizedUi value={busy && <button type="button" onClick={() => { ctl.current?.abort(); setStage('interrupted'); setNotice('Остановлено. Полученные наблюдения сохранены; весь ряд не объявляется оценённым.'); }}><LocalizedUi value={"Остановить анализ"}/></button>}/>
   <LocalizedUi value={stage === 'review' && <button type="button" onClick={() => { ctl.current?.abort(); setStage('idle'); setNotice('Подготовка отменена. Выберите срезы заново; отправка не выполнялась.'); }}><LocalizedUi value={"Вернуться к выбору срезов"}/></button>}/>
   <LocalizedUi value={(stage === 'interrupted' || stage === 'completed') && receipts.length < plan.batches.length && approvedPackets.current.length === plan.batches.length && <button type="button" disabled={!connected} onClick={() => { const c = new AbortController(); ctl.current = c; void submitAll(approvedPackets.current, true); }}><LocalizedUi value={"Продолжить обработку оставшихся срезов"}/></button>}/>
