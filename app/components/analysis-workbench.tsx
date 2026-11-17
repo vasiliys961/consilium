@@ -6,6 +6,7 @@ import{materialRoute,materialKey,restoreMaterial,storeOriginal}from'@/lib/materi
 import { CitationContent, fullTextAnchor } from "@/app/components/citation-content";
 import { StudyReports } from './study-reports';
 import { studyReportsText } from '@/lib/study-report';
+import { ecgWordDescription } from '@/lib/ecg-word-description';
 import { LanguageSwitcher } from './language-switcher';
 import { SourceSuggestions } from './source-suggestions';
 import { EcgGridRuler } from './ecg-grid-ruler';
@@ -913,7 +914,7 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
     if (analyzing || transcribing) return;
     const dicom=files.filter(isRadiologyFile);
     const savedCase=casebook.find(c=>c.id===linkedCase);
-    if(dicom.length&&(!savedCase||caseAnalysisInput(savedCase).pendingModules.length)){setRadiologyOpen(true);setBridgeNotice('DICOM передан в Opus Radiology. Запустите анализ исследования и верните результат в случай.');return;}
+    if(fixedProfile!=='ecg'&&dicom.length&&(!savedCase||caseAnalysisInput(savedCase).pendingModules.length)){setRadiologyOpen(true);setBridgeNotice('DICOM передан в Opus Radiology. Запустите анализ исследования и верните результат в случай.');return;}
     setAnalyzing(true);setProgress([]);setPreview("");
     setCaseError(false);setCaseErrorMessage("");
     const askOpinions = consilium || wantsOpinions(note);
@@ -1461,7 +1462,7 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
               </ul></details>
             ) : null}
             {result.visit && !result.draft.studyReports?.length ? <p className="visit">{result.visit.text}</p> : null}
-            {result.draft.studyReports?.length ? <button type="button" className="open" onClick={()=>void downloadDocx(fixedProfile==='ecg'?t('Заключение ЭКГ'):t('Описание исследования'),studyReportsText(result.draft.studyReports!,t('Заключение')),locale)}>{t('Скачать описание DOCX')}</button> : result.visit ? (
+            {result.draft.studyReports?.length ? <button type="button" className="open" onClick={()=>void downloadDocx(fixedProfile==='ecg'?t('Заключение ЭКГ'):t('Описание исследования'),fixedProfile==='ecg'?ecgWordDescription(result.draft.studyReports!,result.ecgEvidence,t('Заключение')):studyReportsText(result.draft.studyReports!,t('Заключение')),locale)}>{t('Скачать описание DOCX')}</button> : result.visit ? (
               <button type="button" className="open" onClick={downloadVisit}>
                 {copy.protocolDownload}
               </button>
