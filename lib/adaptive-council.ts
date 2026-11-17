@@ -106,7 +106,9 @@ export function planAdaptiveCouncil(note:string,modalities:readonly string[],req
  const first=distinct([...preferred.filter(s=>s!=='radiology and medical imaging'),
   ...preferred.filter(s=>s==='radiology and medical imaging')]);
  const lead:ClinicalSpecialty=requested!=='auto'?requested:(first[0]??'internal medicine');
- const secondary=first.find(item=>item!==lead)??(lead==='internal medicine'?'radiology and medical imaging':'internal medicine');
+ // For a general, non-imaging case, use internal medicine in both distinct
+ // functional roles. Never recruit an unrelated radiology perspective.
+ const secondary=first.find(item=>item!==lead)??'internal medicine';
  return {
   lead,secondary,suggested:distinct([lead,...first]).slice(0,5),
   manual:requested!=='auto',
