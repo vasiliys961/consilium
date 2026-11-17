@@ -47,6 +47,15 @@ export function councilSpecialtyLabel(id:string,locale:string):string{
  if(!allowed.has(id))return locale==='ru'?'Неизвестный профиль':'Unknown specialty';
  return locale==='ru'?ruNames[id as CouncilSpecialty]:labels[id as CouncilSpecialty];
 }
+export function councilPerspectiveLabel(value:string,locale:string):string{
+ if(allowed.has(value))return councilSpecialtyLabel(value,locale);
+ const extra:Record<string,readonly [string,string]>={
+  'multidisciplinary critic':['Междисциплинарный критик','Multidisciplinary critic'],
+  'medication safety':['Безопасность лечения','Medication safety'],
+  'clinical synthesis':['Итоговый синтез','Clinical synthesis'],
+ };
+ const item=extra[value];return item?(locale==='ru'?item[0]:item[1]):value;
+}
 export function validCouncilSpecialty(value:unknown):value is CouncilSpecialty{
  return typeof value==='string'&&allowed.has(value);
 }
@@ -66,15 +75,17 @@ function isModality(modalities:readonly string[],id:string):boolean{
 /** Deterministic planning, before spending anything; recommendations only. */
 export function planAdaptiveCouncil(note:string,modalities:readonly string[],requested:CouncilSpecialty='auto'):CouncilLensPlan{
  const excerpt=note.slice(0,14000);
- const base=chooseClinicalFocus(excerpt,modalities).map(item=>item.domain).filter(
-  (domain):domain is ClinicalSpecialty=>allowed.has(domain)&&domain!=='auto'&&domain!=='internal medicine'&&domain!=='clinical pharmacology'
+ const focus=chooseClinicalFocus(excerpt,modalities).filter(item=>
+  allowed.has(item.domain)&&item.domain!=='auto'&&item.domain!=='internal medicine'&&item.domain!=='clinical pharmacology'
  );
+ const fromText=focus.filter(item=>item.reason==='clinical-text').map(item=>item.domain as ClinicalSpecialty);
+ const fromModality=focus.filter(item=>item.reason==='input-modality').map(item=>item.domain as ClinicalSpecialty);
  // Reuse specialist image-read conclusions as EVIDENCE. The council does not
  // claim to have inspected histology pixels, dermatoscopy, retinal scans, etc.
  const imageContext:ClinicalSpecialty[]=[];
  if(isModality(modalities,'dermatology'))imageContext.push('dermatology');
  if(isModality(modalities,'histology'))imageContext.push('histopathology');
- if(isModality(modalities,'ultrasound')&&!base.some(s=>s==='radiology and medical imaging'))
+ if(isModality(modalities,'ultrasound')&&!focus.some(s=>s.domain==='radiology and medical imaging'))
   imageContext.push('radiology and medical imaging');
  if(/\b(?:pediatric|paediatric|infant|child)\b|реб[её]нок|детск|младен/i.test(excerpt))imageContext.push('pediatrics');
  if(/онколог|опухол|новообразован|метастаз|злокачеств|malignan|neoplas|metasta|oncolog|melanoma|меланом/iu.test(excerpt))imageContext.push('oncology');
@@ -82,7 +93,12 @@ export function planAdaptiveCouncil(note:string,modalities:readonly string[],req
  if(/биопс|гистолог|патоморфолог|histolog|patholog(?:y|ical)|biopsy/iu.test(excerpt))imageContext.push('histopathology');
  if(/сетчатк|глазн.*дн|retina|retinal|fundoscop/iu.test(excerpt))imageContext.push('ophthalmology');
  // Do not put imaging as the lead over an identifiable clinical problem.
- const first=distinct([...imageContext.filter(s=>s!=='radiology and medical imaging'),...base.filter(s=>s!=='radiology and medical imaging'),...imageContext,...base]);
+ // Clinical text comes first; imaging modality alone should not overrule a
+ // clear cardiopulmonary/neurologic complaint in a mixed clinical case.
+ const preferred=distinct([...fromText,...imageContext.filter(s=>s!=='radiology and medical imaging'),
+  ...fromModality,...imageContext]);
+ const first=distinct([...preferred.filter(s=>s!=='radiology and medical imaging'),
+  ...preferred.filter(s=>s==='radiology and medical imaging')]);
  const lead:ClinicalSpecialty=requested!=='auto'?requested:(first[0]??'internal medicine');
  const secondary=first.find(item=>item!==lead)??(lead==='internal medicine'?'radiology and medical imaging':'internal medicine');
  return {
