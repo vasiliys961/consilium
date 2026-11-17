@@ -72,3 +72,25 @@ test('C12: UI requires physician acknowledgment after mismatches, reset on edit 
  for(const code of ['en','es','fr','ar','hi','pt-BR','id','ms','tr','zh-CN'])
   assert.ok(localization.includes(code+':{')||localization.includes("'"+code+"':{"),code);
 });
+
+test('C12: explicit negation reversal is flagged in RU and EN, without rewriting content',()=>{
+ const scenarios=[
+  ['Пациент: Одышку отрицает.','Одышка есть [T1].'],
+  ['Пациент: Есть одышка.','Одышки нет [T1].'],
+  ['Patient: No chest pain.','Patient reports chest pain [T1].'],
+  ['Patient: Has cough.','No cough [T1].'],
+ ];
+ for(const [source,draft] of scenarios){
+  for(const audit of [ruAudit,enAudit]){
+   const issues=audit(source,draft);
+   assert.ok(issues.some(x=>x.code==='possible_negation_mismatch'&&x.detail.includes('[T1]')),source+' / '+draft);
+  }
+ }
+});
+test('C12: neutral or ambiguous symptom text cannot imply clinical polarity',()=>{
+ for(const audit of [ruAudit,enAudit]){
+  assert.deepEqual(audit('Пациент: Одышка при нагрузке.','Одышка при нагрузке [T1].'),[]);
+  assert.deepEqual(audit('Patient: No chest pain.','No chest pain [T1].'),[]);
+  assert.deepEqual(audit('Пациент: Не отрицает одышку.','Одышка есть [T1].'),[]);
+ }
+});
