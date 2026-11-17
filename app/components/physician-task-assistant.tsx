@@ -6,8 +6,9 @@ import {prepareChatSend,reviewBeforeSending} from '@/lib/privacy-client';
 import {copilotNeedsPrivacyReview} from '@/lib/copilot-privacy';
 import {cleanChatText} from '@/lib/privacy-chat';
 import {storeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
+import {appendLocalCopilotTurn,composeCopilotSpecialistDraft} from '@/lib/copilot-conversation';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
-import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
+import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,isCopilotHelpQuery,isCopilotToolDiscoveryQuery,type PhysicianTool} from '@/lib/physician-task-router';
 import {suggestClinicalDestination} from '@/lib/copilot-clinical-routing';
 import {copilotText,copilotToolTitle,copilotToolReason,copilotWorkflowMessage} from '@/lib/copilot-i18n';
 import {useWorkspaceLanguage} from './workspace-language';
@@ -65,7 +66,8 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
 
  const plan=planPhysicianTask(request);
  const displayedPlan=agentReply?.plan??plan;
- const selectedSpecialty=suggestClinicalDestination(request);
+ const selectedSpecialty=(isCopilotHelpQuery(request)||isCopilotToolDiscoveryQuery(request))
+   ?null:suggestClinicalDestination(composeCopilotSpecialistDraft(dialogue,request));
  const workflow=copilotWorkflowMessage(language,displayedPlan,{
   specialty:displayedPlan.steps[0]?.tool==='specialist'?(selectedSpecialty?.label??'Терапия'):undefined,
   urgent:Boolean(selectedSpecialty?.urgentHint),
@@ -129,7 +131,8 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    const isOnlyCommand=copilotRequestedOpen(question)==='specialist';
    const lastQuestion=[...dialogue].reverse().find(turn=>turn.role==='physician'&&!copilotRequestedOpen(turn.text))?.text
     ??(!copilotRequestedOpen(request)?request:'');
-   const draft=isOnlyCommand?lastQuestion:question;
+   const draft=(isCopilotHelpQuery(question)||isCopilotToolDiscoveryQuery(question))
+    ?'':composeCopilotSpecialistDraft(dialogue,isOnlyCommand?lastQuestion:question);
    const target=manualSpecialist?null:suggestClinicalDestination(draft);
    if(draft.trim()&&!storeCopilotConsultDraft(draft,Date.now(),{specialty:target?.specialty,caseId})){
     setAgentError('Не удалось передать вопрос. Откройте специалиста и введите его вручную.');
@@ -172,8 +175,9 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const local=planPhysicianTask(utterance);
   // Clinical complaints go to actual specialists; capability questions are
   // free and immediate. Neither requires a separate paid navigation answer.
-  if(local.intent==='help'||suggestClinicalDestination(utterance)){
+  if(local.intent==='help'||suggestClinicalDestination(utterance)||isCopilotToolDiscoveryQuery(utterance)){
    setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
+   setDialogue(previous=>appendLocalCopilotTurn(previous,utterance,local.message));
    return;
   }
   // Show a useful route immediately, even when the provider is slow or fails.
@@ -232,6 +236,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const direct=copilotRequestedOpen(phrase);
   if(direct){openTool(direct,phrase);return}
   setRequest(phrase);setAgentReply(null);setAgentError('');
+  setDialogue(previous=>appendLocalCopilotTurn(previous,phrase,planPhysicianTask(phrase).message));
  }
  function resetDialogue(){
   requestController.current?.abort();requestController.current=null;
@@ -291,7 +296,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        return <li key={step.tool} style={{marginBottom:7}}>
         <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
          style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
-         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}</button>
+         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&selectedSpecialty?' · '+ct(selectedSpecialty.label):''}</button>
         <span style={{fontSize:13}}>{copilotToolReason(language,step.tool)}</span>
         {visible&&<small style={{display:'block',color:allowed?'#56675d':'#8a2b17',marginTop:3}}>{hint}</small>}
        </li>;
@@ -303,7 +308,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        return <span key={step.tool} style={{display:'inline-flex',flexDirection:'column',gap:3,maxWidth:250}}>
         <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
          style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}
+         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&selectedSpecialty?' · '+ct(selectedSpecialty.label):''}
         </button>
         {visible&&<small style={{fontSize:11,color:allowed?'#56675d':'#8a2b17'}}>{hint}</small>}
        </span>;
