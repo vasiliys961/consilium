@@ -2,7 +2,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {COUNCIL_SPECIALTIES,planAdaptiveCouncil,validCouncilSpecialty,councilSpecialtyLabel,councilRoleDirective,councilPerspectiveLabel} from './adaptive-council.ts';
-import {readFileSync} from 'node:fs';
+
 import {runConsilium,CONSILIUM_ROLES} from './consilium.ts';
 import {validCaseInput} from './input-validation.ts';
 import {runOptionsKey} from './repeat-analysis.ts';
