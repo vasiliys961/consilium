@@ -17,6 +17,8 @@ test('C13: clinician complaint is matched to existing medical specialist (not di
   ['артрит и боли в суставах','rheumatology'],
   ['анемия и снижение гемоглобина','hematology'],
   ['у ребенка высокая температура','pediatrics'],
+  ['у ребёнка кашель и одышка','pediatrics'],
+  ['у ребёнка боль в груди','pediatrics'],
   ['сыпь на коже','dermatology'],
   ['подозрение на опухоль','oncology'],
   ['перелом после травмы','traumatology'],
