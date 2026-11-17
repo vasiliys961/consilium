@@ -9,6 +9,7 @@ import {storeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
 import type {PhysicianAgentResult} from '@/lib/physician-agent';
 import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianTool} from '@/lib/physician-task-router';
 import {suggestClinicalDestination} from '@/lib/copilot-clinical-routing';
+import {copilotText,copilotToolTitle,copilotToolReason,copilotWorkflowMessage} from '@/lib/copilot-i18n';
 import {useWorkspaceLanguage} from './workspace-language';
 
 type IntegrationSnapshot={
@@ -46,7 +47,8 @@ const safeError=(code:string)=>{
 export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  caseId?:string;caseClosed?:boolean;onClinical?:(task:string)=>void;
 }){
- const {t,language}=useWorkspaceLanguage();
+ const {language}=useWorkspaceLanguage();
+  const ct=(value:string)=>copilotText(language,value);
  const router=useRouter();
  const [text,setText]=useState('');
  const [request,setRequest]=useState('');
@@ -67,6 +69,11 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
 
  const plan=planPhysicianTask(request);
  const displayedPlan=agentReply?.plan??plan;
+ const selectedSpecialty=suggestClinicalDestination(request);
+ const workflow=copilotWorkflowMessage(language,displayedPlan,{
+  specialty:displayedPlan.steps[0]?.tool==='specialist'?(selectedSpecialty?.label??'Терапия'):undefined,
+  urgent:Boolean(selectedSpecialty?.urgentHint),
+ });
  useEffect(()=>{
   if(typeof window==='undefined')return;
   try{setCopilotEnabled(window.localStorage.getItem(COPILOT_PREF)==='yes');}catch{}
@@ -127,7 +134,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   setDialogue([]);
   try{window.localStorage.setItem(COPILOT_PREF,value?'yes':'no')}catch{}
  }
- function propose(value:string){setText(value);setRequest(value);setAgentReply(null);setAgentError('');}
+ function propose(value:string){const localized=ct(value);setText(localized);setRequest(localized);setAgentReply(null);setAgentError('');}
 
  function openTool(tool:PhysicianTool,question:string,manualSpecialist=false){
   const {allowed,hint}=availability(tool);
@@ -246,59 +253,62 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   requestController.current?.abort();requestController.current=null;
   setAgentBusy(false);setDialogue([]);setAgentReply(null);setAgentError('');setText('');setRequest('');
  }
- return <section id="doctor-opus-assistant" aria-label={t('Opus Copilot — помощник врача')} style={{padding:'16px 18px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
-  <h2 style={{marginTop:0}}>{t('Opus Copilot')} <small style={{fontSize:13,fontWeight:400}}>{t('Помощник по приложению')}</small></h2>
+ return <section id="doctor-opus-assistant" aria-label={ct('Opus Copilot — помощник врача')} style={{padding:'16px 18px',margin:'12px 0 20px',background:'#f6faf7',border:'1px solid #bfd2c6',borderRadius:12,scrollMarginTop:24}}>
+  <h2 style={{marginTop:0}}>{ct('Opus Copilot')} <small style={{fontSize:13,fontWeight:400}}>{ct('Помощник по приложению')}</small></h2>
   {!copilotEnabled?<div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-   <p style={{margin:'5px 0'}}><strong>{t('Нужен Opus Copilot?')}</strong> {t('Подскажет, куда перейти и как выполнить задачу. Короткий ответ обычно стоит доли цента.')}</p>
-   <button type="button" disabled={!prefLoaded} onClick={()=>enableCopilot(true)}>{t('Включить помощника')}</button>
-   <span style={{fontSize:12,color:'#56675d'}}>{t('Необязательно. Приложение работает и без него.')}</span>
+   <p style={{margin:'5px 0'}}><strong>{ct('Нужен Opus Copilot?')}</strong> {ct('Подскажет, куда перейти и как выполнить задачу. Короткий ответ обычно стоит доли цента.')}</p>
+   <button type="button" disabled={!prefLoaded} onClick={()=>enableCopilot(true)}>{ct('Включить помощника')}</button>
+   <span style={{fontSize:12,color:'#56675d'}}>{ct('Необязательно. Приложение работает и без него.')}</span>
   </div>:<div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-   <span role="status" style={{fontSize:13}}>{t('Opus Copilot включён — вопросы обрабатываются через внешнюю ИИ-модель.')}</span>
-   <button type="button" onClick={()=>enableCopilot(false)} disabled={agentBusy}>{t('Отключить Copilot')}</button>
+   <span role="status" style={{fontSize:13}}>{ct('Opus Copilot включён — вопросы обрабатываются через внешнюю ИИ-модель.')}</span>
+   <button type="button" onClick={()=>enableCopilot(false)} disabled={agentBusy}>{ct('Отключить Copilot')}</button>
   </div>}
-  {caseId&&<p style={{fontSize:12,color:'#56675d'}}>{t('Выбран клинический случай')} · {caseId.slice(0,8)}{caseClosed?' · '+t('Случай завершён'):''}</p>}
+  {caseId&&<p style={{fontSize:12,color:'#56675d'}}>{ct('Выбран клинический случай')} · {caseId.slice(0,8)}{caseClosed?' · '+ct('Случай завершён'):''}</p>}
   <form onSubmit={submit} style={{marginTop:12}}>
-   <label htmlFor="opus-physician-task">{t('Что хотите сделать?')}</label>
-   <textarea id="opus-physician-task" rows={2} maxLength={4000} value={text} disabled={agentBusy} onChange={event=>setText(event.target.value)} placeholder={t('Например: покажи, где начать разбор случая')} style={{display:'block',width:'100%',boxSizing:'border-box',margin:'6px 0 10px'}}/>
+   <label htmlFor="opus-physician-task">{ct('Что хотите сделать?')}</label>
+   <textarea id="opus-physician-task" rows={2} maxLength={4000} value={text} disabled={agentBusy} onChange={event=>setText(event.target.value)} placeholder={ct('Например: покажи, где начать разбор случая')} style={{display:'block',width:'100%',boxSizing:'border-box',margin:'6px 0 10px'}}/>
    <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-    <button type="submit" disabled={agentBusy||!text.trim()}>{agentBusy?t('Отвечает…'):copilotEnabled?t('Спросить Copilot'):t('Найти инструмент')}</button>
-    {dialogue.length>0&&<button type="button" disabled={agentBusy} onClick={resetDialogue}>{t('Новый разговор')}</button>}
-    {voiceAvailable&&<button type="button" disabled={agentBusy} onClick={toggleVoice}>{voiceListening?t('Остановить микрофон'):t('Ввести голосом')}</button>}
+    <button type="submit" disabled={agentBusy||!text.trim()}>{agentBusy?ct('Отвечает…'):copilotEnabled?ct('Спросить Copilot'):ct('Найти инструмент')}</button>
+    {dialogue.length>0&&<button type="button" disabled={agentBusy} onClick={resetDialogue}>{ct('Новый разговор')}</button>}
+    {voiceAvailable&&<button type="button" disabled={agentBusy} onClick={toggleVoice}>{voiceListening?ct('Остановить микрофон'):ct('Ввести голосом')}</button>}
    </div>
    {voiceAvailable&&<label style={{display:'flex',alignItems:'start',gap:6,fontSize:12,marginTop:8}}>
     <input type="checkbox" checked={voiceConsent} onChange={event=>{setVoiceConsent(event.target.checked);if(!event.target.checked)voiceRef.current?.stop()}}/>
-    {t('Разрешаю голосовой ввод. Распознавание может выполняться службой браузера. Вопрос перед отправкой можно исправить.')}
+    {ct('Разрешаю голосовой ввод. Распознавание может выполняться службой браузера. Вопрос перед отправкой можно исправить.')}
    </label>}
-   {voiceError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{t(voiceError)}</p>}
+   {voiceError&&<p role="status" style={{fontSize:12,color:'#8a2b17'}}>{ct(voiceError)}</p>}
   </form>
-  {agentBusy&&<p role="status" style={{fontSize:12,color:'#456a53'}}>{t('Подбираю инструменты…')}</p>}
-  {agentError&&<p role="alert" style={{fontSize:12,color:'#8a2b17'}}>{t(agentError)} {t('Маршрут доступен ниже.')}</p>}
-  {dialogue.length>0&&<details style={{marginTop:10}}><summary>{t('История разговора')} · {dialogue.length}</summary>
+  {agentBusy&&<p role="status" style={{fontSize:12,color:'#456a53'}}>{ct('Подбираю инструменты…')}</p>}
+  {agentError&&<p role="alert" style={{fontSize:12,color:'#8a2b17'}}>{ct(agentError)} {ct('Маршрут доступен ниже.')}</p>}
+  {dialogue.length>0&&<details style={{marginTop:10}}><summary>{ct('История разговора')} · {dialogue.length}</summary>
    <div style={{maxHeight:200,overflowY:'auto',padding:8}}>
-    {dialogue.map((turn,index)=><p key={index} dir="auto" style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><strong>{turn.role==='physician'?t('Врач'):t('Copilot')}:</strong> {turn.text}</p>)}
+    {dialogue.map((turn,index)=><p key={index} dir="auto" style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><strong>{turn.role==='physician'?ct('Врач'):ct('Copilot')}:</strong> {turn.text}</p>)}
    </div>
   </details>}
-  {agentReply?.usedModel&&<details style={{marginTop:8,fontSize:12,color:'#52665b'}}><summary>{t('Сведения о модели и расходах')}</summary>
-   <p>{t('Модель')}: {agentReply.model??'—'} · {t('Расчётная стоимость')}: {agentReply.estimatedUsd===null?t('нет данных'):'$'+agentReply.estimatedUsd.toFixed(5)}.</p>
+  {agentReply?.usedModel&&<details style={{marginTop:8,fontSize:12,color:'#52665b'}}><summary>{ct('Сведения о модели и расходах')}</summary>
+   <p>{ct('Модель')}: {agentReply.model??'—'} · {ct('Расчётная стоимость')}: {agentReply.estimatedUsd===null?ct('нет данных'):'$'+agentReply.estimatedUsd.toFixed(5)}.</p>
   </details>}
-  <div aria-label={t('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
-   <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')} style={{border:'1px solid #6c9981',background:'#e8f4ed',padding:'8px 12px',borderRadius:8,fontWeight:600}}>{t('Показать возможности')}</button>
-   <details><summary>{t('Примеры задач')}</summary>
-    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{t(example)}</button>)}</div>
+  <div aria-label={ct('Примеры задач и возможности')} style={{display:'flex',flexWrap:'wrap',alignItems:'center',gap:8,marginTop:14}}>
+   <button type="button" onClick={()=>propose('Что умеет Doctor Opus?')} style={{border:'1px solid #6c9981',background:'#e8f4ed',padding:'8px 12px',borderRadius:8,fontWeight:600}}>{ct('Показать возможности')}</button>
+   <details><summary>{ct('Примеры задач')}</summary>
+    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:8}}>{examples.map(example=><button type="button" key={example} onClick={()=>propose(example)}>{ct(example)}</button>)}</div>
    </details>
   </div>
-  {(request.trim()||agentReply)&&<section id="opus-copilot-result" aria-label={t('Предлагаемый маршрут')} aria-live="polite" style={{marginTop:12}}>
-   {agentReply?.message?<p dir="auto">{agentReply.message}</p>:<p>{t(displayedPlan.message)}</p>}
+  {(request.trim()||agentReply)&&<section id="opus-copilot-result" aria-label={ct('Предлагаемый маршрут')} aria-live="polite" style={{marginTop:12}}>
+   {agentReply?.message?<p dir="auto" style={{whiteSpace:'pre-line'}}>{agentReply.message}</p>:<div>
+      <p lang="en">{workflow.english}</p>
+      {workflow.localized&&<p lang={language} dir="auto" style={{marginTop:4}}>{workflow.localized}</p>}
+     </div>}
    {agentReply?.question&&<p dir="auto" style={{fontWeight:600}}>{agentReply.question}</p>}
    {displayedPlan.steps.length>0&&(displayedPlan.intent==='help'
     ? <ul style={{margin:'10px 0',paddingLeft:20}}>
       {displayedPlan.steps.map(step=>{
        const {allowed,hint}=availability(step.tool);
        return <li key={step.tool} style={{marginBottom:7}}>
-        <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
+        <button type="button" disabled={!allowed} title={ct(hint)} onClick={()=>openTool(step.tool,request)}
          style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
-         {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}</button>
-        <span style={{fontSize:13}}>{t(step.reason)}</span>
+         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}</button>
+        <span style={{fontSize:13}}>{copilotToolReason(language,step.tool)}</span>
        </li>;
       })}
      </ul>
@@ -307,19 +317,19 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
        const {allowed,hint}=availability(step.tool);
        return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
         style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-        {t(step.title)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+t(suggestClinicalDestination(request)!.label):''}
+        {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}
        </button>;
       })}
      </div>
    )}
    {displayedPlan.steps.some(step=>step.tool==='clinical')&&!displayedPlan.steps.some(step=>step.tool==='specialist')&&<button type="button" onClick={()=>openTool('specialist',request)}
       style={{marginTop:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8}}>
-      {t('Обсудить со специалистом')}
+      {ct('Обсудить со специалистом')}
    </button>}
    {displayedPlan.steps.some(step=>step.tool==='specialist')&&displayedPlan.intent!=='help'&&
     <button type="button" onClick={()=>openTool('specialist',request,true)}
       style={{marginTop:8,marginLeft:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8,background:'#fff'}}>
-      {t('Выбрать специальность самостоятельно')}
+      {ct('Выбрать специальность самостоятельно')}
     </button>}
   </section>}
  </section>;
