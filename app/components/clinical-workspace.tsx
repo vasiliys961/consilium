@@ -4,6 +4,7 @@ import{materialRoute,moduleHref}from'@/lib/material-routing';
 import{CaseConnections}from'./case-connections';
 import {CaseResultsSummary} from './case-results-summary';
 import {PhysicianTaskAssistant} from './physician-task-assistant';
+import {physicianTaskHref} from '@/lib/physician-task-router';
 import {consumeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
 import {PortableCaseExport,PortableCaseImport} from './portable-case-file';
 import {LibrarySuggestions} from './library-suggestions';
@@ -230,6 +231,20 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             setNotice('Сохранение не удалось. Экспортируйте случай — хранилище может быть заполнено.');return false;
         }
     }
+    /** W3: the existing RU/Global Ambient is the ONLY recorder and STT owner.
+     * Save pending case edits, then open its already-supported ambient=1 entry.
+     * Never start microphone, STT, protocol LLM, or a new child service here.
+     */
+    async function openExistingAmbientFromCase(){
+        if(!current || current.status!=='active' || busy || uploading || saving)return;
+        try{
+            if(unsaved && !(await save()))return;
+            await flushDraft();
+            router.push(physicianTaskHref('ambient',current.id,language));
+        }catch{
+            setNotice('Не удалось сохранить изменения перед открытием записи приёма. Останьтесь в случае и повторите сохранение.');
+        }
+    }
     async function addFiles(list: FileList | null, reference = false) {
         if (!list || !current)return;
         if(current.status==='closed'){setNotice('Верните случай в работу перед добавлением материалов.');return;}
@@ -423,7 +438,7 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
    </>}
    {section === 'cases' && current && <>
     <button className={styles.back} disabled={busy} onClick={() => changeCase(null)}>{t("← Все случаи")}</button>
-    <div className={styles.heading}><div><p className={styles.eyebrow}>{t("СЛУЧАЙ ·")}{current.id.slice(0, 8)} {dirty ? t("· СОХРАНЯЕМ") : ''}</p><h1>{caseTitle(current,t('Новый клинический случай'))}</h1><p>{t("Создан")} {date(current.created)} · {current.status === 'active' ? t("В работе") : t("Завершён")}</p></div><div className={styles.actions}><button disabled={busy} onClick={() => download(exportCase(current), `case-${current.id.slice(0, 8)}.md`, 'text/markdown')}>{t("↓ Экспорт")}</button><button disabled={busy} onClick={()=>void downloadDocx(current.title||t("Протокол осмотра"),exportCase(current),answerLocale).catch(()=>setNotice(t("Не удалось создать DOCX")))}>{t("Бланк DOCX")}</button>{current.analyses[0]?.result.clinicalDraft==='generated'?<button type="button" className={styles.primary} disabled={busy} onClick={()=>setProtocolOffer({caseId:current.id,analysisId:current.analyses[0].id})}>{t("Протокол осмотра")}</button>:<Link className={styles.primary} href={`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`} onClick={event=>{if(dirty||!cases.some(item=>item.id===current.id)){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`);});}}}>{t("Протокол осмотра")}</Link>}<Link href={`/radiology?case=${encodeURIComponent(current.id)}`} onClick={event=>{if(dirty){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/radiology?case=${encodeURIComponent(current.id)}`);});}}}>{t("Opus Radiology")}</Link><button className={styles.primary} disabled={busy || uploading} onClick={() => void save()}>{t("Сохранить случай")}</button></div></div>
+    <div className={styles.heading}><div><p className={styles.eyebrow}>{t("СЛУЧАЙ ·")}{current.id.slice(0, 8)} {dirty ? t("· СОХРАНЯЕМ") : ''}</p><h1>{caseTitle(current,t('Новый клинический случай'))}</h1><p>{t("Создан")} {date(current.created)} · {current.status === 'active' ? t("В работе") : t("Завершён")}</p></div><div className={styles.actions}><button disabled={busy} onClick={() => download(exportCase(current), `case-${current.id.slice(0, 8)}.md`, 'text/markdown')}>{t("↓ Экспорт")}</button><button disabled={busy} onClick={()=>void downloadDocx(current.title||t("Протокол осмотра"),exportCase(current),answerLocale).catch(()=>setNotice(t("Не удалось создать DOCX")))}>{t("Бланк DOCX")}</button>{current.analyses[0]?.result.clinicalDraft==='generated'?<button type="button" className={styles.primary} disabled={busy} onClick={()=>setProtocolOffer({caseId:current.id,analysisId:current.analyses[0].id})}>{t("Протокол осмотра")}</button>:<Link className={styles.primary} href={`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`} onClick={event=>{if(dirty||!cases.some(item=>item.id===current.id)){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/protocol/case?case=${encodeURIComponent(current.id)}&locale=${encodeURIComponent(answerLocale)}`);});}}}>{t("Протокол осмотра")}</Link>}<button type="button" disabled={busy||uploading||saving||current.status!=='active'} onClick={()=>void openExistingAmbientFromCase()}>{language==='ru'?'Записать приём':'Record encounter'}</button><Link href={`/radiology?case=${encodeURIComponent(current.id)}`} onClick={event=>{if(dirty){event.preventDefault();void save().then(saved=>{if(saved)router.push(`/radiology?case=${encodeURIComponent(current.id)}`);});}}}>{t("Opus Radiology")}</Link><button className={styles.primary} disabled={busy || uploading} onClick={() => void save()}>{t("Сохранить случай")}</button></div></div>
     <PhysicianTaskAssistant caseId={current.id} caseClosed={current.status==='closed'} onClinical={task=>{setCaseQuestion(task);goToTab('analysis');}}/>
     <PortableCaseExport caseId={current.id} beforeExport={async()=>{const ok=await save();if(ok)await flushDraft();return ok;}}/>
     <CaseConnections/>{protocolOffer?.caseId===current.id&&current.analyses[0]?.id===protocolOffer.analysisId&&<ProtocolLanguageOffer disabled={busy||saving} onDismiss={()=>setProtocolOffer(null)} onChoose={languages=>{void (async()=>{try{if(unsaved&&!(await save()))return;await flushDraft();router.push(protocolLanguageHref(current.id,languages));setProtocolOffer(null);}catch{setNotice('Не удалось сохранить переход к протоколу. Случай остаётся открытым.');}})();}}/>}<CaseResultsSummary record={current}/>{current.status==='closed'&&<section className={styles.notice}><div><strong>{t('Случай завершён и доступен для скачивания')}</strong><p>{t('Чтобы изменить решение или продолжить обсуждение, верните случай в работу. Предыдущий текст решения сохранится в истории правок.')}</p><div className={styles.actions}><button disabled={saving} onClick={()=>void downloadDocx(caseTitle(current,t('Решение врача')),decisionDocument(current),answerLocale)}>{t('Скачать решение DOCX')}</button><button onClick={()=>download(exportCase(current),`case-${current.id.slice(0,8)}.md`,'text/markdown')}>{t('Скачать всю историю')}</button><button disabled={saving} onClick={()=>void storeTransition({...current,status:'active',closedAt:undefined,updated:new Date().toISOString()},'Случай возвращён в работу.')}>{t('Вернуть в работу')}</button></div></div></section>}
