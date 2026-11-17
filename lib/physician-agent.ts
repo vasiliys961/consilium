@@ -75,7 +75,7 @@ export function parsePhysicianAgentJson(text:string):AgentJson|null{
  */
 export function respiratoryPresentation(text:string):boolean{
  const latest=extractLatest(text);
- const hasSymptoms=/(?:кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i.test(latest);
+ const hasSymptoms=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i.test(latest);
  const requestedDocument=/(?:протокол|soap|оформ|запиш.*карт|заключени|состав.*документ|write.*note|draft.*protocol|medical report)/i.test(latest);
  const featureQuestion=/(?:что умеет|возможност|покаж.*функци|help.*features|what can (?:you|opus) do)/i.test(latest);
  return hasSymptoms&&!requestedDocument&&!featureQuestion;
@@ -115,7 +115,7 @@ export async function converseWithPhysician(
   retryInvalidResponse:false,signal,
   messages:[
    {role:'system',content:[
-    'You are Opus Copilot, a physician-facing clinical workflow assistant. You are not an autonomous diagnostic engine.',
+    'You are Opus Copilot, a physician-facing clinical workflow assistant, not a medical diagnostician or an autonomous agent.',
     'Treat a short patient presentation (e.g. cough with dyspnea) as a clinical question, NOT a request to list platform features or generate a protocol.',
     'For an undifferentiated patient complaint, first help the physician assess urgency/red flags, name the minimum discriminating clinical measurements, and ask ONE focused follow-up. Do not manufacture findings or prescribe.',
     'For cough and dyspnea, focus first on SpO2, respiratory rate, vital signs, timing, chest pain and whether urgent in-person evaluation is needed. The main first tool is clinical.',
