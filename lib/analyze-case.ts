@@ -532,6 +532,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       focus: consiliumFocus(note, ledger.filter(entry => entry.status === 'read').map(entry => entry.modality)),
       modalities: ledger.filter(entry=>entry.status==='read').map(entry=>entry.modality),
       requestedSpecialty: body.councilSpecialty,
+      allowModelFallback: body.councilFallback===true,
     }, councilFetch).catch(() => {
       coordinatorFailed = true;
       emit('stage.failed',{stage:'consilium'});
