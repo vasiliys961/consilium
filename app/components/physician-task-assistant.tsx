@@ -71,7 +71,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
  const displayedPlan=agentReply?.plan??plan;
  const selectedSpecialty=suggestClinicalDestination(request);
  const workflow=copilotWorkflowMessage(language,displayedPlan,{
-  specialty:displayedPlan.steps[0]?.tool==='specialist'?selectedSpecialty?.label:undefined,
+  specialty:displayedPlan.steps[0]?.tool==='specialist'?(selectedSpecialty?.label??'Терапия'):undefined,
   urgent:Boolean(selectedSpecialty?.urgentHint),
  });
  useEffect(()=>{
@@ -188,7 +188,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   const local=planPhysicianTask(utterance);
   // Clinical complaints go to actual specialists; capability questions are
   // free and immediate. Neither requires a separate paid navigation answer.
-  if(local.intent==='help'||suggestClinicalDestination(utterance)){
+  if(local.intent==='help'||local.steps[0]?.tool==='specialist'||suggestClinicalDestination(utterance)){
    setRequest(utterance);setAgentReply(null);setAgentError('');setText('');
    return;
   }
