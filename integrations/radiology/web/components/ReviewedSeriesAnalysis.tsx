@@ -19,6 +19,7 @@ import FindingMeasurementReview, { type AcceptedFindingMeasurement } from './Fin
 import MrSeriesComparison from './MrSeriesComparison';
 import StudyPrivacyReview from './StudyPrivacyReview';
 import {reviewedConnectionNotice} from '../lib/reviewed-connection-notice';
+import {singleFramePilotAllowed} from '../lib/single-frame-pilot';
 import StudyReportDiscussion from './StudyReportDiscussion';
 import { estimateStudyCost, opusUsageEstimate, argonUsageEstimate } from '../lib/study-cost-estimate';
 import { splitReviewedTransport } from '../lib/reviewed-packet-transport';
@@ -79,6 +80,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     }, [stage, notice]);
     const [budget, setBudget] = useState(2), [connected, setConnected] = useState(false);
     const [connectionAttempt, setConnectionAttempt] = useState(0);
+    const [singleSliceTest, setSingleSliceTest] = useState(false);
     const [connectionDiagnostic, setConnectionDiagnostic] = useState('');
     const [receipts, setReceipts] = useState<LocalVolumeReceipt[]>([]), [report, setReport] = useState('');
     const ctl = useRef<AbortController | null>(null), sending = useRef(false);
@@ -140,6 +142,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         setMeasureSource(null);
         setAcceptedMeasurements([]);
         setStage('idle');
+        setSingleSliceTest(false);
         setReceipts([]);
         setReport('');
     }, [series, files]);
@@ -204,6 +207,8 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     }
     async function start() {
         if (!plan || selectionResult.error || (visualEnabled && physicianSelection.error) || sending.current || stage !== 'idle')
+            return;
+        if (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))
             return;
         const c = new AbortController();
         ctl.current = c;
@@ -304,6 +309,10 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             return;
         }
         packets = execution.packets;
+        if (singleSliceTest && (!singleFramePilotAllowed(selectionResult.indices, execution.batches) || packets.length !== 1)) {
+            interrupted(Error('Тест допускает только один проверенный срез и один запрос Gemini.'));
+            return;
+        }
         const batchPlan = { ...plan, batches: execution.batches };
         setExecutionBatches(execution.batches);
         approvedPackets.current = packets;
@@ -345,12 +354,17 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
                 current = done;
             }
             approvedPackets.current = packets;
+            if (singleSliceTest) {
+                setStage('completed');
+                setNotice('Тест завершён: наблюдения Gemini по одному срезу получены. Argon/Opus не вызывались. Остальная серия не оценена.');
+                return;
+            }
             synthesizing = true;
             await finalize(current, signal, batchPlan);
         }
         catch (e) {
             if (ctl.current?.signal === signal) {
-                if (!synthesizing && current.length > 0 && !signal.aborted) {
+                if (!singleSliceTest && !synthesizing && current.length > 0 && !signal.aborted) {
                     setStopReason(e instanceof Error ? e.message : 'Обзор Gemini прервался.');
                     // One authorized final synthesis from actual completed receipts; never retry
                     // the failed Gemini call or a failed Opus request automatically.
@@ -400,9 +414,9 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
    <p><LocalizedUi value={"CLN: исходные координаты привязаны к"}/><LocalizedUi value={detectorLocations.anchors.length}/><LocalizedUi value={"кандидатам. Их срезы входят в подборку Argon в пределах общего потолка 16. Фактический охват указан в результате."}/></p>
    <LocalizedUi value={detectorLocations.anchors.slice(0, 16).map(a => <p key={a.candidateId}><button type="button" onClick={() => onOpenSlice(series.members[a.sourceIndex].id)}><LocalizedUi value={"Кандидат"}/><LocalizedUi value={a.candidateId}/><LocalizedUi value={"· срез"}/><LocalizedUi value={a.sourceIndex + 1}/></button><LocalizedUi value={"· центр исходного кадра: X"}/><LocalizedUi value={(a.xFraction * 100).toFixed(1)}/>%, Y <LocalizedUi value={(a.yFraction * 100).toFixed(1)}/><LocalizedUi value={"%. Это координаты кандидата, не подтверждённый диагноз."}/></p>)}/>
   </section>}/>
-  <p>Flash просматривает выбранный объём. Argon получает значимые участки, соседние и контрольные срезы и составляет протокол. Opus — при существенном расхождении или по кнопке врача.</p><h2><LocalizedUi value={"Анализ КТ/МРТ · в серии"}/><LocalizedUi value={series.members.length}/><LocalizedUi value={"срезов"}/></h2>
+  <p><LocalizedUi value={singleSliceTest ? 'Проверка одного среза: один платный запрос Gemini. Argon и Opus не вызываются. Это не заключение по исследованию.' : 'Flash просматривает выбранный объём. Argon получает значимые участки, соседние и контрольные срезы и составляет протокол. Opus — при существенном расхождении или по кнопке врача.'}/></p><h2><LocalizedUi value={"Анализ КТ/МРТ · в серии"}/><LocalizedUi value={series.members.length}/><LocalizedUi value={"срезов"}/></h2>
   <p role="status"><strong><LocalizedUi value={"Обработано"}/><LocalizedUi value={processed}/><LocalizedUi value={"из"}/><LocalizedUi value={plan.budget.overviewIndices.length}/><LocalizedUi value={"выбранных срезов."}/></strong><LocalizedUi value={"Всего в серии:"}/><LocalizedUi value={series.members.length}/><LocalizedUi value={". Не оценено в серии:"}/><LocalizedUi value={series.members.length - processed}/>.</p>
-  <p role="status"><LocalizedUi value={stage === 'gemini' ? 'Gemini просматривает снимки. Затем результаты автоматически поступят Opus для заключения.' : stage === 'opus' ? 'Результаты Gemini переданы Opus. Формируется заключение…' : stage === 'completed' ? (processed < series.members.length ? 'Предварительное заключение готово по обработанной части исследования.' : 'Предварительное заключение готово.') : stage === 'interrupted' ? 'Обработка приостановлена. Полученные результаты сохранены.' : 'Выберите снимки, проверьте подготовленные копии и запустите анализ.'}/></p>
+  <p role="status"><LocalizedUi value={stage === 'gemini' ? (singleSliceTest ? 'Gemini анализирует один проверенный срез; дополнительных платных моделей нет.' : 'Gemini просматривает снимки. Затем результаты автоматически поступят Opus для заключения.') : stage === 'opus' ? 'Результаты Gemini переданы Opus. Формируется заключение…' : stage === 'completed' ? (singleSliceTest ? 'Тест завершён: наблюдения по одному срезу, не заключение по исследованию.' : (processed < series.members.length ? 'Предварительное заключение готово по обработанной части исследования.' : 'Предварительное заключение готово.')) : stage === 'interrupted' ? 'Обработка приостановлена. Полученные результаты сохранены.' : 'Выберите снимки, проверьте подготовленные копии и запустите анализ.'}/></p>
   <LocalizedUi value={(report || receipts.length > 0) && <section aria-label={__ui("Диагноз по обработанным срезам")}>
    <LocalizedUi value={report && <label><LocalizedUi value={"Предварительное заключение · проверьте и отредактируйте"}/><textarea data-concilium-report="true" rows={18} style={{ width: '100%' }} value={report} onChange={e => setReport(e.target.value)}/></label>}/>
    <LocalizedUi value={receipts.length > 0 && <button type="button" onClick={save}><LocalizedUi value={report ? 'Сохранить заключение TXT' : 'Сохранить промежуточный результат'}/></button>}/>
