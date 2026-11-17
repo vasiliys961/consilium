@@ -9,6 +9,7 @@ export interface RunOptions {
   kind: AnalysisKind;
   consilium: boolean;
   councilSpecialty?: string;
+  councilFallback?: boolean;
   secondOpinion: boolean;
   rereadImages: boolean;
   externalSearch: boolean;
@@ -20,7 +21,7 @@ export interface RunOptions {
 /** Compact key; source hashes, not full patient texts or binary data. */
 export function runOptionsKey(options: RunOptions): string {
   return JSON.stringify([
-    options.task,options.kind,options.consilium,options.councilSpecialty??'auto',options.secondOpinion,
+    options.task,options.kind,options.consilium,options.councilSpecialty??'auto',options.councilFallback===true,options.secondOpinion,
     options.rereadImages,options.externalSearch,options.answerLocale,options.sourceLocale,
     options.retrievedSources.map(item=>[item.name,item.sha256??'']),
   ]);
