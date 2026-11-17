@@ -20,8 +20,8 @@ const booleanFields:ReadonlyArray<{key:BooleanKey;name:string;pattern:RegExp}>= 
 ];
 function resolveBoolean(value:string):boolean|null{
  const clean=value.trim().toLowerCase().replace(/[.。]$/,'');
- if(/^(?:да|есть|подтвержден[ао]?|yes|true|present)$/.test(clean))return true;
- if(/^(?:нет|не\s+подтвержден[ао]?|отсутствует|no|false|absent)$/.test(clean))return false;
+ if(/^(?:да|есть|подтвержд[её]н[ао]?|yes|true|present)$/.test(clean))return true;
+ if(/^(?:нет|не\s+подтвержд[её]н[ао]?|отсутствует|no|false|absent)$/.test(clean))return false;
  return null;
 }
 export function extractMedicationSafetyContext(text:string):MedicationContextExtraction{
