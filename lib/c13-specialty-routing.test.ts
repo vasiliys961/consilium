@@ -21,7 +21,7 @@ test('C13: clinician complaint is matched to existing medical specialist (not di
   ['подозрение на опухоль','oncology'],
   ['перелом после травмы','traumatology'],
   ['беременность','gynecology'],
-  ['расшифруй МРТ','radiology'],
+  ['вопрос к радиологу по заключению','radiology'],
   ['у пациента слабость','universal'],
  ];
  for(const [question,expected] of scenarios){
@@ -49,6 +49,8 @@ test('C13: routine app questions and explicit protocol work do not get mistaken 
  assert.deepEqual(planPhysicianTask('У пациента одышка, есть КТ и ЭКГ. Хочу комплексный разбор и протокол').steps.map(s=>s.tool),
   ['radiology','ecg','clinical','protocol']);
  assert.equal(suggestClinicalDestination('открой ЭКГ'),null);
+ assert.equal(suggestClinicalDestination('расшифруй МРТ'),null);
+ assert.deepEqual(planPhysicianTask('расшифруй МРТ').steps.map(s=>s.tool),['radiology']);
 });
 
 test('C13: instant local response, visible result, selection and lazy integration check',()=>{
