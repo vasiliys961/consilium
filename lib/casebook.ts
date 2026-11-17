@@ -322,7 +322,8 @@ export function exportCase(value: ClinicalCase): string {
     ...(value.specialistReports??[]).map(report=>[
       report.at+' · '+report.specialty+' · '+report.model,
       'Источник: проверенный текст запроса · SHA-256 '+report.inputSha256,
-      'Вопрос: '+report.question,'Ответ (не подписан врачом):\n'+report.answer,
+      'Вопрос: '+report.question,'Проверенный текст запроса:\n'+report.inputText,
+      'Ответ (не подписан врачом):\n'+report.answer,
       'Стоимость: '+(report.costUsd===null?'не установлена':'$'+report.costUsd.toFixed(5)),
       'Источники: '+report.sources.map(source=>source.title+(source.url?' '+source.url:'')).join('; '),
     ].join('\n')),
