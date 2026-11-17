@@ -17,7 +17,7 @@ export interface SpecialistCaseReport{
  inputSha256:string;
  costUsd:number|null;
  costComplete:boolean;
- sources:Array<{title:string;url?:string;year?:number;pmid?:string}>;
+ sources:Array<{title:string;url?:string;year?:string;pmid?:string}>;
 }
 
 const SHA=/^[a-f0-9]{64}$/;
@@ -35,7 +35,7 @@ export function validateSpecialistCaseReport(value:SpecialistCaseReport):boolean
   &&Array.isArray(value.sources)&&value.sources.length<=25
   &&value.sources.every(source=>typeof source.title==='string'&&source.title.length>0&&source.title.length<=500
    &&(source.url===undefined||(typeof source.url==='string'&&source.url.startsWith('https://')&&source.url.length<=2000))
-   &&(source.year===undefined||(Number.isInteger(source.year)&&source.year>=1800&&source.year<=2200))
+   &&(source.year===undefined||(typeof source.year==='string'&&source.year.length<=20))
    &&(source.pmid===undefined&&(typeof source.pmid==='string'&&source.pmid.length<=50)));
 }
 
@@ -59,7 +59,7 @@ export async function specialistCaseReport(
   sources:reply.sources.slice(0,25).map(source=>({
    title:source.title.slice(0,500),
    ...(source.url?.startsWith('https://')?{url:source.url.slice(0,2000)}:{}),
-   ...(typeof source.year==='number'?{year:source.year}:{}),
+   ...(typeof source.year==='string'?{year:source.year.slice(0,20)}:{}),
    ...(source.pmid?{pmid:String(source.pmid).slice(0,50)}:{}),
   })),
  };
