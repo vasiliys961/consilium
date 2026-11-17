@@ -7,8 +7,8 @@ import {planPhysicianTask,physicianToolSteps,type PhysicianTool,type PhysicianTa
 
 /** C13: server-side LLM conversation; approved text only, no case documents or tools. */
 export const AGENT_MODEL=MODELS.flash;
-export const AGENT_TEXT_LIMIT=9000;
-const ALLOWED_TOOLS:readonly PhysicianTool[]=['clinical','radiology','ecg','ultrasound','genetics','medications','guidelines','protocol','ambient','documents'];
+export const AGENT_TEXT_LIMIT=16000;
+const ALLOWED_TOOLS:readonly PhysicianTool[]=['clinical','specialist','radiology','ecg','ultrasound','genetics','medications','guidelines','protocol','ambient','documents'];
 const EMPTY_MESSAGE='Опишите задачу врача и уточните, какой инструмент необходимо открыть.';
 
 type AgentJson={reply:string;question:string|null;tools:PhysicianTool[]};
@@ -137,6 +137,8 @@ export async function converseWithPhysician(
     'Keep your reply to one or two brief sentences; ask one concise question only when truly needed. No marketing, no model names, no technical system details.',
     'Answer in '+languageName(locale)+'. Be concise, helpful, non-patronizing, one clarifying question only if needed.',
     'Propose clinical workflow steps using ONLY these exact module IDs: '+tools+'.',
+    'If a doctor asks you to discuss diagnoses, differential, treatment or interpretation yourself, briefly offer the specialist module, which has the appropriate clinical models and evidence workflow. You are a guide, not that specialist.',
+    'If a user explicitly asks to open a module, select exactly that module, not a multi-step protocol.',
     'Never claim to have run a module, read a patient file, recorded audio, verified a diagnosis, or saved a clinical case.',
     'Do not invent capabilities, medical results, hyperlinks, or patient-specific medication orders. Do not choose provider models on behalf of the clinician.',
     'If the task is unclear ask one brief question, otherwise offer 1-3 relevant tool steps with reasons in prose.',
