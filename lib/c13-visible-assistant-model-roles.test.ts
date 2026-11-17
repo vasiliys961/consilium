@@ -19,7 +19,7 @@ test('C13: assistant is encountered before the homepage hero instead of below me
  assert.match(workspace,/getElementById\('doctor-opus-assistant'\)/);
  assert.match(workspace,/aria-label=\{t\("Помощник Doctor Opus"\)\}/);
  assert.match(assistant,/id="doctor-opus-assistant"/);
- assert.match(assistant,/С чего начать\?/);
+ assert.match(assistant,/Показать возможности/);
  assert.doesNotMatch(assistant,/<details style=\{\{marginTop:12\}\}><summary>\{t\('Примеры задач и возможности'\)\}/);
 });
 test('C13: visible welcome shortcut offers real modules, not an autonomous paid clinical call',()=>{
