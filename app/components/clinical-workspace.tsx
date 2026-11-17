@@ -270,18 +270,9 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
             return;
         const originalSnapshot=snapshot;
         const pendingQuestion=(explicitQuestion??(snapshot===current?caseQuestion:'')).trim();
-        if(caseAnalysisInput(snapshot).pendingModules.length){
-            // The Radiology detour must not discard the physician's unsent
-            // question or new observations before navigating to the module.
-            try{
-                if(pendingQuestion){
-                    setCaseQuestion(pendingQuestion);
-                    await preservePendingQuestion(snapshot,pendingQuestion,eventDrafts.note,eventDrafts.decision);
-                }else if(!(await save(snapshot)))return;
-                router.push(moduleHref('radiology',snapshot.id));
-            }catch{setNotice('Не удалось сохранить вопрос перед переходом к Radiology. Останьтесь в случае и экспортируйте материалы.');}
-            return;
-        }
+        // Pending Radiology materials must not block clinical reasoning about other
+        // supplied data. caseAnalysisInput() explicitly marks the unassessed
+        // imaging; the physician opens Radiology separately when needed.
         if(pendingQuestion)snapshot=stagePhysicianQuestion(snapshot,pendingQuestion);
         const request = new AbortController();
         analysisRequest.current = request;
