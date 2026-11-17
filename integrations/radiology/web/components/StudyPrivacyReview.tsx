@@ -32,12 +32,15 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
     const [notice, setNotice] = useState(''), [preparing, setPreparing] = useState(true), [error, setError] = useState('');
     const [resolved, setResolved] = useState<Set<number>>(new Set()), [editing, setEditing] = useState(false);
     const [approved, setApproved] = useState(false), [sending, setSending] = useState(false);
+    const [released, setReleased] = useState(false), [releaseError, setReleaseError] = useState('');
     const [attempt, setAttempt] = useState(0);
     const cancel = useRef<AbortController | null>(null), started = useRef(false);
     useEffect(() => {
         const c = new AbortController();
         cancel.current = c;
         started.current = false;
+        setReleased(false);
+        setReleaseError('');
         setGroups([]);
         setResolved(new Set());
         setApproved(false);
@@ -79,6 +82,8 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
         if (!canRelease || !approved || preparing || error || started.current || groups.length !== count)
             return;
         started.current = true;
+        setReleased(true);
+        setReleaseError('');
         setSending(true);
         try {
             // This is the physician's ONE explicit attestation of these exact copies,
@@ -88,14 +93,18 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
             await onReady(reviewed.map(g => g.packet));
         }
         catch (e) {
-            setError(e instanceof Error ? e.message : 'Анализ не завершён.');
+            // Current onReady throws only on preflight/packet errors, never after
+            // an uncertain remote paid reply. Preserve prepared exact PNG copies.
+            started.current = false;
+            setReleased(false);
+            setReleaseError(e instanceof Error ? e.message : 'Отправка не началась.');
         }
         finally {
             setSending(false);
         }
     }
     return <section aria-label={__ui("\u041F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0432\u0441\u0435\u0439 \u0441\u0435\u0440\u0438\u0438 \u043F\u0435\u0440\u0435\u0434 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u043E\u0439")}>
-  <p role="status"><LocalizedUi value={notice}/></p><LocalizedUi value={error && <p role="alert"><LocalizedUi value={error}/></p>}/>
+  <p role="status"><LocalizedUi value={notice}/></p><LocalizedUi value={error && <p role="alert"><LocalizedUi value={error}/></p>}/><LocalizedUi value={releaseError && <p role="alert"><LocalizedUi value={releaseError}/></p>}/>
   <LocalizedUi value={error && !preparing && !started.current && <button type="button" onClick={() => setAttempt(n => n + 1)}><LocalizedUi value={"\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u0443\u044E \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0443"}/></button>}/>
   <LocalizedUi value={preparing && <button type="button" onClick={() => { cancel.current?.abort(); setPreparing(false); setError('Подготовка остановлена. Изображения не отправлялись.'); }}><LocalizedUi value={"\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0443"}/></button>}/>
   <LocalizedUi value={group && !sending && <>
@@ -127,7 +136,7 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
    <LocalizedUi value={!preparing && !canRelease && <p role="status"><LocalizedUi value={connectionNotice || "Передача недоступна: рабочее место ещё не разрешено администратором. Снимки остаются локально."}/></p>}/>
    <LocalizedUi value={!preparing && groups.length === count && !error && <>
     <label><input type="checkbox" checked={approved} onChange={e => setApproved(e.target.checked)}/><LocalizedUi value={"\u042F \u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u043B \u0432\u044B\u0431\u0440\u0430\u043D\u043D\u044B\u0435 \u043F\u043E\u0434\u0433\u043E\u0442\u043E\u0432\u043B\u0435\u043D\u043D\u044B\u0435 \u043A\u043E\u043F\u0438\u0438 \u0438 \u043A\u043B\u0438\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0442\u0435\u043A\u0441\u0442, \u0432\u043A\u043B\u044E\u0447\u0430\u044F \u0432\u0441\u0435 \u043E\u0442\u043C\u0435\u0442\u043A\u0438 OCR: \u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0445 \u043D\u0430\u0434\u043F\u0438\u0441\u0435\u0439 \u0438 \u0443\u0437\u043D\u0430\u0432\u0430\u0435\u043C\u044B\u0445 \u043F\u0440\u0438\u0437\u043D\u0430\u043A\u043E\u0432 \u043D\u0435\u0442; \u043E\u0441\u0442\u0430\u0432\u0448\u0438\u0435\u0441\u044F \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u2014 \u043B\u043E\u0436\u043D\u044B\u0435 \u0441\u0440\u0430\u0431\u0430\u0442\u044B\u0432\u0430\u043D\u0438\u044F \u0438\u043B\u0438 \u043D\u0435\u0438\u0434\u0435\u043D\u0442\u0438\u0444\u0438\u0446\u0438\u0440\u0443\u044E\u0449\u0438\u0439 \u0442\u0435\u043A\u0441\u0442. \u0418\u043C\u0435\u044E \u043F\u0440\u0430\u0432\u043E \u043F\u0435\u0440\u0435\u0434\u0430\u0447\u0438 \u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0438\u043B \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u043C\u0435\u0434\u0438\u0446\u0438\u043D\u0441\u043A\u0438\u0445 \u0434\u0430\u043D\u043D\u044B\u0445. \u0420\u0430\u0437\u0440\u0435\u0448\u0430\u044E \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u044D\u0442\u0443 \u0441\u0435\u0440\u0438\u044E \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0438\u0437\u0430."}/></label>
-    <button type="button" disabled={!canRelease || !approved || sending || preparing} onClick={() => void release()}><LocalizedUi value={singleSliceTest ? "Отправить один проверенный срез в Gemini (платно)" : "Отправить проверенные снимки в анализ"}/></button>
+    <button type="button" disabled={!canRelease || !approved || sending || preparing || released} onClick={() => void release()}><LocalizedUi value={released ? "Запрос передан; повторная оплата заблокирована" : singleSliceTest ? "Отправить один проверенный срез в Gemini (платно)" : "Отправить проверенные снимки в анализ"}/></button>
    </>}/>
   </>}/>
  </section>;
