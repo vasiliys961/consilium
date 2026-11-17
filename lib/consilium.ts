@@ -131,7 +131,7 @@ function packet(input: ConsiliumInput, prior: ConsiliumVoice[], lenses:ReturnTyp
     .join("\n");
   const earlier = prior
     .map((voice) => voice.status === "done" && voice.text
-      ? `${voice.id} [AI clinical perspective: ${councilRolePerspective(voice.id,lenses)}; NOT a human specialist vote]: ${voice.text}`
+      ? `${voice.id}: ${voice.text} [AI clinical perspective: ${councilRolePerspective(voice.id,lenses)}; NOT a human specialist vote]`
       : `${voice.id}: NOT ASSESSED — no opinion returned. [AI clinical perspective: ${councilRolePerspective(voice.id,lenses)}]. Do not infer agreement or a clinical finding from this missing role.`)
     .join("\n");
   return [
