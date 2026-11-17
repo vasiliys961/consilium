@@ -17,7 +17,7 @@ type Rule = {
 const RULES: readonly Rule[] = [
   {
     domain: 'cardiology',
-    text: /сердечн|карди|ишеми|инфаркт|аритми|фибрилляци|ортопноэ|стенокарди|тропонин|nt.?probnp|cardiac|cardio|heart\s+fail|orthopn|troponin|myocard|arrhythm|atrial\s+fibrill|chest\s+pain/iu,
+    text: /сердечн|карди|ишеми|инфаркт|аритми|фибрилляци|(?:^|[\s(])фп(?=[\s,.;)])|ортопноэ|стенокарди|тропонин|nt.?probnp|cardiac|cardio|heart\s+fail|orthopn|troponin|myocard|arrhythm|atrial\s+fibrill|chest\s+pain/iu,
     modalities: ['ecg'],
   },
   {
