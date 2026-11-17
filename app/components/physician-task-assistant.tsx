@@ -265,15 +265,28 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
   {(request.trim()||agentReply)&&<section aria-label={t('Предлагаемый маршрут')} style={{marginTop:12}}>
    {agentReply?.message?<p dir="auto">{agentReply.message}</p>:<p>{t(displayedPlan.message)}</p>}
    {agentReply?.question&&<p dir="auto" style={{fontWeight:600}}>{agentReply.question}</p>}
-   {!!displayedPlan.steps.length&&<div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-    {displayedPlan.steps.map(step=>{
-     const {allowed,hint}=availability(step.tool);
-     return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
-      style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-      {t(step.title)}
-     </button>
-    })}
-   </div>}
+   {displayedPlan.steps.length>0&&(displayedPlan.intent==='help'
+    ? <ul style={{margin:'10px 0',paddingLeft:20}}>
+      {displayedPlan.steps.map(step=>{
+       const {allowed,hint}=availability(step.tool);
+       return <li key={step.tool} style={{marginBottom:7}}>
+        <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
+         style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
+         {t(step.title)}</button>
+        <span style={{fontSize:13}}>{t(step.reason)}</span>
+       </li>;
+      })}
+     </ul>
+    : <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+      {displayedPlan.steps.map(step=>{
+       const {allowed,hint}=availability(step.tool);
+       return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
+        style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
+        {t(step.title)}
+       </button>;
+      })}
+     </div>
+   )}
    {displayedPlan.steps.some(step=>step.tool==='clinical')&&<button type="button" onClick={()=>openTool('specialist',request)}
       style={{marginTop:8,border:'1px solid #9bb6a7',padding:'7px 10px',borderRadius:8}}>
       {t('Обсудить со специалистом')}
