@@ -7,6 +7,7 @@ import { findAcademicSources, searchPhrases, type Citation } from './literature.
 import { ANSWER_MARKER, latestQuestion, QUESTION_MARKER, SPECIALIST_PROFILES, TRANSCRIPT_LIMIT, type SpecialistProfile } from './specialist-profiles.ts';
 import { CONSULT_MODELS, REVIEW_LIMIT, REVIEW_MARKER, type ConsultDepth, type ConsultModel, type ConsultStage } from './specialist-options.ts';
 import { specialistPrompt } from './specialist-prompt.ts';
+import {specialistTerminologyHint} from './specialist-medical-terminology.ts';
 import { hearWindow, wavDurationSeconds } from '../packages/translator/wav.ts';
 
 type ApprovedQuestion = {
@@ -137,7 +138,8 @@ export async function consultSpecialist(
     messages: [
       {
         role: 'system',
-        content: specialistPrompt(input.profile, input.locale, depth, input.draft !== null),
+        content: specialistPrompt(input.profile, input.locale, depth, input.draft !== null,
+          specialistTerminologyHint(latestQuestion(input.transcript),input.locale,input.sourceLocale)),
       },
       {
         role: 'user',
