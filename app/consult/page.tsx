@@ -253,10 +253,19 @@ export default function ConsultPage() {
     setAttachmentPreview(undefined);
   }
   function continueInClinicalCase(){
-    const last=dialogue.turns.at(-1);
-    const doc=[question.trim()?'Вопрос врача: '+question.trim():last?.question?'Вопрос врача: '+last.question:'',
-      last?.text?'Ответ специалиста (непроверенный черновик):\n'+last.text.slice(0,4200):''].filter(Boolean).join('\n\n');
-    if(!doc.trim()||!storeSpecialistCaseDraft(doc,sourceCaseId)){
+    // A deliberately bounded and clearly marked *draft*, not a clinical summary.
+    // Copy the latest turns without pretending this is the entire consultation.
+    const recent=dialogue.turns.slice(-2).map(turn=>
+      'Вопрос врача: '+turn.question.slice(0,700)+'\n' +
+      'Ответ специалиста (требует проверки врачом):\n'+turn.text.slice(0,1000));
+    const current=question.trim();
+    const doc=['Черновик для клинического случая. Последние реплики — не вся консультация; проверьте сведения перед разбором.',
+      ...recent,current?'Новый вопрос врача: '+current:''].filter(Boolean).join('\n\n');
+    if(!recent.length&&!current){setError('Сначала сформулируйте вопрос.');return}
+    if(doc.length>6000){
+      setError('Черновик слишком длинный. Сократите новый вопрос или перенесите документы через клинический случай.');return;
+    }
+    if(!storeSpecialistCaseDraft(doc,sourceCaseId)){
       setError('Не удалось подготовить переход в случай. Скопируйте вопрос вручную.');return;
     }
     router.push(sourceCaseId?'/workspace?case='+encodeURIComponent(sourceCaseId):'/workspace?new=1');
