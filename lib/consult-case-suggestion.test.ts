@@ -20,7 +20,8 @@ test('A general medical question uses universal internal medicine if specialty u
 });
 test('Specialist explicitly offers continue dialogue or form a case with a selected button',()=>{
  const page=readFileSync('app/consult/page.tsx','utf8');
- assert.match(page,/suggestClinicalCase\(question,dialogue\.turns\.length,Boolean\(attachmentPreview\)\)/);
+ assert.match(page,/suggestClinicalCase\(question,dialogue\.turns\.length,Boolean\(attachmentPreview\)\|\|Boolean\(preparedDocuments\[specialty\]\)\)/);
+ assert.match(page,/setPreparedDocuments\(current=>\(\{\.\.\.current,\[specialty\]:true\}\)\)/);
  assert.match(page,/Продолжить диалог/);
  assert.match(page,/Сформировать клинический случай/);
  assert.match(page,/setCasePromptDismissed\(current=>/);
