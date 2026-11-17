@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import {checkMedicationRegimen, type MedicationContext, type DrugInteractionAlert} from '@/lib/drug-interaction-rules';
+import {caseMedicationSafetyContext} from '@/lib/case-medication-safety-context';
 import {useWorkspaceLanguage} from './workspace-language';
 
 export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert[] }) {
@@ -15,20 +16,22 @@ export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert
   </article>)}</>;
 }
 
-export function DrugInteractionChecker({current,onCurrentChange,disabled=false,initialProposed='',proposed:controlledProposed,onReview,onProposedChange,onDetailsChange,reviewLabel}:{current?:string;onCurrentChange?:(text:string)=>void;disabled?:boolean;initialProposed?:string;proposed?:string;onReview?:(current:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext})=>void;onProposedChange?:(text:string)=>void;onDetailsChange?:()=>void;reviewLabel?:string}){
+export function DrugInteractionChecker({current,onCurrentChange,disabled=false,initialProposed='',proposed:controlledProposed,onReview,onProposedChange,onDetailsChange,reviewLabel,caseFacts=''}:{current?:string;onCurrentChange?:(text:string)=>void;disabled?:boolean;initialProposed?:string;proposed?:string;caseFacts?:string;onReview?:(current:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext})=>void;onProposedChange?:(text:string)=>void;onDetailsChange?:()=>void;reviewLabel?:string}){
   const {t}=useWorkspaceLanguage();
   const [standalone,setStandalone]=useState(''),[localProposed,setProposed]=useState(initialProposed);
   const [stopped,setStopped]=useState(''),[alternatives,setAlternatives]=useState('');
   const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState(''),[ageText,setAgeText]=useState(''),[qtcText,setQtcText]=useState('');
-  const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false);
-  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,ageYears:ageText.trim()?Number(ageText):null,qtcMs:qtcText.trim()?Number(qtcText):null,decompensatedCirrhosis,severeHepaticImpairment};
+  const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState<boolean|null>(null),[severeHepaticImpairment,setSevereHepaticImpairment]=useState<boolean|null>(null);
+  const {context,issues,fromCase}=caseMedicationSafetyContext(caseFacts,{egfrText,potassiumText,ageText,qtcText,decompensatedCirrhosis,severeHepaticImpairment});
   const proposed=controlledProposed??localProposed;
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
   const alerts=result.alerts,coverage=result.coverage;
   return <section aria-label={t('Локальная проверка сочетаний')}>
     <h3>{t('Бесплатная локальная проверка сочетаний')}</h3>
-    <p>{t('Добавлять препараты можно на любом этапе. Введите действующие вещества по одному на строку, через запятую или плюс. Эта локальная проверка использует только поля ниже; она не извлекает препараты из свободного клинического текста.')}</p>
+    <p>{t('Добавлять препараты можно на любом этапе. Введите действующие вещества по одному на строку, через запятую или плюс. Лекарства извлекаются только из списка препаратов, а клинические показатели — из явно записанных данных текущего случая или из полей ниже.')}</p>
+    {caseFacts.trim()&&fromCase.length>0&&<p><small>{t('Из данных случая для проверки:')} {fromCase.join('; ')}. {t('Значения можно уточнить в полях ниже.')}</small></p>}
+    {issues.length>0&&<p role="status"><small>{t('Противоречивые данные случая — требуется уточнение:')} {issues.join('; ')}</small></p>}
     <label>{t('Текущие препараты')}<textarea disabled={disabled} rows={3} maxLength={2000} value={active} onChange={event=>(onCurrentChange??setStandalone)(event.target.value)}/></label>
     <label>{t('Проверить предполагаемое назначение')}<textarea disabled={disabled} rows={2} maxLength={1000} value={proposed} onChange={event=>{setProposed(event.target.value);onProposedChange?.(event.target.value);}}/></label>
     <details><summary>{t('Отменяемые препараты, альтернативы и данные пациента')}</summary>
@@ -38,8 +41,8 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
       <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="0" max="15" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Возраст, годы (если известен)')}<input type="number" min="0" max="120" step="1" disabled={disabled} value={ageText} onChange={e=>{setAgeText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('QTc, мс (если известен)')}<input type="number" min="200" max="900" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
-      <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
-      <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
+      <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis??context.decompensatedCirrhosis??false} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
+      <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment??context.severeHepaticImpairment??false} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
     </details>
     {onReview&&<button type="button" disabled={disabled||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}{result.organAlerts.map(item=><article key={item.drug+item.risk}><strong>{item.drug} · {t(item.severity==='contraindicated'?'Противопоказано':'Значимый риск')}</strong><p>{t(item.risk)}</p><p>{t(item.action)}</p><a href={item.url} target="_blank" rel="noreferrer">DailyMed · {item.section} ↗</a></article>)}
       {alerts.length?<DrugInteractionAlerts alerts={alerts}/>:<p>{t('В доступных правилах совпадений нет. Это не подтверждает совместимость; для остальных сочетаний нужен отдельный разбор и проверка источников.')}</p>}
