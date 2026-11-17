@@ -87,6 +87,7 @@ export interface ConductInput {
   locale?: Locale;
   sourceLocale?: Locale;
   consilium?: boolean;
+  councilSpecialty?: import('./adaptive-council.ts').CouncilSpecialty;
   secondOpinion?:boolean;
   attachment?: string | null;
   retain?: boolean;
