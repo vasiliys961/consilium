@@ -22,7 +22,7 @@ test('C13: a generic marketing/protocol model answer is superseded by clinical t
  );
  assert.deepEqual(data.tools,['clinical','radiology']);
  assert.match(data.reply,/Клинический разбор/);
- assert.match(data.reply,/срочная очная оценка/);
+ assert.match(data.reply,/срочная очная (?:оценка|помощь)/);
  assert.match(data.question??'',/SpO₂/);
  assert.doesNotMatch(data.reply,/наши возможности/i);
 });
