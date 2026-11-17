@@ -26,5 +26,5 @@ test('C13: new case and existing case routes remain distinct and encoded',()=>{
 test('C13: empty/help and open-ended questions are not falsely treated as completed analysis',()=>{
  assert.equal(planPhysicianTask('').intent,'welcome');
  assert.equal(planPhysicianTask('Что умеет Doctor Opus?').intent,'help');
- assert.deepEqual(planPhysicianTask('Как обследовать пациента с лихорадкой?').steps.map(s=>s.tool),['clinical']);
+ assert.deepEqual(planPhysicianTask('Как обследовать пациента с лихорадкой?').steps.map(s=>s.tool),['specialist','clinical']);
 });

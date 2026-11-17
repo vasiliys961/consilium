@@ -2,6 +2,7 @@
 
 import {LanguageSwitcher} from '@/app/components/language-switcher';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,6 +11,8 @@ import { useWorkspaceLanguage } from '@/app/components/workspace-language';
 import { requestStreamedJson } from '@/lib/analysis-stream';
 import { recordConsultQuestion } from '@/lib/consult-recording';
 import {consumeCopilotConsultDraft} from '@/lib/copilot-consult-handoff';
+import {storeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
+import {suggestClinicalCase} from '@/lib/consult-case-suggestion';
 import { LOCALES, parseLocale, type Locale } from '@/lib/locale';
 import { cleanChatText } from '@/lib/privacy-chat';
 import { prepareChatSend, reviewBeforeSending } from '@/lib/privacy-client';
@@ -62,6 +65,7 @@ function ReplyContent({ reply }: { reply: ConsultReply }) {
 }
 
 export default function ConsultPage() {
+  const router=useRouter();
   const { language, setLanguage, t } = useWorkspaceLanguage();
   const [specialty, setSpecialty] = useState<SpecialistId>('universal');
   const [answerLanguage, setAnswerLanguage] = useState<Locale>();
@@ -80,14 +84,21 @@ export default function ConsultPage() {
   const [mic, setMic] = useState<'opening' | 'recording'>();
   const [clip, setClip] = useState<string>();
   const [editedCopy, setEditedCopy] = useState<{ original: string; text: string }>();
+  const [sourceCaseId,setSourceCaseId]=useState<string>();
+  const [attachmentPreview,setAttachmentPreview]=useState<{name:string;text:string}>();
+  const [preparedDocuments,setPreparedDocuments]=useState<Partial<Record<SpecialistId,boolean>>>({});
+  const [attachmentBusy,setAttachmentBusy]=useState(false);
+  const [casePromptDismissed,setCasePromptDismissed]=useState<Partial<Record<SpecialistId,boolean>>>({});
 
   const controller = useRef<AbortController>();
   const recording = useRef<AbortController>();
   const stopRecording = useRef<() => void>();
   const promptInput = useRef<HTMLTextAreaElement>(null);
+  const documentInput=useRef<HTMLInputElement>(null);
   const conversation = useRef<HTMLDivElement>(null);
   const question = drafts[specialty] ?? '';
   const dialogue = dialogues[specialty] ?? EMPTY_DIALOGUE;
+  const offerCase= !casePromptDismissed[specialty]&&suggestClinicalCase(question,dialogue.turns.length,Boolean(attachmentPreview)||Boolean(preparedDocuments[specialty]));
   const profile = SPECIALIST_PROFILES.find(item => item.id === specialty)!;
   const busy = Boolean(action || mic);
   const original = question.trim() ? consultationTranscript(dialogue.transcript, question) : '';
@@ -104,8 +115,9 @@ export default function ConsultPage() {
     // before the specialist's ordinary consent and model action.
     const received=consumeCopilotConsultDraft();
     if(received){
-      setSpecialty('universal');
-      setDrafts(current=>({...current,universal:current.universal?.trim()||received}));
+      setSpecialty(received.specialty);
+      setSourceCaseId(received.caseId);
+      setDrafts(current=>({...current,[received.specialty]:current[received.specialty]?.trim()||received.text}));
       promptInput.current?.focus();
     }
   },[]);
@@ -213,6 +225,54 @@ export default function ConsultPage() {
     }
   }
 
+  async function prepareLocalDocument(file?:File){
+    if(!file)return;
+    setError('');setAttachmentPreview(undefined);setAttachmentBusy(true);
+    try{
+      if(file.size>8*1024*1024)throw Error('Файл больше 8 МБ. Добавьте его в материалы клинического случая.');
+      if(!/\.(pdf|docx|xlsx|txt|md|csv)$/i.test(file.name))
+        throw Error('Здесь можно извлечь текст из PDF, DOCX, XLSX, TXT или CSV. Изображения и DICOM добавляйте в клиническом случае.');
+      // Lazy import: the PDF / Office parsers never slow down the normal chat load.
+      const {prepareFile}=await import('@/lib/case-intake');
+      const prepared=await prepareFile(file);
+      if(!prepared.text?.trim())throw Error('Из документа не извлечён текст. Скан или изображение откройте в материалах случая.');
+      const excerpt=cleanChatText(prepared.text).text.trim().slice(0,2200);
+      if(!excerpt)throw Error('После удаления идентификаторов не осталось текста.');
+      setAttachmentPreview({name:file.name,text:excerpt});
+    }catch(e){setError(e instanceof Error?e.message:'Не удалось прочитать документ.')}
+    finally{setAttachmentBusy(false);}
+  }
+  function insertLocalDocument(){
+    if(!attachmentPreview)return;
+    // Explicit physician review: append only extracted and scrubbed TEXT to
+    // the editable question. The file itself is never uploaded here.
+    setDrafts(current=>{
+      const old=current[specialty]??'';
+      const inserted='\n\n[Фрагмент документа — проверьте извлечённый текст]\n'+attachmentPreview.text;
+      return {...current,[specialty]:(old+inserted).trim().slice(0,QUESTION_LIMIT)};
+    });
+    setPreparedDocuments(current=>({...current,[specialty]:true}));
+    setAttachmentPreview(undefined);
+  }
+  function continueInClinicalCase(){
+    // A deliberately bounded and clearly marked *draft*, not a clinical summary.
+    // Copy the latest turns without pretending this is the entire consultation.
+    const recent=dialogue.turns.slice(-2).map(turn=>
+      'Вопрос врача: '+turn.question.slice(0,700)+'\n' +
+      'Ответ специалиста (требует проверки врачом):\n'+turn.text.slice(0,1000));
+    const current=question.trim();
+    const doc=['Черновик для клинического случая. Последние реплики — не вся консультация; проверьте сведения перед разбором.',
+      ...recent,current?'Новый вопрос врача: '+current:''].filter(Boolean).join('\n\n');
+    if(!recent.length&&!current){setError('Сначала сформулируйте вопрос.');return}
+    if(doc.length>6000){
+      setError('Черновик слишком длинный. Сократите новый вопрос или перенесите документы через клинический случай.');return;
+    }
+    if(!storeSpecialistCaseDraft(doc,sourceCaseId)){
+      setError('Не удалось подготовить переход в случай. Скопируйте вопрос вручную.');return;
+    }
+    router.push(sourceCaseId?'/workspace?case='+encodeURIComponent(sourceCaseId):'/workspace?new=1');
+  }
+
   function ask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (outgoingQuestion) void execute({ kind: 'ask' });
@@ -257,6 +317,7 @@ export default function ConsultPage() {
       <span className={styles.badge}>{t('ИИ-помощник')}</span>
       <h1>{t('Спросить специалиста')}</h1>
       <p>{t('Выберите клинический профиль и задайте вопрос. Можно уточнить ответ в том же диалоге.')}</p>
+      <p style={{fontSize:14}}>{t('Можно просто пообщаться или передать вопрос и подтверждённые сведения в клинический случай.')}</p>
     </header>
 
     <section className={styles.chat} aria-label={t('Диалог со специалистом')}>
@@ -299,6 +360,8 @@ export default function ConsultPage() {
           setDrafts(current => ({ ...current, [specialty]: '' }));
           setClip(undefined);
           setEditedCopy(undefined);
+          setCasePromptDismissed(current=>({...current,[specialty]:false}));
+          setPreparedDocuments(current=>({...current,[specialty]:false}));
           setError('');
           promptInput.current?.focus();
         }}>{t('Новый диалог')}</button>
@@ -331,6 +394,38 @@ export default function ConsultPage() {
         </div>}
       </div>}
 
+      {offerCase&&<section aria-label={t('Выбор дальнейшей работы')} role="status" style={{border:'1px solid #b8cdbb',borderRadius:10,padding:14,marginBottom:10,background:'#f6fbf5'}}>
+        <strong>{t('Вопрос стал объёмным. Продолжим разговор или оформим клинический случай?')}</strong>
+        <p style={{fontSize:13,margin:'6px 0'}}>{t('В диалоге можно уточнять отдельные вопросы. В клиническом случае удобнее собрать документы, результаты и подготовить полноценный разбор.')}</p>
+        <div className={styles.actions}>
+          <button type="button" disabled={busy} onClick={()=>setCasePromptDismissed(current=>({...current,[specialty]:true}))}>
+            {t('Продолжить диалог')}
+          </button>
+          <button type="button" disabled={busy} onClick={continueInClinicalCase}>
+            {t(sourceCaseId?'Продолжить в моём клиническом случае':'Сформировать клинический случай')}
+          </button>
+        </div>
+      </section>}
+      <section className={styles.composer} aria-label={t('Материалы и переход в случай')} style={{borderTop:'1px solid #d8e3d8',paddingBlock:12}}>
+        <div className={styles.actions}>
+          <input ref={documentInput} hidden type="file" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" onChange={e=>{void prepareLocalDocument(e.target.files?.[0]);e.target.value='';}}/>
+          <button type="button" disabled={busy||attachmentBusy} onClick={()=>documentInput.current?.click()}>
+            {attachmentBusy?t('Читаем документ…'):t('Добавить текст документа')}
+          </button>
+          <button type="button" disabled={busy||(!question.trim()&&!dialogue.turns.length)}
+            onClick={continueInClinicalCase}>{t(sourceCaseId?'Перейти к моему случаю':'Продолжить в клиническом случае')}</button>
+        </div>
+        {attachmentPreview&&<div className={styles.outgoing} style={{paddingBlock:10}}>
+          <strong>{t('Текст извлечён локально')} · {attachmentPreview.name}</strong>
+          <textarea aria-label={t('Проверить текст документа')} rows={4} value={attachmentPreview.text} maxLength={2200}
+            onChange={e=>setAttachmentPreview(value=>value?{...value,text:e.target.value}:value)}/>
+          <div className={styles.actions}>
+            <button type="button" onClick={insertLocalDocument}>{t('Вставить проверенный текст в вопрос')}</button>
+            <button type="button" onClick={()=>setAttachmentPreview(undefined)}>{t('Отмена')}</button>
+          </div>
+          <p className={styles.hint}>{t('Документ не отправляется целиком. Вопрос можно исправить до запуска специалиста.')}</p>
+        </div>}
+      </section>
       <form className={styles.composer} onSubmit={ask}>
         <label>{t('Ваш вопрос')}
           <textarea ref={promptInput} rows={4} dir="auto" value={question} maxLength={QUESTION_LIMIT} required

@@ -4,6 +4,7 @@ import{materialRoute,moduleHref}from'@/lib/material-routing';
 import{CaseConnections}from'./case-connections';
 import {CaseResultsSummary} from './case-results-summary';
 import {PhysicianTaskAssistant} from './physician-task-assistant';
+import {consumeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
 import {PortableCaseExport,PortableCaseImport} from './portable-case-file';
 import {LibrarySuggestions} from './library-suggestions';
 import {CaseFeed} from './case-feed';
@@ -124,9 +125,27 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
                 const query = new URLSearchParams(window.location.search);
                 if (query.get('new') === '1') {
                     const value = await openNewCase(saved);
-                    if (active) {setCurrent(value);window.history.replaceState(window.history.state,'',`/workspace?case=${encodeURIComponent(value.id)}`);}
+                    if (active) {
+                      setCurrent(value);window.history.replaceState(window.history.state,'',`/workspace?case=${encodeURIComponent(value.id)}`);
+                      const transfer=consumeSpecialistCaseDraft(value.id);
+                      if(transfer){setCaseQuestion(transfer.question);setTab('analysis');}
+                    }
                 }
-                else if (query.get('case')) {const value=saved.find(item=>!item.deletedAt&&item.id===query.get('case'))??null;setCurrent(value);if(value?.workspaceDraft){setCaseQuestion(value.workspaceDraft.question);setEventDrafts({note:value.workspaceDraft.note,decision:value.workspaceDraft.decision});if(CASE_SECTIONS.some(s=>s.id===value.workspaceDraft?.tab))setTab(value.workspaceDraft.tab as CaseSection);}}
+                else if (query.get('case')) {
+                    const value=saved.find(item=>!item.deletedAt&&item.id===query.get('case'))??null;
+                    setCurrent(value);
+                    if(value?.workspaceDraft){
+                      setCaseQuestion(value.workspaceDraft.question);
+                      setEventDrafts({note:value.workspaceDraft.note,decision:value.workspaceDraft.decision});
+                      if(CASE_SECTIONS.some(s=>s.id===value.workspaceDraft?.tab))setTab(value.workspaceDraft.tab as CaseSection);
+                    }
+                    const transfer=value?consumeSpecialistCaseDraft(value.id):null;
+                    if(transfer){
+                      // Keep any existing unsent physician draft; never replace it.
+                      setCaseQuestion(previous=>[previous,transfer.question].filter(Boolean).join('\n\n').slice(0,6500));
+                      setTab('analysis');
+                    }
+                }
             }
         }).catch(() => { if (active) setNotice('Не удалось открыть локальное хранилище. Экспортируйте случай перед закрытием.'); });
         fetch('/api/status').then(r => r.json()).then(v => { if (active) setConfigured(v.configured); }).catch(() => { if (active) setConfigured(false); });

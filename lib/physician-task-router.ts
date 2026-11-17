@@ -1,3 +1,4 @@
+import {suggestClinicalDestination} from './copilot-clinical-routing.ts';
 /** C13 lightweight, offline and deterministic assistant for clinical TOOL routing.
  * Not a diagnostic engine: it never launches modules or sends clinical data.
  */
@@ -37,16 +38,27 @@ const MED=/лекарств|препарат|полипрагмаз|взаимо
 const GUIDE=/рекомендаци|гайдлайн|guideline|руководств|источник|литератур|доказательн|публикаци/i;
 const SPECIALIST=/специалист|консультаци|консультант|врач.*консультаци|consult specialist|ask specialist/i;
 const CLIN=/консилиум|комплексн|дифференциал|разбор|тактик|диагноз|сопостав|клиническ.*случай|second opinion/i;
-const PROTO=/протокол|soap|заключен|документир|оформлен.*прием|запис.*в карт/i;
+const PROTO=/протокол|soap|(?:подготов|созд|состав|оформ|напис|сгенер|сдел).{0,35}заключен|документир|оформлен.*прием|запис.*в карт/i;
 const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
 const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц');
 const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
+const CARDIAC=/(?:болит\s+сердц|боль\s+(?:в|за)\s+(?:груд|грудин|сердц)|бол[ьи]\s+(?:в\s+)?груд|давит\s+(?:в\s+)?груд|дискомфорт\s+(?:в\s+)?груд|chest\s+(?:pain|tightness|discomfort)|heart\s+pain)/i;
+export const isCardiacPresentation=(value:string)=>CARDIAC.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
+export const isCopilotHelpQuery=(value:string)=>/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?(?:функции|возможности)|help|what can you do|(?:найди|подбери|покажи) (?:мне )?(?:нужный )?инструмент\??$|find (?:a )?tool\??$)/i.test(value.trim());
+
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
- if(/^(?:что (?:ты |вы )?умеешь|что умеет|чем (?:ты |вы |doctor opus )?може(?:шь|те|т) помочь|что может doctor opus|возможност|покажи (?:все )?функции|help|what can you do)/i.test(value))
-  return {intent:'help',steps:(['clinical','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Вот реальные инструменты Doctor Opus. Выберите подходящий модуль или опишите задачу своими словами, чтобы получить маршрут. Запуск, платные запросы и сохранение — только по вашему подтверждению.'};
+ if(isCopilotHelpQuery(value))
+  return {intent:'help',steps:(['clinical','specialist','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Могу помочь выбрать инструмент Doctor Opus. Выберите модуль ниже или напишите, что хотите сделать.'};
+ const specialty=suggestClinicalDestination(value);
+ if(specialty&&!PROTO.test(value)&&!AMBIENT.test(value)){
+  const available=[...physicianToolSteps(['specialist','clinical'])];
+  return {intent:'route',steps:available,message:specialty.urgentHint
+    ? 'Рекомендую специалиста: '+specialty.label+'. '+specialty.urgentHint
+    : 'По этому вопросу могу предложить специалиста: '+specialty.label+'. Можно также открыть клинический разбор.'};
+ }
  const tools:PhysicianTool[]=[];
  const add=(tool:PhysicianTool)=>{if(!tools.includes(tool))tools.push(tool);};
  if(RAD.test(value))add('radiology');
