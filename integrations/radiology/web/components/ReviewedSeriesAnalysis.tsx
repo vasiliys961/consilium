@@ -18,7 +18,7 @@ import { clnDetectorRecheck, type BoundDetectorRecheck } from '../lib/cln-detect
 import FindingMeasurementReview, { type AcceptedFindingMeasurement } from './FindingMeasurementReview';
 import MrSeriesComparison from './MrSeriesComparison';
 import StudyPrivacyReview from './StudyPrivacyReview';
-import {reviewedConnectionNotice} from '../lib/reviewed-connection-notice';
+import {reviewedConnectionNotice,reviewedConnectionReady} from '../lib/reviewed-connection-notice';
 import {singleFramePilotAllowed} from '../lib/single-frame-pilot';
 import StudyReportDiscussion from './StudyReportDiscussion';
 import { estimateStudyCost, opusUsageEstimate, argonUsageEstimate } from '../lib/study-cost-estimate';
@@ -154,7 +154,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         }).then(async (r) => r.ok ? r.json() : null)
             .then(d => {
             if (!c.signal.aborted) {
-                setConnected(d?.enabled === true && d?.workstationConnected === true);
+                setConnected(reviewedConnectionReady(d));
                 const diagnostic = reviewedConnectionNotice(d);
                 setConnectionDiagnostic(diagnostic);
                 setNotice(diagnostic);
@@ -222,7 +222,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
                 cache: 'no-store', credentials: 'same-origin'
             });
             const status = response.ok ? await response.json() : null;
-            const ready = status?.enabled === true && status?.workstationConnected === true;
+            const ready = reviewedConnectionReady(status);
             const diagnostic = reviewedConnectionNotice(status);
             setConnected(ready);
             setConnectionDiagnostic(diagnostic);
