@@ -45,6 +45,15 @@ test('C13: English symptom-only encounter prioritizes immediate clinical assessm
  assert.match(result.question??'',/respiratory rate/);
 });
 
+test('C13: Global languages are not overwritten with Russian text',()=>{
+ const text='Paciente con cough and dyspnea';
+ const original='Antes de elegir herramientas, compruebe la saturación y el estado clínico.';
+ const result=clinicalFirstResponse(text,'es',{reply:original,question:'¿Cuál es la SpO2?',tools:['protocol','clinical']});
+ assert.equal(result.reply,original);
+ assert.equal(result.question,'¿Cuál es la SpO2?');
+ assert.deepEqual(result.tools,['clinical']);
+});
+
 test('C13: simulated cheap LLM that advertises capabilities is clinically corrected with no extra API',async()=>{
  let requests=0;
  const mockFetch:typeof fetch=async(_url,init)=>{
