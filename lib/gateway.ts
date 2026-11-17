@@ -46,7 +46,7 @@ function durationMs(started: number): number {
 
 export async function complete(
   env: Record<string, string | undefined>,
-  request: { model: string; pinModel?:boolean; fallbackModel?: string; maxTokens: number; messages: ModelTurn[]; timeoutMs?: number;
+  request: { model: string; pinModel?:boolean; fallbackModel?: string; fallbackOnlyIfUnavailable?:boolean; maxTokens: number; messages: ModelTurn[]; timeoutMs?: number;
     signal?: AbortSignal;
     retryInvalidResponse?: boolean;
     jsonSchema?: { name: string; schema: Record<string, unknown> };
@@ -61,7 +61,13 @@ export async function complete(
   ].filter((endpoint) => endpoint !== null);
   const models = [request.model, request.fallbackModel].filter((model): model is string => Boolean(model)).map(model=>model===MODELS.pro&&!request.pinModel?geminiModel(env):model);
 
-  for (const model of models) {
+  let fallbackAllowed=false;
+  for (const [modelIndex,model] of models.entries()) {
+    // Strict clinical fallback: only a provider's explicit unavailable-model
+    // rejection with no reported usage permits a second model attempt.
+    // Never auto-retry uncertain transport failures, timeouts, truncated,
+    // invalid paid responses or payment failures.
+    if(modelIndex>0&&request.fallbackOnlyIfUnavailable&&!fallbackAllowed)break;
     for (const endpoint of endpoints) {
       let schemaFallback = false;
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -91,7 +97,14 @@ export async function complete(
           usage?: { prompt_tokens?: number; completion_tokens?: number };
         };
         if (!response.ok || data.error || data.choices?.[0]?.finish_reason === 'error') {
-          const schemaRejected = /compiled grammar is too large/i.test(JSON.stringify(data.error ?? ''));
+          const errorMessage=JSON.stringify(data.error??'');
+          const schemaRejected = /compiled grammar is too large/i.test(errorMessage);
+          const modelUnavailability = !data.usage && (
+            response.status===404 ||
+            ((response.status===400||response.status===422) &&
+              /(?:no endpoints|model.{0,40}(?:not found|unavailable|not available|unknown)|unknown model|unsupported model)/i.test(errorMessage))
+          );
+          if(request.fallbackOnlyIfUnavailable&&modelUnavailability)fallbackAllowed=true;
           request.onFailure?.(response.status === 402 ? 'payment_required' : schemaRejected ? 'schema_rejected' : 'provider_error');
           // A bounded compatibility retry; keep local validation mandatory in JSON mode.
           if (schemaRejected && request.jsonSchema && request.validate && !schemaFallback) {
