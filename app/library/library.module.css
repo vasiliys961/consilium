@@ -1,3 +1,11 @@
 .page{max-width:1000px;margin:0 auto;padding:32px 24px 80px;color:#163934;line-height:1.65}.page h1{font-size:32px}.page section{background:white;border:1px solid #d9e4df;border-radius:16px;padding:24px;margin:20px 0}.page article{border-top:1px solid #e2e8e5;padding:16px 0}.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}.page button,.page input{font:inherit}.page button{padding:8px 14px;border:1px solid #b4c9bf;border-radius:8px;background:#f4f8f3;cursor:pointer}.page button:disabled{opacity:.5}.page input:not([type=file]):not([type=checkbox]):not([type=number]){display:block;width:100%;padding:10px;border:1px solid #b4c9bf;border-radius:8px}.page label{display:block}.page input[type=file]{max-width:100%}
 
 .page input[type=checkbox]{width:auto;flex:0 0 auto}.page select{font:inherit;max-width:100%;padding:8px;border:1px solid #b4c9bf;border-radius:8px}
+
+
+/* Book search, document review and clinical reading need desktop width. */
+.page{width:100%;max-width:1600px;margin-inline:auto;padding:clamp(16px,2.6vw,42px);font-size:18px;line-height:1.7}
+.page section{padding:clamp(18px,2.4vw,38px)}
+.page input,.page select,.page textarea,.page button{font-size:17px;line-height:1.55}
+.page article{overflow-wrap:anywhere}
+@media(max-width:700px){.page{padding:14px}.page section{padding:16px}}
