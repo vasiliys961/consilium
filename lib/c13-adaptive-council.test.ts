@@ -43,7 +43,7 @@ test('C13 adaptive council uses same five model calls; titles are lenses, not im
  assert.match(prompts.find(s=>s.startsWith('You suggest'))??'',/pulmonology/);
  assert.match(prompts.find(s=>s.startsWith('You are the critic'))??'',/INDEPENDENT multidisciplinary clinical critic/);
  assert.match(prompts.find(s=>s.startsWith('Review the proposed'))??'',/clinical pharmacology/);
- assert.match(prompts.find(s=>s.startsWith('Synthesize the four'))??'',/Do not claim independent specialty votes/);
+ assert.match(prompts.find(s=>s.startsWith('Synthesize the four'))??'',/NOT a human expert consultation/);
  assert.ok(result.every(v=>v.status==='done'));
 });
 
