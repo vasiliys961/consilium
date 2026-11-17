@@ -40,6 +40,6 @@ test('C13: a missing council voice is clearly missing even after adaptive labeli
  });
  assert.equal(result.length,5);
  assert.equal(result.find(v=>v.id==='challenger')?.status,'not_assessed');
- assert.match(all.at(-1)??'',/challenger \[AI clinical perspective: multidisciplinary critic\]: NOT ASSESSED/);
+ assert.match(all.at(-1)??'',/challenger: NOT ASSESSED — no opinion returned\. \[AI clinical perspective: multidisciplinary critic\]/);
  assert.match(all.at(-1)??'',/hypothesis = internal medicine; testChooser = internal medicine/);
 });
