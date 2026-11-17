@@ -401,7 +401,9 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
    <button aria-label={t("Клинические случаи")} aria-pressed={section==='cases'} className={section === 'cases' ? styles.active : ''} onClick={() => goToSection('cases')}>▤ <span>{t("Клинические случаи")}</span><small>{cases.filter(value=>!value.deletedAt).length}</small></button>
    <button aria-label={t("Модули анализа")} aria-pressed={section==='modules'} className={section === 'modules' ? styles.active : ''} onClick={() => goToSection('modules')}>◈ <span>{t("Модули анализа")}</span></button>
    <button type="button" aria-label={t("Помощник Doctor Opus")} onClick={()=>{goToSection('cases');requestAnimationFrame(()=>document.getElementById('doctor-opus-assistant')?.scrollIntoView({block:'start',behavior:'smooth'}));}}>✳ <span>{t("Помощник Doctor Opus")}</span></button>
-   <Link className={styles.sidebarConsult} aria-label={t("Спросить специалиста")} href={current?`/consult?case=${encodeURIComponent(current.id)}`:'/consult'}><span aria-hidden="true">◌</span><span>{t("Спросить специалиста")}</span></Link>
+   <Link className={styles.sidebarConsult} aria-label={t("Спросить специалиста")} href={current?`/consult?case=${encodeURIComponent(current.id)}`:'/consult'} onClick={event=>{
+     if(current&&unsaved){event.preventDefault();void save().then(saved=>{if(saved)router.push('/consult?case='+encodeURIComponent(current.id))});}
+    }}><span aria-hidden="true">◌</span><span>{t("Спросить специалиста")}</span></Link>
    <button aria-label={t("Инструкция для врача")} onClick={() => setHelpOpen(true)}>ⓘ <span>{t("Инструкция для врача")}</span></button>
    <Link className={styles.sidebarConsult} href="/library" aria-label={t('Личная библиотека')}><span aria-hidden="true">▤</span><span>{t('Личная библиотека')}</span></Link><div className={styles.sideBottom}><span className={styles.dot}/>{t("Локальное рабочее место")}<p>{t("Исследовательская версия")}<br />{t("Решение принимает врач")}</p><Link href={current?moduleHref('workbench',current.id):'/workbench'}>{t("Расширенная станция ↗")}</Link></div>
   </aside>
