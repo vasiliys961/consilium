@@ -11,12 +11,8 @@ import {planPhysicianTask,physicianTaskHref,copilotRequestedOpen,type PhysicianT
 import {suggestClinicalDestination} from '@/lib/copilot-clinical-routing';
 import {copilotText,copilotToolTitle,copilotToolReason,copilotWorkflowMessage} from '@/lib/copilot-i18n';
 import {useWorkspaceLanguage} from './workspace-language';
+import {copilotModuleReadiness,type CopilotIntegrationSnapshot as IntegrationSnapshot} from '@/lib/copilot-module-readiness';
 
-type IntegrationSnapshot={
- radiology?:{installed:boolean;running:boolean};
- ecg?:{available:boolean};
- protocol?:{ru?:{installed:boolean;running:boolean};en?:{installed:boolean;running:boolean}};
-};
 type VoiceResult={results:ArrayLike<ArrayLike<{transcript:string}>>};
 type VoiceRecognition={
  lang:string;interimResults:boolean;continuous:boolean;
@@ -99,31 +95,19 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    fetch('/api/integrations',{cache:'no-store',signal:controller.signal}).then(response=>{
     if(!response.ok)throw Error('status');
     return response.json() as Promise<IntegrationSnapshot>;
-   }).then(value=>{if(active)setIntegration(value)})
-    .catch(()=>{if(active&&!controller.signal.aborted)setHealthError(true)});
+   }).then(value=>{if(active){setIntegration(value);setHealthError(false)}})
+    .catch(()=>{if(active&&!controller.signal.aborted){setIntegration(null);setHealthError(true)}});
   },250);
   return()=>{active=false;clearTimeout(timer);controller.abort()};
- },[routeRequested]);
+ },[request]);
  useEffect(()=>{
   if(request.trim())requestAnimationFrame(()=>
    document.getElementById('opus-copilot-result')?.scrollIntoView({block:'nearest',behavior:'smooth'}));
  },[request]);
 
- function availability(tool:PhysicianTool):{allowed:boolean;hint:string}{
-  if(!integration)return {allowed:true,hint:healthError?'Наличие инструмента будет проверено при открытии.':'Проверяем подключение.'};
-  if(tool==='radiology'){
-   if(integration.radiology?.installed===false)return {allowed:false,hint:'Radiology не установлена в этой копии.'};
-   return {allowed:true,hint:integration.radiology?.running?'Radiology доступна.':'Проверим Radiology при открытии.'};
-  }
-  if(tool==='ambient'||tool==='protocol'){
-   const edition=language==='ru'?'ru':'en';
-   const status=integration.protocol?.[edition];
-   if(status?.installed===false)return {allowed:false,hint:'Редактор протокола не установлен.'};
-   return {allowed:true,hint:status?.running?'Редактор доступен.':'Проверим редактор при открытии.'};
-  }
-  if(tool==='ecg'&&integration.ecg?.available===false)
-   return {allowed:true,hint:'Модуль ЭКГ покажет доступные варианты анализа.'};
-  return {allowed:true,hint:''};
+ function availability(tool:PhysicianTool):{allowed:boolean;hint:string;visible:boolean}{
+  const status=copilotModuleReadiness(tool,language,integration,healthError);
+  return {allowed:status.allowed,hint:status.text,visible:status.visible};
  }
  function enableCopilot(value:boolean){
   setCopilotEnabled(value);
@@ -303,22 +287,26 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,onClinical}:{
    {displayedPlan.steps.length>0&&(displayedPlan.intent==='help'
     ? <ul style={{margin:'10px 0',paddingLeft:20}}>
       {displayedPlan.steps.map(step=>{
-       const {allowed,hint}=availability(step.tool);
+       const {allowed,hint,visible}=availability(step.tool);
        return <li key={step.tool} style={{marginBottom:7}}>
-        <button type="button" disabled={!allowed} title={ct(hint)} onClick={()=>openTool(step.tool,request)}
+        <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
          style={{border:'1px solid #9bb6a7',borderRadius:6,padding:'4px 8px',background:'#fff',marginRight:8}}>
          {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}</button>
         <span style={{fontSize:13}}>{copilotToolReason(language,step.tool)}</span>
+        {visible&&<small style={{display:'block',color:allowed?'#56675d':'#8a2b17',marginTop:3}}>{hint}</small>}
        </li>;
       })}
      </ul>
     : <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
       {displayedPlan.steps.map(step=>{
-       const {allowed,hint}=availability(step.tool);
-       return <button key={step.tool} type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
-        style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
-        {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}
-       </button>;
+       const {allowed,hint,visible}=availability(step.tool);
+       return <span key={step.tool} style={{display:'inline-flex',flexDirection:'column',gap:3,maxWidth:250}}>
+        <button type="button" disabled={!allowed} title={hint} onClick={()=>openTool(step.tool,request)}
+         style={{padding:'8px 12px',borderRadius:8,border:'1px solid #9bb6a7',background:'#fff'}}>
+         {copilotToolTitle(language,step.tool)}{step.tool==='specialist'&&suggestClinicalDestination(request)?' · '+ct(suggestClinicalDestination(request)!.label):''}
+        </button>
+        {visible&&<small style={{fontSize:11,color:allowed?'#56675d':'#8a2b17'}}>{hint}</small>}
+       </span>;
       })}
      </div>
    )}
