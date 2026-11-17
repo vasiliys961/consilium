@@ -18,6 +18,7 @@ export function validCaseInput(value:unknown):value is ConductInput {
  if(value.sourceLocale!==undefined&&parseLocale(value.sourceLocale)!==value.sourceLocale)return false;
  if(value.drugLabels!==undefined&&!validDrugSelections(value.drugLabels))return false;
  if(value.councilSpecialty!==undefined&&!validCouncilSpecialty(value.councilSpecialty))return false;
+ if(value.councilFallback!==undefined&&typeof value.councilFallback!=='boolean')return false;
  if(value.task!==undefined&&!['interpret','clinical','management','evidence'].includes(String(value.task)))return false;
  if(value.speech!==undefined&&(!record(value.speech)||!optionalString(value.speech.text)||!optionalString(value.speech.audio)))return false;
  if(record(value.speech)&&value.speech.target!==undefined&&parseLocale(value.speech.target)!==value.speech.target)return false;
