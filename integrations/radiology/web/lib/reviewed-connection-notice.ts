@@ -1,3 +1,10 @@
+/** Preview cloud access is active only after explicit admin approval and a verified reviewed-frame session. */
+export function reviewedConnectionReady(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const status = raw as {enabled?: unknown;workstationConnected?: unknown};
+  return status.enabled === true && status.workstationConnected === true;
+}
+
 /** Non-sensitive diagnostics for a clinician without exposing provider tokens. */
 export function reviewedConnectionNotice(raw: unknown): string {
   if (!raw || typeof raw !== "object") return "Не удалось проверить доступ к анализу. Снимки остаются локально.";
