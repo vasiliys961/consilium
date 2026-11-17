@@ -38,7 +38,7 @@ const CLIN=/консилиум|комплексн|дифференциал|ра�
 const PROTO=/протокол|soap|заключен|документир|оформлен.*прием|запис.*в карт/i;
 const AMBIENT=/ambient|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
 const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц');
-const RESPIRATORY=/(?:кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
+const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
 
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
