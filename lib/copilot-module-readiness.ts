@@ -70,7 +70,8 @@ export function copilotModuleReadiness(
   visible=true;
   const value=!healthFailed?snapshot?.ecg:undefined;
   if(value?.available===false)state='limited';
-  else if(value?.available===true)state='available';
+  // ECGFounder readiness does not prove the full ECG module is running.
+  else if(value?.available===true)state='unknown';
  }
  // All other modules are navigable in the app but have no health verification
  // in this API. Avoid a green "ready" label that could mislead a physician.
