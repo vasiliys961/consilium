@@ -50,13 +50,20 @@ export const isCopilotHelpQuery=(value:string)=>{
 };
 
 
+/** Finding an already installed tool is local navigation, not paid AI reasoning. */
+export function isCopilotToolDiscoveryQuery(task:string):boolean{
+ const query=task.trim();
+ return /^(?:найди|найти|подбери|покажи|подскажи|find|locate|show|search for)(?=\\s|$)/i.test(query)
+  && /(?:инструмент|модул|раздел|функци|tool|module)/i.test(query);
+}
+
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
  if(isCopilotHelpQuery(value))
   return {intent:'help',steps:(['clinical','specialist','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Могу помочь выбрать инструмент Doctor Opus. Выберите модуль ниже или напишите, что хотите сделать.'};
  const specialty=suggestClinicalDestination(value);
- if(specialty&&!PROTO.test(value)&&!AMBIENT.test(value)){
+ if(specialty&&!isCopilotToolDiscoveryQuery(value)&&!PROTO.test(value)&&!AMBIENT.test(value)){
   const available=[...physicianToolSteps(['specialist','clinical'])];
   return {intent:'route',steps:available,message:specialty.urgentHint
     ? 'Рекомендую специалиста: '+specialty.label+'. '+specialty.urgentHint
