@@ -4,7 +4,7 @@ import { MODELS, sendTextRequestWithUsage } from '@/lib/openrouter'
 import { addModelUsage, emptyTokenUsage } from '@/lib/cost-calculator'
 import { getForcedLanguageInstructionForRequest } from '@/lib/i18n/llm-response-language'
 
-const DEFAULT_DRAFT_MODEL = process.env.PROTOCOL_DIALOGUE_DRAFT_MODEL?.trim() || MODELS.HAIKU
+const DEFAULT_DRAFT_MODEL = process.env.PROTOCOL_DIALOGUE_DRAFT_MODEL?.trim() || 'anthropic/claude-haiku-5.5' // C14: extraction only, not the final note writer
 const FALLBACK_DRAFT_MODEL = MODELS.GEMINI_3_FLASH
 
 function buildDialogueDraftPrompt(params: { transcript: string; specialistName?: string; languageInstruction: string }): string {
