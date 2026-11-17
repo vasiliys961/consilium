@@ -63,7 +63,7 @@ test('C13: instant local response, visible result, selection and lazy integratio
  assert.match(component,/id="opus-copilot-result"/);
  assert.match(component,/routeRequested=Boolean\(request\.trim\(\)\)/);
  assert.match(component,/specialty:target\?\.specialty,caseId/);
- assert.match(component,/step\.tool==='specialist'.*suggestClinicalDestination\(request\)/);
+ assert.match(component,/step\.tool==='specialist'.*selectedSpecialty/);
 });
 
 test('C13: specialist can receive a selected specialty and run voice without Copilot STT',()=>{
