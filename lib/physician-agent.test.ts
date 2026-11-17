@@ -37,7 +37,7 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
   const payload=JSON.parse(String(init?.body));
   assert.equal(payload.model,MODELS.flash);
   assert.equal(payload.stream,undefined);
-  assert.match(payload.messages[0].content,/not a medical diagnostician/);
+  assert.match(payload.messages[0].content,/not a clinical expert or diagnostician/);
   assert.match(payload.messages[0].content,/Never claim to have run a module/);
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({reply:'Откройте анализ ЭКГ и затем клинический разбор.',question:'Есть ли запись ЭКГ?',tools:['ecg','clinical']})}}],usage:{prompt_tokens:180,completion_tokens:115}});
  };
@@ -57,7 +57,7 @@ test('C13: provider or invalid output has local fallback, no silent retry or inv
  assert.equal(calls,1);
  assert.equal(first.usedModel,false);
  assert.equal(first.model,null);
- assert.equal(first.warning,'model_unavailable');
+ assert.equal(first.warning,'provider_error');
  assert.deepEqual(first.plan.steps.map(s=>s.tool),['ecg','clinical']); // Existing free planner follows ECG interpretation with a clinical review.
  const noKey=await converseWithPhysician({text:'[PHYSICIAN]\nНужно записать приём',locale:'ru'},{} as NodeJS.ProcessEnv,async()=>{throw Error('Never call without key')});
  assert.deepEqual(noKey.plan.steps.map(s=>s.tool),['ambient']);
@@ -66,11 +66,14 @@ test('C13: provider or invalid output has local fallback, no silent retry or inv
 test('C13: UI never sends case files, retains conversation only in component state, preserves free planner',()=>{
  const component=readFileSync('app/components/physician-task-assistant.tsx','utf8');
  const route=readFileSync('app/api/physician-agent/route.ts','utf8');
- assert.match(component,/reviewBeforeSending\(\{text:transcript,locale:language,externalSearch:false\}\)/);
+ assert.match(component,/copilotNeedsPrivacyReview\(utterance\)/);
+ assert.match(component,/reviewBeforeSending\(outgoing\)/);
+ assert.match(component,/prepareChatSend\(outgoing,controller.signal\)/);
  assert.match(component,/\/api\/physician-agent/);
  assert.match(component,/disabled=\{agentBusy\|\|!text.trim\(\)\}/);
  assert.match(component,/Бесплатный план по правилам/);
- assert.match(component,/Спросить Opus Copilot/);
+ assert.match(component,/Спросить Copilot/);
+ assert.match(component,/Включить помощника/);
  assert.match(component,/Opus Copilot — помощник врача/);
  assert.doesNotMatch(component,/Обсудить с ИИ · OpenRouter/);
  assert.match(component,/requestController\.current\?\.abort\(\)/);
