@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 // @ts-expect-error Tested JavaScript installer exports a runtime ESM helper without a TypeScript declaration.
 import {approvedRadiologyPreviewEnv} from '../scripts/approve-radiology-preview.mjs';
-import {reviewedConnectionNotice} from '../integrations/radiology/web/lib/reviewed-connection-notice.ts';
+import {reviewedConnectionNotice,reviewedConnectionReady} from '../integrations/radiology/web/lib/reviewed-connection-notice.ts';
 
 test('Preview Radiology opt-in edits only specific flags, preserving existing secrets and comments', () => {
   const original = '# local preferences\nOPENROUTER_API_KEY=sample-secret-not-real\n' +
@@ -25,4 +25,15 @@ test('Readiness copy distinguishes permission from missing provider and session'
   assert.match(reviewedConnectionNotice({configurationStatus:'operator-required'}), /администратор/);
   assert.match(reviewedConnectionNotice({enabled:true,workstationConnected:true}), /Передача начнётся только/);
   assert.match(reviewedConnectionNotice(null), /локально/);
+});
+
+test('A missing approval cannot silently proceed to reviewing or paid release', () => {
+  const denied = {enabled:false, workstationConnected:false, configurationStatus:'not-approved'};
+  assert.equal(reviewedConnectionReady(denied),false);
+  assert.equal(reviewedConnectionReady({enabled:true,workstationConnected:false}),false);
+  assert.equal(reviewedConnectionReady({enabled:false,workstationConnected:true}),false);
+  assert.equal(reviewedConnectionReady({enabled:'true',workstationConnected:true}),false);
+  assert.equal(reviewedConnectionReady(null),false);
+  assert.equal(reviewedConnectionReady({enabled:true,workstationConnected:true}),true);
+  assert.match(reviewedConnectionNotice(denied), /разрешён/);
 });

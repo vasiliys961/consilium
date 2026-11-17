@@ -18,7 +18,7 @@ import { clnDetectorRecheck, type BoundDetectorRecheck } from '../lib/cln-detect
 import FindingMeasurementReview, { type AcceptedFindingMeasurement } from './FindingMeasurementReview';
 import MrSeriesComparison from './MrSeriesComparison';
 import StudyPrivacyReview from './StudyPrivacyReview';
-import {reviewedConnectionNotice} from '../lib/reviewed-connection-notice';
+import {reviewedConnectionNotice,reviewedConnectionReady} from '../lib/reviewed-connection-notice';
 import {singleFramePilotAllowed} from '../lib/single-frame-pilot';
 import StudyReportDiscussion from './StudyReportDiscussion';
 import { estimateStudyCost, opusUsageEstimate, argonUsageEstimate } from '../lib/study-cost-estimate';
@@ -81,6 +81,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     const [budget, setBudget] = useState(2), [connected, setConnected] = useState(false);
     const [connectionAttempt, setConnectionAttempt] = useState(0);
     const [singleSliceTest, setSingleSliceTest] = useState(false);
+    const [checkingBeforeReview, setCheckingBeforeReview] = useState(false);
     const [connectionDiagnostic, setConnectionDiagnostic] = useState('');
     const [receipts, setReceipts] = useState<LocalVolumeReceipt[]>([]), [report, setReport] = useState('');
     const ctl = useRef<AbortController | null>(null), sending = useRef(false);
@@ -153,16 +154,18 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         }).then(async (r) => r.ok ? r.json() : null)
             .then(d => {
             if (!c.signal.aborted) {
-                setConnected(d?.enabled === true && d?.workstationConnected === true);
+                setConnected(reviewedConnectionReady(d));
                 const diagnostic = reviewedConnectionNotice(d);
                 setConnectionDiagnostic(diagnostic);
                 setNotice(diagnostic);
             }
         })
             .catch(() => {
-            if (!c.signal.aborted)
+            if (!c.signal.aborted) {
+                setConnected(false);
                 setConnectionDiagnostic('Локальный сервер подключения недоступен. Снимки остаются локально.');
                 setNotice('Локальный сервер подключения недоступен.');
+            }
         });
         return () => { c.abort(); ctl.current?.abort(); };
     }, [connectionAttempt]);
@@ -210,9 +213,35 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             return;
         if (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))
             return;
-        const c = new AbortController();
-        ctl.current = c;
-        setStage('review');
+        // Do not decode/OCR an entire series when the server will refuse cloud release.
+        // GET is non-billable and creates the reviewed-frame cookie only if opted-in.
+        if (checkingBeforeReview) return;
+        setCheckingBeforeReview(true);
+        try {
+            const response = await fetch('/api/ai/deidentified-openrouter-review', {
+                cache: 'no-store', credentials: 'same-origin'
+            });
+            const status = response.ok ? await response.json() : null;
+            const ready = reviewedConnectionReady(status);
+            const diagnostic = reviewedConnectionNotice(status);
+            setConnected(ready);
+            setConnectionDiagnostic(diagnostic);
+            if (!ready) {
+                setNotice(diagnostic + ' Анализ не запущен; повторять проверку снимков не нужно.');
+                return;
+            }
+            const c = new AbortController();
+            ctl.current = c;
+            setStage('review');
+            setNotice(singleSliceTest
+                ? 'Подготавливается один срез локально. Проверьте копию, затем дайте одно разрешение на платный Gemini.'
+                : 'Подготавливаются снимки локально. После просмотра разрешите отправку один раз.');
+        } catch {
+            setConnected(false);
+            setNotice('Связь с Radiology недоступна. Подготовка не запускалась, снимки не передавались.');
+        } finally {
+            setCheckingBeforeReview(false);
+        }
     }
     async function finalize(done: LocalVolumeReceipt[], signal: AbortSignal, executionPlan = plan) {
         const plan = executionPlan;
@@ -296,7 +325,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     }
     async function submitAll(packets: VisionPrivacyPacket[], resume = false) {
         if (!plan || !connected || sending.current || (!resume && stage !== 'review') || packets.length !== plan.batches.length)
-            return;
+            throw Error('Отправка не началась: конфигурация анализа или подготовленные кадры изменились. Снимки не передавались.');
         let execution: {
             packets: VisionPrivacyPacket[];
             batches: VisionBatch[];
@@ -469,11 +498,11 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
       }
    }}/><LocalizedUi value={"Тест одного среза · один платный Gemini без Argon/Opus"}/></label>
    <LocalizedUi value={singleSliceTest && <p role="status"><LocalizedUi value={"Выберите один номер среза. После проверки подготовленного изображения отправится только один запрос Gemini. Остальная серия не оценивается, повторов нет."}/></p>}/>
-   <label><LocalizedUi value={"Какие срезы анализировать"}/><select value={selection} onChange={e => setSelection(e.target.value)}><option value="all"><LocalizedUi value={"Вся серия"}/></option><option value="custom"><LocalizedUi value={"Отдельные срезы или диапазон"}/></option></select></label>
-   <LocalizedUi value={selection === 'custom' && <label><LocalizedUi value={"Номера срезов"}/><input aria-label={__ui("Номера срезов")} value={selectionText} onChange={e => setSelectionText(e.target.value)} placeholder="5, 12, 20–35"/><small><LocalizedUi value={"Например: 5 — один срез; 5, 12 — два среза; 20–35 — диапазон. Номера соответствуют исходной серии."}/></small></label>}/>
+   <LocalizedUi value={!singleSliceTest && <label><LocalizedUi value={"Какие срезы анализировать"}/><select value={selection} onChange={e => setSelection(e.target.value)}><option value="all"><LocalizedUi value={"Вся серия"}/></option><option value="custom"><LocalizedUi value={"Отдельные срезы или диапазон"}/></option></select></label>}/>
+   <LocalizedUi value={selection === 'custom' && <label><LocalizedUi value={singleSliceTest ? "Номер одного среза" : "Номера срезов"}/><input aria-label={__ui("Номера срезов")} value={selectionText} onChange={e => setSelectionText(e.target.value)} placeholder="5, 12, 20–35"/><small><LocalizedUi value={singleSliceTest ? "Укажите один номер, например 5. Несколько срезов или диапазон не допускаются." : "Например: 5 — один срез; 5, 12 — два среза; 20–35 — диапазон. Номера соответствуют исходной серии."}/></small></label>}/>
    <LocalizedUi value={selectionResult.error && <p role="alert"><LocalizedUi value={selectionResult.error}/></p>}/>
-   <label><LocalizedUi value={"Клинические данные для заключения (необязательно)"}/><textarea maxLength={4000} value={clinicalContext} onChange={e => setClinicalContext(e.target.value)} placeholder={__ui("Жалобы, длительность, значимый анамнез. Без ФИО, контактов и других идентификаторов.")}/></label>
-   <p><LocalizedUi value={"Эти данные будут переданы Argon вместе с наблюдениями после вашего разрешения на отправку. Они не заменяют признаки на снимках."}/></p>
+   <LocalizedUi value={!singleSliceTest && <label><LocalizedUi value={"Клинические данные для заключения (необязательно)"}/><textarea maxLength={4000} value={clinicalContext} onChange={e => setClinicalContext(e.target.value)} placeholder={__ui("Жалобы, длительность, значимый анамнез. Без ФИО, контактов и других идентификаторов.")}/></label>}/>
+   <LocalizedUi value={!singleSliceTest && <p><LocalizedUi value={"Эти данные будут переданы Argon вместе с наблюдениями после вашего разрешения на отправку. Они не заменяют признаки на снимках."}/></p>}/>
    <details><summary><LocalizedUi value={"Настройки изображения, перепроверки и расходов"}/></summary>
    <LocalizedUi value={series.modality === 'CT' && <p><LocalizedUi value={"Окна подобраны по подтверждённым заголовкам и шкале HU. При неизвестной области сохраняется исходное окно. Их можно изменить перед подготовкой."}/></p>}/>
    <LocalizedUi value={series.modality === 'CT' && windowPlan.delivery === 'separate' && additionalWindow !== 'NONE' && (separate ? <p><LocalizedUi value={"Матрица не позволяет два окна на одной копии. Каждый выбранный срез готовится дважды: основное окно и второе. Обе копии нужно проверить перед отправкой."}/></p> : <p><LocalizedUi value={"Матрица не позволяет два окна на одной копии. Второе окно добавляется само, если выбрано не больше 16 срезов. Сейчас на копиях только основное окно, средостение или кость в нём не разобраны."}/></p>)}/>
@@ -499,10 +528,10 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
    <p><LocalizedUi value={"Выбрано"}/><LocalizedUi value={plan.budget.overviewIndices.length}/><LocalizedUi value={"срезов,"}/><LocalizedUi value={basePlan?.batches.length}/><LocalizedUi value={"групп подготовки. В одном запросе — до 4 срезов, для крупных копий меньше. После обзора — предварительное заключение Opus. Перевод и обсуждение доступны по готовому заключению."}/></p>
    <LocalizedUi value={plan.budget.overviewIndices.length > 40 && <p role="status"><LocalizedUi value={"Выбрано"}/><LocalizedUi value={plan.budget.overviewIndices.length}/><LocalizedUi value={"срезов и"}/><LocalizedUi value={basePlan?.batches.length ?? plan.batches.length}/><LocalizedUi value={"групп локальной подготовки. Копии будут видны по мере готовности. Отправка начнётся только после просмотра всех групп."}/></p>}/>
    <LocalizedUi value={physicianSelection.error && <p role="alert"><LocalizedUi value={physicianSelection.error}/></p>}/>
-   <button type="button" disabled={!!selectionResult.error || (visualEnabled && !!physicianSelection.error) || (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))} onClick={() => void start()}><LocalizedUi value={singleSliceTest ? 'Подготовить один срез для платного теста' : selection === 'custom' ? 'Подготовить указанные срезы' : 'Подготовить выбранные срезы к анализу'}/></button>
+   <button type="button" disabled={checkingBeforeReview || !!selectionResult.error || (visualEnabled && !!physicianSelection.error) || (singleSliceTest && !singleFramePilotAllowed(selectionResult.indices, plan.batches))} onClick={() => void start()}><LocalizedUi value={checkingBeforeReview ? 'Проверяем подключение без оплаты…' : singleSliceTest ? 'Проверить подключение и один срез' : selection === 'custom' ? 'Проверить подключение и выбранные срезы' : 'Проверить подключение и исследование'}/></button>
   </>}/>
   <LocalizedUi value={stage === 'review' && <button type="button" onClick={() => { ctl.current?.abort(); setSelection('custom'); setStage('idle'); setNotice('Подготовка папки остановлена. Укажите номера срезов и нажмите «Подготовить указанные срезы». Отправка не выполнялась.'); }}><LocalizedUi value={"Остановить и выбрать отдельные срезы"}/></button>}/>
-  <LocalizedUi value={(stage === 'review' || stage === 'gemini' || stage === 'opus') && <StudyPrivacyReview count={plan.batches.length} modality={series.modality as 'CT' | 'MR'} load={prepare} onReady={submitAll} canRelease={connected} connectionNotice={connectionDiagnostic} releaseNotice={"Flash просматривает выбранные срезы; Argon составляет протокол по JSON и подборке изображений. Opus — при существенном расхождении или по кнопке. Лимит обзора Flash: $" + budget.toFixed(2) + "; Argon и второе мнение оплачиваются отдельно."} onOpenSlice={inspect} windows={series.modality === 'CT' ? { primary: CT_REVIEW_WINDOWS[reviewWindow].label, ...(additionalWindow !== 'NONE' && (windowPlan.delivery === 'paired' || separate) ? { additional: CT_REVIEW_WINDOWS[additionalWindow].label, ...(separate ? { separateAfter: plan.batches.filter(b => b.pass === 'overview').length } : {}) } : {}) } : undefined} clinicalContext={clinicalContext} sourceNumbers={plan.batches.map(b => b.indices.map(i => i + 1))} sourceIds={plan.batches.map(b => b.indices.map(i => series.members[i].id))}/>}/>
+  <LocalizedUi value={(stage === 'review' || stage === 'gemini' || stage === 'opus') && <StudyPrivacyReview count={plan.batches.length} modality={series.modality as 'CT' | 'MR'} load={prepare} onReady={submitAll} canRelease={connected} connectionNotice={connectionDiagnostic} singleSliceTest={singleSliceTest} releaseNotice={singleSliceTest ? 'Пробный анализ: один проверенный PNG-срез → один платный Gemini. Другие модели не запускаются; DICOM остаётся локально.' : "Flash просматривает выбранные срезы; Argon составляет протокол по JSON и подборке изображений. Opus — при существенном расхождении или по кнопке. Лимит обзора Flash: $" + budget.toFixed(2) + "; Argon и второе мнение оплачиваются отдельно."} onOpenSlice={inspect} windows={series.modality === 'CT' ? { primary: CT_REVIEW_WINDOWS[reviewWindow].label, ...(additionalWindow !== 'NONE' && (windowPlan.delivery === 'paired' || separate) ? { additional: CT_REVIEW_WINDOWS[additionalWindow].label, ...(separate ? { separateAfter: plan.batches.filter(b => b.pass === 'overview').length } : {}) } : {}) } : undefined} clinicalContext={clinicalContext} sourceNumbers={plan.batches.map(b => b.indices.map(i => i + 1))} sourceIds={plan.batches.map(b => b.indices.map(i => series.members[i].id))}/>}/>
   <LocalizedUi value={busy && <button type="button" onClick={() => { ctl.current?.abort(); setStage('interrupted'); setNotice('Остановлено. Полученные наблюдения сохранены; весь ряд не объявляется оценённым.'); }}><LocalizedUi value={"Остановить анализ"}/></button>}/>
   <LocalizedUi value={stage === 'review' && <button type="button" onClick={() => { ctl.current?.abort(); setStage('idle'); setNotice('Подготовка отменена. Выберите срезы заново; отправка не выполнялась.'); }}><LocalizedUi value={"Вернуться к выбору срезов"}/></button>}/>
   <LocalizedUi value={(stage === 'interrupted' || stage === 'completed') && receipts.length < plan.batches.length && approvedPackets.current.length === plan.batches.length && <button type="button" disabled={!connected} onClick={() => { const c = new AbortController(); ctl.current = c; void submitAll(approvedPackets.current, true); }}><LocalizedUi value={"Продолжить обработку оставшихся срезов"}/></button>}/>
