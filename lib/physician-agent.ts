@@ -88,8 +88,8 @@ export function clinicalFirstResponse(text:string,locale:Locale,parsed:AgentJson
  const generic=/(?:возможност|функци|созда.*протокол|состав.*протокол|перейд.*протокол|выбер.*модул|наши инструмент|our tools|capabilit|write.*protocol|create.*note)/i.test(parsed.reply);
  const english=locale==='en';
  const defaultReply=english
-   ? 'For cough and breathlessness, I suggest opening Clinical Review. Check urgency first if breathing is severely impaired.'
-   : 'Для кашля, свистящего дыхания и одышки предлагаю открыть «Клинический разбор». При выраженном нарушении дыхания нужна срочная очная оценка.';
+   ? 'For cough and breathlessness, open Clinical Review. SpO₂ and respiratory rate help assess urgency; severe breathing difficulty needs urgent care.'
+   : 'При кашле и одышке предлагаю открыть «Клинический разбор». Для оценки срочности нужны SpO₂ и ЧДД; при тяжёлом нарушении дыхания — срочная очная помощь.';
  const defaultQuestion=english
    ? 'Do you have SpO₂ and respiratory rate measurements?'
    : 'Есть данные SpO₂ и частоты дыхания?';
