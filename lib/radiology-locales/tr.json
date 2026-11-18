@@ -3373,5 +3373,8 @@
   "Добавить одну проекцию": "Bir projeksiyon ekle",
   "Анализировать исследование": "İncelemeyi analiz et",
   "Идёт анализ исследования…": "İnceleme analiz ediliyor…",
-  "Описание слишком длинное для передачи.": "Açıklama aktarım için çok uzun."
+  "Описание слишком длинное для передачи.": "Açıklama aktarım için çok uzun.",
+  "Описание изображения": "Görüntü açıklaması",
+  "Подтверждаю · получить описание (платно)": "Onayla · açıklamayı al (ücretli)",
+  "Формируется описание изображения…": "Görüntü açıklaması hazırlanıyor…"
 }

@@ -1,7 +1,7 @@
 import {appendFileSync,existsSync,mkdirSync,renameSync,statSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 export interface RunEvent {event:string;runId:string;at:string;[key:string]:unknown}
-const numericFields=new Set(['files','referenceFiles','inputTokens','outputTokens','durationMs','estimatedUsd','httpStatus','modelResponses','readFiles','unassessedFiles','passages','citations']);
+const numericFields=new Set(['files','referenceFiles','inputTokens','outputTokens','durationMs','estimatedUsd','billedUsd','httpStatus','modelResponses','readFiles','unassessedFiles','passages','citations']);
 const stringFields=new Set(['model','provider','requestedTask','task','clinicalDraft','finishReason','stage','module','status']);
 const reasons=new Set(['Error','TypeError','AbortError','TimeoutError','unknown','transport_error','deadline','queue','invalid_json','invalid_case','payload_too_large','privacy_review_required','invalid_response','truncated','schema_rejected','payment_required','provider_error']);
 export function terminalEvent(runId:string,event:string,fields:Record<string,unknown>={}):RunEvent{
@@ -31,7 +31,8 @@ export function formatTerminalEvent(event:RunEvent):string{
  const time=new Date(event.at).toLocaleTimeString('ru-RU');
  const prefix=`${time} [${event.runId.slice(0,8)}]`;
  const duration=typeof event.durationMs==='number'?` · ${(event.durationMs/1000).toFixed(1)} с`:'';
- const cost=event.usageAvailable===false||event.usageComplete===false?' · стоимость неполная: провайдер не передал токены':typeof event.estimatedUsd==='number'?` · ≈ $${event.estimatedUsd.toFixed(6)}`:'';
+ const cost=typeof event.billedUsd==='number'?` · OpenRouter $${event.billedUsd.toFixed(6)}`:
+  event.usageAvailable===false||event.usageComplete===false?' · расход не подтверждён: полная квитанция провайдера не получена':typeof event.estimatedUsd==='number'?` · ≈ $${event.estimatedUsd.toFixed(6)}`:'';
  switch(event.event){
   case 'privacy.approved':return `${prefix} Проверка персональных данных подтверждена врачом · отправляется подготовленная копия`;
   case 'run.started':

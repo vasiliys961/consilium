@@ -1234,5 +1234,14 @@
   "Языковые версии протокола": "Raporun dil sürümleri",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "Kaydedilen klinik analiz tekrarlanmaz. Her dilde ayrı bir sürüm oluşturup kaydedin; modülde metin üretimi ücretli olabilir.",
   "Сохранён": "Kaydedildi",
-  "Не создан": "Oluşturulmadı"
+  "Не создан": "Oluşturulmadı",
+  "Анализ подключён. Отправка снимков — после вашей проверки и подтверждения.": "Analiz bağlantısı hazır. Görüntüler, incelemeniz ve onayınızdan sonra gönderilir.",
+  "Просмотр снимков доступен. Для анализа требуется разрешение администратора рабочего места.": "Görüntüler görüntülenebilir. Analiz için iş istasyonu yöneticisinin izni gerekir.",
+  "Просмотр снимков доступен. Подключение к службе анализа ещё не настроено.": "Görüntüler görüntülenebilir. Analiz hizmeti bağlantısı henüz yapılandırılmadı.",
+  "Просмотр снимков доступен. Администратору нужно завершить подключение анализа.": "Görüntüler görüntülenebilir. Yöneticinin analiz bağlantısını tamamlaması gerekir.",
+  "Просмотр снимков доступен. Анализ не разрешён в этом режиме рабочего места.": "Görüntüler görüntülenebilir. Bu iş istasyonu modunda analize izin verilmiyor.",
+  "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "Görüntüler görüntülenebilir. Analiz bağlantısı şu anda denetlenemedi.",
+  "Подключение анализа · для администратора": "Analiz bağlantısı · yönetici için",
+  "Эта проверка не отправляет снимки и не включает платные вызовы.": "Bu denetim görüntü göndermez veya ücretli istek başlatmaz.",
+  "Открыть параметры подключения": "Bağlantı ayarlarını aç"
 }

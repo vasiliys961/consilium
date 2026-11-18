@@ -228,7 +228,7 @@ export async function reviewSanitizedSamples(
   clnTumorEvidence:unknown=null,
   frameRelativeClnEvidence:unknown=null,
   outputLanguage:RadiologyReportLanguage="ru",
-  selective?:{forceOpus?:boolean;primary?:SanitizedModelReview;onPrimary?:(value:SanitizedModelReview)=>void},
+  selective?:{forceOpus?:boolean;allowSecondOpinion?:boolean;primary?:SanitizedModelReview;onPrimary?:(value:SanitizedModelReview)=>void},
 ):Promise<SanitizedModelReview>{
   const checked=normalizeReviewedCloudPilot(packet);
   const ids=checked.frames.map(f=>f.imageId);
@@ -297,7 +297,7 @@ export async function reviewSanitizedSamples(
         ...(specialist?{specialistEvidence:{model:"lungmask-R231",frameCount:specialist.frameCount,rightLungMaskMl:specialist.rightLungMaskMl,leftLungMaskMl:specialist.leftLungMaskMl,clinicalProvenanceServerVerified:false,findingOfPathologyEstablished:false}}:{})};
       selective.onPrimary?.(primary);
     }
-    if(primary.secondOpinion?.status==='completed')return primary;
+    if(selective.allowSecondOpinion===false||primary.secondOpinion?.status==='completed')return primary;
     const reason=selective.forceOpus?'physician':primary.opusSynthesis!.conflicts.length||primary.opusSynthesis!.comparisons.some(c=>c.assessment==='discordant')?'material_conflict':null;
     if(!reason)return primary;
     try{

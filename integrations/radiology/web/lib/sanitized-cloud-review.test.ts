@@ -366,3 +366,18 @@ test("Opus cannot omit one completed detector from integrated JSON",async()=>{
   request.model===PILOT_GEMINI?answer("gemini"):answer("opus"),undefined,null,bound),
   /opus_synthesis_missing_or_unbound_to_executed_detector_tasks/);
 });
+
+test('An explicit one-reader image request returns the primary description despite conflicts and never calls Opus',async()=>{
+ const calls:AiGatewayRequest[]=[];
+ const source=packet('CT');
+ const result=await reviewSanitizedSamples(source,async request=>{
+  calls.push(request);assert.equal(request.model,'google/gemini-4-argon');
+  if(calls.length>1)throw Error('Unauthorized additional paid call');
+  return answer('single-argon');
+ },undefined,null,null,null,null,null,'ru',{allowSecondOpinion:false});
+ assert.equal(calls.length,1);assert.equal(result.callsAttempted,1);assert.equal(result.results.length,1);
+ assert.equal(result.secondOpinion?.status,'not_requested');
+ assert.ok(result.opusSynthesis?.summary.includes('ОПИСАНИЕ'));
+ assert.ok(result.opusSynthesis?.conflicts.length);
+ assert.equal(result.sourceFrames?.[0].reviewedPixelSha256,source.frames[0].sha256);
+});
