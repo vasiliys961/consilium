@@ -22,4 +22,3 @@ test('No completed or foreign slice can become a description of this DICOM',()=>
  assert.throws(()=>singleFrameReport([{...receipt,structuredReview:undefined}],'CT',0,1));
  assert.throws(()=>singleFrameReport([{...receipt,findings:[{...receipt.findings[0],sourceIndex:2}]}],'CT',0,3));
 });
-
