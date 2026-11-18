@@ -1254,5 +1254,19 @@
   "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Kasus dibuat. Anda dapat menambahkan gejala, riwayat, dan materi lain.",
   "Сначала загрузите снимок или подготовьте описание.": "Unggah gambar atau siapkan laporan terlebih dahulu.",
   "Не удалось проверить исходные материалы. Случай не создан.": "Materi sumber tidak dapat diverifikasi. Kasus tidak dibuat.",
-  "Не удалось сохранить описание и его исходные материалы.": "Laporan dan materi sumbernya tidak dapat disimpan."
+  "Не удалось сохранить описание и его исходные материалы.": "Laporan dan materi sumbernya tidak dapat disimpan.",
+  "Служебные настройки": "Pengaturan layanan",
+  "Книги и руководства": "Buku dan pedoman",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Tinjau rekaman EKG digital dan foto, lalu simpan laporan dalam kasus.",
+  "Руководства и клинические источники": "Pedoman dan sumber klinis",
+  "Взаимодействия и ограничения терапии": "Interaksi dan tindakan pencegahan terapi",
+  "● Разбор доступен": "● Analisis tersedia",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "Analisis saat ini tidak tersedia. Anda dapat melanjutkan penyuntingan data dan menyimpan kasus.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "Perubahan tidak dapat disimpan. Tetap di kasus ini dan coba simpan lagi.",
+  "Сведения о модели и расходах": "Detail model dan biaya",
+  "Помощник Doctor Opus": "Asisten Doctor Opus",
+  "Перенести случай · зашифрованный файл": "Transfer kasus · berkas terenkripsi",
+  "Модели Doctor Opus и их задачи": "Model Doctor Opus dan perannya",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Data kasus berubah setelah analisis ini. Tinjau informasi baru sebelum mengambil keputusan; jawaban sebelumnya belum diperbarui.",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Draf tidak dapat disimpan. Tetap di halaman ini dan simpan materi Anda."
 }

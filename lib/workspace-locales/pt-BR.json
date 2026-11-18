@@ -1254,5 +1254,19 @@
   "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Caso criado. Pode adicionar sintomas, histórico e outros materiais.",
   "Сначала загрузите снимок или подготовьте описание.": "Primeiro carregue uma imagem ou prepare um relatório.",
   "Не удалось проверить исходные материалы. Случай не создан.": "Não foi possível verificar os materiais originais. O caso não foi criado.",
-  "Не удалось сохранить описание и его исходные материалы.": "Não foi possível salvar o relatório e os seus materiais originais."
+  "Не удалось сохранить описание и его исходные материалы.": "Não foi possível salvar o relatório e os seus materiais originais.",
+  "Служебные настройки": "Configurações do serviço",
+  "Книги и руководства": "Livros e diretrizes",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Revisar registros de ECG digital e fotos e salvar o laudo no caso.",
+  "Руководства и клинические источники": "Diretrizes e fontes clínicas",
+  "Взаимодействия и ограничения терапии": "Interações e precauções do tratamento",
+  "● Разбор доступен": "● Análise disponível",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "A análise está indisponível no momento. Você pode continuar editando os dados e salvar o caso.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "Não foi possível salvar as alterações. Permaneça neste caso e tente salvar novamente.",
+  "Сведения о модели и расходах": "Detalhes do modelo e dos custos",
+  "Помощник Doctor Opus": "Assistente Doctor Opus",
+  "Перенести случай · зашифрованный файл": "Transferir caso · arquivo criptografado",
+  "Модели Doctor Opus и их задачи": "Modelos do Doctor Opus e suas funções",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Os dados do caso mudaram após esta análise. Revise as novas informações antes de decidir; a resposta anterior não foi atualizada.",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Não foi possível salvar o rascunho. Permaneça nesta página e salve os materiais."
 }

@@ -92,4 +92,26 @@ Object.assign(english,{
  'Не создан':'Not created'
 });
 
+Object.assign(english,{'Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.':'The draft could not be saved. Stay on this page and save your material.'});
+
+// Physician-facing workstation copy; other languages use the existing English fallback.
+Object.assign(english,{
+ 'Служебные настройки':'Service settings',
+ 'Книги и руководства':'Books and guidelines',
+ 'Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.':'Review digital ECG recordings and photos, and save the report to the case.',
+ 'Руководства и клинические источники':'Guidelines and clinical sources',
+ 'Взаимодействия и ограничения терапии':'Interactions and treatment precautions',
+ '● Разбор доступен':'● Analysis available',
+ 'Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.':'Analysis is currently unavailable. You can continue editing and save the case.',
+ 'Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.':'Changes could not be saved. Stay in this case and try saving again.',
+ 'Сведения о модели и расходах':'Model and cost details',
+});
+
+Object.assign(english,{
+ 'Помощник Doctor Opus':'Doctor Opus assistant',
+ 'Перенести случай · зашифрованный файл':'Transfer case · encrypted file',
+ 'Модели Doctor Opus и их задачи':'Doctor Opus models and their roles',
+ 'После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.':'Case data changed after this analysis. Review the new information before deciding; the earlier answer has not been updated.',
+});
+
 for(const row of [...coordinatorRows,...consultWorkflowRows,...medicationUiRows,...bookTransferRows]){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}

@@ -1254,5 +1254,19 @@
   "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Cas créé. Vous pouvez ajouter les symptômes, les antécédents et d’autres documents.",
   "Сначала загрузите снимок или подготовьте описание.": "Chargez d’abord une image ou préparez un compte rendu.",
   "Не удалось проверить исходные материалы. Случай не создан.": "Impossible de vérifier les documents sources. Le cas n’a pas été créé.",
-  "Не удалось сохранить описание и его исходные материалы.": "Impossible d’enregistrer le compte rendu et ses documents sources."
+  "Не удалось сохранить описание и его исходные материалы.": "Impossible d’enregistrer le compte rendu et ses documents sources.",
+  "Служебные настройки": "Paramètres du service",
+  "Книги и руководства": "Livres et recommandations",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Analyser les ECG numériques et les photos, puis enregistrer le compte rendu dans le cas.",
+  "Руководства и клинические источники": "Recommandations et sources cliniques",
+  "Взаимодействия и ограничения терапии": "Interactions et précautions thérapeutiques",
+  "● Разбор доступен": "● Analyse disponible",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "L’analyse est indisponible pour le moment. Vous pouvez continuer à modifier et enregistrer le cas.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "Les modifications n’ont pas pu être enregistrées. Restez dans ce cas et réessayez.",
+  "Сведения о модели и расходах": "Détails du modèle et des coûts",
+  "Помощник Doctor Opus": "Assistant Doctor Opus",
+  "Перенести случай · зашифрованный файл": "Transférer le cas · fichier chiffré",
+  "Модели Doctor Opus и их задачи": "Modèles de Doctor Opus et leurs rôles",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Les données du cas ont changé depuis cette analyse. Examinez les nouvelles informations avant de décider ; la réponse précédente n’a pas été actualisée.",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "Le brouillon n’a pas pu être enregistré. Restez sur cette page et enregistrez vos documents."
 }

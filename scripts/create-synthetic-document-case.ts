@@ -1,0 +1,20 @@
+/** Offline-only fixture for browser document acceptance. Contains no patient data. */
+import 'fake-indexeddb/auto';
+import {writeFile} from 'node:fs/promises';
+import {newCase,persistCase} from '../lib/casebook.ts';
+import type {ProtocolDocument} from '../packages/protocol/document.ts';
+import {conduct} from '../lib/conductor.ts';
+import {createPortableCaseFile} from '../lib/portable-case-file.ts';
+const output=process.argv[2];
+if(!output)throw Error('Supply an output .doctor-opus-case path');
+const value=newCase();value.id='11111111-3333-4444-8555-777777777777';
+value.title='SYNTHETIC · document acceptance';value.question='SYNTHETIC: preserve the original report and physician edits';value.context='SYNTHETIC ONLY. No patient data.\nСКФ: 28 мл/мин/1,73 м²\nКалий: 5,6 ммоль/л';
+const result=conduct({text:value.context});result.clinicalDraft='generated';result.draft.summary='SYNTHETIC clinical draft. This is a storage/export fixture, not an actual clinical analysis.';
+result.ecgEvidence={module:'ecgfounder',method:'digital-ecg-waveform',source:'synthetic.csv',sha256:'b'.repeat(64),status:'not_assessed',threshold:0.5,cleared:[],top:null,reason:'SYNTHETIC: engine deliberately not executed'};
+value.analyses=[{id:'synthetic-analysis',at:value.created,context:value.context,result}];
+value.events=[{id:'synthetic-decision',at:value.created,kind:'decision',text:'SYNTHETIC physician decision: verify all findings; no treatment was prescribed.'}];
+value.protocols=['older','newer'].map((id):ProtocolDocument=>({id:'synthetic-document-'+id,created:value.created,locale:'ru',kind:'encounter',generationMode:'standalone',presentation:'formal',sourceSnapshot:value.context,sections:[{id:'assessment',title:'SYNTHETIC assessment '+id,text:'SYNTHETIC '+id+' document: preserve dose 0,125 мг and negation «не принимает».'}]}));
+await persistCase(value);
+await writeFile(output,await createPortableCaseFile(value.id,'Synthetic-document-test-only'));
+console.log('Created synthetic acceptance archive: '+output);
+console.log('Fixture password: Synthetic-document-test-only (not a real credential)');

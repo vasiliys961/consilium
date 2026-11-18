@@ -1,7 +1,7 @@
 'use client';
 import {imageModelLabel} from '@/packages/medical-images/routing';
 import {memo} from 'react';
-import {analysisQuestion,type ClinicalCase} from '@/lib/casebook';
+import {analysisQuestion,caseSignature,type ClinicalCase} from '@/lib/casebook';
 import {ClinicalReportView} from './clinical-report';
 import {GenomicReviewView} from './genomic-review';
 import {MedicationReviewView} from './drug-label-picker';
@@ -30,6 +30,7 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     <h3>{t(analysisQuestion(analysis))}</h3>
     <small>{result.clinicalDraft==='generated'?t('ЧЕРНОВИК · ПРОВЕРИТЬ ВРАЧУ'):t('РАЗБОР НЕ ЗАВЕРШЁН')}</small>
     {analysis.newFacts&&<details><summary>{t('Новые данные этого этапа')}</summary><p className={styles.voiceText}>{analysis.newFacts}</p></details>}
+    {newest&&analysis.inputSignature&&analysis.inputSignature!==caseSignature(value)&&<p role="status">{t('После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.')}</p>}
     <div className={styles.feedAnswer}><p>{result.draft.summary}</p></div>
     {medicationRisks.risks.length>0&&<section aria-label={t('Лекарственные риски · проверить врачу')} style={{borderLeft:'3px solid #b07c42',padding:'7px 14px',margin:'12px 0',background:'rgba(184,129,57,.06)'}}>
       <h4 style={{margin:'0 0 5px'}}>{t('Перед назначением: важные лекарственные риски')}</h4>
@@ -37,7 +38,7 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
       {medicationRisks.remaining>0&&<small>{t('Дополнительные предупреждения в подробном плане:')} {medicationRisks.remaining}.</small>}
       <small style={{display:'block'}}>{t('Это предварительная проверка отдельных вариантов. Отсутствие предупреждения не подтверждает совместимость препаратов.')}</small>
     </section>}
-    {result.visualReadings?.filter(a=>a.secondOpinion).map(a=><section key={a.source}><h4>{t('Второе мнение')} · {imageModelLabel(a.secondOpinion?.model??'')} · {a.source}</h4>{a.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{a.secondOpinion?.status==='completed'?a.secondOpinion.reading:t('Второе мнение не получено. Основное заключение сохранено.')}</p><small>{t('Сопоставьте мнения по исходному изображению. Окончательное решение принимает врач.')}</small></section>)}
+    {result.visualReadings?.filter(a=>a.secondOpinion).map(a=><section key={a.source}><h4>{t('Второе мнение')} · {a.source}</h4>{a.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{a.secondOpinion?.status==='completed'?a.secondOpinion.reading:t('Второе мнение не получено. Основное заключение сохранено.')}</p><small>{t('Сопоставьте мнения по исходному изображению. Окончательное решение принимает врач.')}</small><details><summary>{t('Сведения о модели и расходах')}</summary>{imageModelLabel(a.secondOpinion?.model??'')}</details></section>)}
     {result.validationWarnings?.map((warning,i)=><p role="alert" key={i}>{warning}</p>)}
     {analysis.reusedSources?.length ? <small>{t('Использованы ранее прочитанные исследования:')} {analysis.reusedSources.join(', ')}. {t('Повторное чтение изображений не выполнялось.')}</small>:null}
      {result.voices.length>0&&<section aria-label={t('Итог консилиума')}>
@@ -67,7 +68,7 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     {result.medicationReview&&<details><summary>{t('Проверка инструкций к препаратам')}</summary><MedicationReviewView review={result.medicationReview}/></details>}
     {analysis.kind==='summary'&&result.draft.report&&<section aria-label={t('Краткое резюме')}><h4>{t('Следующий шаг')}</h4><p>{result.draft.report.tactics?.nextStep||result.draft.report.problem}</p>{result.draft.report.questions.length>0&&<><h4>{t('Уточнить перед решением')}</h4><ul>{result.draft.report.questions.map((question,i)=><li key={i}>{question}</li>)}</ul></>}</section>}
     {result.draft.report&&<details className={styles.feedDetails}><summary>{t('Обоснование, тактика и уточняющие вопросы')}</summary><ClinicalReportView report={result.draft.report} citations={result.citations}/></details>}
-{result.readings?.filter(r=>r.secondOpinion).map(r=><section key={'opinion-'+r.source}><h4>{t('Второе мнение')} · {imageModelLabel(r.secondOpinion?.model??'')} · {r.source}</h4>{r.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{r.secondOpinion?.status==='completed'?r.secondOpinion.text:t('Второе мнение не получено. Основное заключение сохранено.')}</p></section>)}
+{result.readings?.filter(r=>r.secondOpinion).map(r=><section key={'opinion-'+r.source}><h4>{t('Второе мнение')} · {r.source}</h4>{r.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{r.secondOpinion?.status==='completed'?r.secondOpinion.text:t('Второе мнение не получено. Основное заключение сохранено.')}</p><details><summary>{t('Сведения о модели и расходах')}</summary>{imageModelLabel(r.secondOpinion?.model??'')}</details></section>)}
     {studies.length>0&&<section className={styles.feedStudies} aria-label={t('Исследования этого этапа')}><StudyReports reports={studies}/></section>}
     {result.draft.statements.length>0&&<details><summary>{t('Утверждения и привязка к источникам')} · {result.draft.statements.length}</summary>{result.draft.statements.map((statement,i)=><p key={i}>{statement.text}<br/><small>{statement.source||t('Источник не подтверждён · вывод модели')}{statement.held?' · '+t('ТРЕБУЕТ ПРОВЕРКИ'):''}</small></p>)}</details>}
     <ClinicalSourcesPanel value={value} analysis={analysis} index={index}/>

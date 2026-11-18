@@ -1254,5 +1254,19 @@
   "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Caso creado. Puede añadir síntomas, antecedentes y otros materiales.",
   "Сначала загрузите снимок или подготовьте описание.": "Primero cargue una imagen o prepare un informe.",
   "Не удалось проверить исходные материалы. Случай не создан.": "No se pudieron verificar los materiales originales. No se creó el caso.",
-  "Не удалось сохранить описание и его исходные материалы.": "No se pudieron guardar el informe y sus materiales originales."
+  "Не удалось сохранить описание и его исходные материалы.": "No se pudieron guardar el informe y sus materiales originales.",
+  "Служебные настройки": "Configuración del servicio",
+  "Книги и руководства": "Libros y guías",
+  "Разбор цифровой ЭКГ и фотографий с сохранением заключения в случае.": "Revisar registros de ECG digital y fotografías, y guardar el informe en el caso.",
+  "Руководства и клинические источники": "Guías y fuentes clínicas",
+  "Взаимодействия и ограничения терапии": "Interacciones y precauciones del tratamiento",
+  "● Разбор доступен": "● Análisis disponible",
+  "Анализ сейчас недоступен. Можно продолжить работу с данными и сохранить случай.": "El análisis no está disponible ahora. Puede seguir editando y guardar el caso.",
+  "Не удалось сохранить изменения. Останьтесь в случае и повторите сохранение.": "No se pudieron guardar los cambios. Permanezca en este caso e intente guardar de nuevo.",
+  "Сведения о модели и расходах": "Detalles del modelo y los costes",
+  "Помощник Doctor Opus": "Asistente Doctor Opus",
+  "Перенести случай · зашифрованный файл": "Transferir caso · archivo cifrado",
+  "Модели Doctor Opus и их задачи": "Modelos de Doctor Opus y sus funciones",
+  "После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.": "Los datos del caso cambiaron después de este análisis. Revise la nueva información antes de decidir; la respuesta anterior no se ha actualizado.",
+  "Не удалось сохранить черновик. Останьтесь на странице и сохраните материалы.": "No se pudo guardar el borrador. Permanezca en esta página y guarde los materiales."
 }

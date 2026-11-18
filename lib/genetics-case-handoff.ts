@@ -22,6 +22,7 @@ export type GeneticsDiscussionTurn={
  id:string;
  at:string;
  caseId?:string;
+ inputSignature?:string;
  question:string;
  clinicalContext:string;
  filesKey:string;
@@ -48,9 +49,23 @@ export function mergeGeneticsIntoCase(value:ClinicalCase,files:readonly CaseFile
    id:turn.id,at:turn.at,question:turn.question,kind:'analysis',
    clinicalContext:turn.clinicalContext,
    context:turn.clinicalContext,
-   inputSignature:caseSignature(updated),
+   inputSignature:turn.inputSignature??'genetics-source-context-unverified',
    result:turn.result
   },...value.analyses];
  }
  return updated;
+}
+
+export type GeneticsWorkspaceDraft={files:CaseFile[];context:string;question:string;focus:string;discussion:GeneticsDiscussionTurn[]};
+/** Returning to a case can restore only its own local working materials. */
+export function geneticsWorkspaceForCase(value:ClinicalCase|undefined):GeneticsWorkspaceDraft{
+ const empty:GeneticsWorkspaceDraft={files:[],context:'',question:'',focus:'',discussion:[]};
+ const draft=value?.geneticsDraft;
+ if(!draft)return empty;
+ if(draft.discussion.some(turn=>turn.caseId&&turn.caseId!==value?.id))throw Error('genetics_draft_case_mismatch');
+ return structuredClone(draft);
+}
+export function geneticsInputSignature(value:ClinicalCase,files:readonly CaseFile[]):string{
+ const hashes=new Set(value.files.map(file=>file.sha256?.toLowerCase()).filter(Boolean));
+ return caseSignature({...value,files:[...value.files,...files.filter(file=>!hashes.has(file.sha256?.toLowerCase()))]});
 }
