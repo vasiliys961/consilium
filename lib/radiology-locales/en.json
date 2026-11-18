@@ -3376,5 +3376,8 @@
   "Описание слишком длинное для передачи.": "Description is too long for transmission.",
   "Описание изображения": "Image description",
   "Подтверждаю · получить описание (платно)": "Confirm · get description (paid)",
-  "Формируется описание изображения…": "Preparing the image description…"
+  "Формируется описание изображения…": "Preparing the image description…",
+  "Получить описание": "Get report",
+  "Подготовка изображения…": "Preparing image…",
+  "Скрыть данные на снимке": "Hide personal data in image"
 }

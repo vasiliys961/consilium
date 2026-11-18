@@ -1243,5 +1243,16 @@
   "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "Gambar dapat dilihat. Koneksi analisis belum dapat diperiksa saat ini.",
   "Подключение анализа · для администратора": "Koneksi analisis · untuk administrator",
   "Эта проверка не отправляет снимки и не включает платные вызовы.": "Pemeriksaan ini tidak mengirim gambar atau memulai permintaan berbayar.",
-  "Открыть параметры подключения": "Buka pengaturan koneksi"
+  "Открыть параметры подключения": "Buka pengaturan koneksi",
+  "Создать случай из снимка и описания": "Buat kasus dari gambar dan laporan",
+  "Перевести описание": "Terjemahkan laporan",
+  "Переводим описание…": "Menerjemahkan laporan…",
+  "Исходное описание": "Laporan asli",
+  "Не удалось перевести описание. Исходный текст сохранён.": "Laporan tidak dapat diterjemahkan. Teks asli tetap tersimpan.",
+  "Не удалось сохранить описание. Текст остался в Radiology.": "Laporan tidak dapat disimpan. Teks tetap ada di Radiology.",
+  "Не удалось создать случай. Описание осталось в Radiology.": "Kasus tidak dapat dibuat. Laporan tetap ada di Radiology.",
+  "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Kasus dibuat. Anda dapat menambahkan gejala, riwayat, dan materi lain.",
+  "Сначала загрузите снимок или подготовьте описание.": "Unggah gambar atau siapkan laporan terlebih dahulu.",
+  "Не удалось проверить исходные материалы. Случай не создан.": "Materi sumber tidak dapat diverifikasi. Kasus tidak dibuat.",
+  "Не удалось сохранить описание и его исходные материалы.": "Laporan dan materi sumbernya tidak dapat disimpan."
 }

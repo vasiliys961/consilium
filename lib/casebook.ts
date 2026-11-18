@@ -34,7 +34,7 @@ export function newCase(number?: number): ClinicalCase {
   const now = new Date().toISOString();
   return { id: crypto.randomUUID(), number, title: '', created: now, updated: now, context: '', question: '', files: [], events: [], analyses: [], status: 'active' };
 }
-export async function openNewCase(saved: ClinicalCase[]) {
+async function reserveNewCase(saved: ClinicalCase[]) {
   const key = 'concilium-case-number';
   function reserve() {
     const largest = saved.reduce((highest, item) => Math.max(highest, item.number ?? (/^\d{1,8}$/.test(item.title.trim()) ? Number(item.title) : 0)), 0);
@@ -44,7 +44,10 @@ export async function openNewCase(saved: ClinicalCase[]) {
     return newCase(number);
   }
   const value=await (navigator.locks ? navigator.locks.request(key, reserve) : reserve());
-  await persistCase(value);return value;
+  return value;
+}
+export async function openNewCase(saved: ClinicalCase[]) {
+  const value=await reserveNewCase(saved);await persistCase(value);return value;
 }
 export function caseTitle(value: ClinicalCase, fallback: string) {
   return value.title.trim() || (value.number ? String(value.number) : fallback);
@@ -220,6 +223,24 @@ export async function persistRadiologyMaterials(caseId:string,materials:import('
   await writeVaultCase(updated);
   return updated;
  });
+}
+/** Create the image-first case in one vault write: originals and report travel together. */
+export async function createRadiologyCase(materials:CaseFile[],report?:{text:string;fileKeys:string[];sources:string[]}):Promise<ClinicalCase>{
+ if(!materials.every(item=>typeof item.sha256==='string'&&SHA256.test(item.sha256)&&item.processingModule==='radiology'))
+  throw Error('Не удалось проверить исходные материалы. Случай не создан.');
+ if(!materials.length&&!report?.text.trim())throw Error('Сначала загрузите снимок или подготовьте описание.');
+ if(report&&(!report.text.trim()||report.text.length>100000||report.fileKeys.length>2000||report.sources.length>2000||
+  report.fileKeys.some(key=>!SHA256.test(key))||report.sources.some(name=>typeof name!=='string'||name.length>1000)))
+  throw Error('Не удалось сохранить описание и его исходные материалы.');
+ const seen=new Set<string>(),files=materials.filter(file=>{const key=sourceHash(file.sha256)!;if(seen.has(key))return false;seen.add(key);return true;});
+ const value=await reserveNewCase(await readCases());
+ value.files=files;
+ if(report){
+  const keys=[...new Set(report.fileKeys.map(key=>key.toLowerCase()))].sort();
+  value.moduleReports=[{id:crypto.randomUUID(),module:'radiology',fileKeys:keys.every(key=>seen.has(key))?keys:[],
+   sources:[...new Set(report.sources)],text:report.text.trim(),at:value.created,status:'reported',coverage:'not_verified'}];
+ }
+ await persistCase(value);return value;
 }
 /** C11: radiology report is an UNSIGNED module draft, not proof that every slice was examined.
  * Never guess its source from filenames or from unrelated studies in the selected case.

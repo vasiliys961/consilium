@@ -3376,5 +3376,8 @@
   "Описание слишком длинное для передачи.": "Açıklama aktarım için çok uzun.",
   "Описание изображения": "Görüntü açıklaması",
   "Подтверждаю · получить описание (платно)": "Onayla · açıklamayı al (ücretli)",
-  "Формируется описание изображения…": "Görüntü açıklaması hazırlanıyor…"
+  "Формируется описание изображения…": "Görüntü açıklaması hazırlanıyor…",
+  "Получить описание": "Rapor al",
+  "Подготовка изображения…": "Görüntü hazırlanıyor…",
+  "Скрыть данные на снимке": "Görüntüdeki kişisel verileri gizle"
 }

@@ -1243,5 +1243,16 @@
   "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "Görüntüler görüntülenebilir. Analiz bağlantısı şu anda denetlenemedi.",
   "Подключение анализа · для администратора": "Analiz bağlantısı · yönetici için",
   "Эта проверка не отправляет снимки и не включает платные вызовы.": "Bu denetim görüntü göndermez veya ücretli istek başlatmaz.",
-  "Открыть параметры подключения": "Bağlantı ayarlarını aç"
+  "Открыть параметры подключения": "Bağlantı ayarlarını aç",
+  "Создать случай из снимка и описания": "Görüntü ve rapordan vaka oluştur",
+  "Перевести описание": "Raporu çevir",
+  "Переводим описание…": "Rapor çevriliyor…",
+  "Исходное описание": "Özgün rapor",
+  "Не удалось перевести описание. Исходный текст сохранён.": "Rapor çevrilemedi. Özgün metin korundu.",
+  "Не удалось сохранить описание. Текст остался в Radiology.": "Rapor kaydedilemedi. Metin Radiology içinde duruyor.",
+  "Не удалось создать случай. Описание осталось в Radiology.": "Vaka oluşturulamadı. Rapor Radiology içinde duruyor.",
+  "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Vaka oluşturuldu. Belirtiler, öykü ve diğer materyaller ekleyebilirsiniz.",
+  "Сначала загрузите снимок или подготовьте описание.": "Önce bir görüntü yükleyin veya rapor hazırlayın.",
+  "Не удалось проверить исходные материалы. Случай не создан.": "Kaynak materyaller doğrulanamadı. Vaka oluşturulmadı.",
+  "Не удалось сохранить описание и его исходные материалы.": "Rapor ve kaynak materyalleri kaydedilemedi."
 }

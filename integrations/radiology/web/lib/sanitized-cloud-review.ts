@@ -63,6 +63,7 @@ export function validateOpusIntegratedSynthesis(
  });
 }
 export type SanitizedModelReview={
+  outputLanguage?:RadiologyReportLanguage;
   schema:"opus-sanitized-cloud-pilot/v1";
   modality:"CT"|"MR"|"CR"|"DX"|"IMG";
   coverage:"sampled-frames-only";
@@ -288,7 +289,7 @@ export async function reviewSanitizedSamples(
       const synthesis=raw.opusSynthesis as OpusIntegratedSynthesis;
       if(synthesis&&typeof synthesis.summary==='string')synthesis.summary=canonicalizeRadiologistHeadings(synthesis.summary);
       if(!validateOpusIntegratedSynthesis(synthesis,completedTasks))throw Error('Invalid Argon primary synthesis');
-      primary={schema:"opus-sanitized-cloud-pilot/v1",modality:checked.modality,coverage:"sampled-frames-only",
+      primary={outputLanguage,schema:"opus-sanitized-cloud-pilot/v1",modality:checked.modality,coverage:"sampled-frames-only",
         results:[{reviewer:"gemini",model:primaryModel,review:reading}],sourceFrames:checked.localFrameHashes,
         primaryModel,opusSynthesis:synthesis,callsAttempted:1,secondOpinion:{status:'not_requested',reason:null},
         originalDicomSent:false,sourceDicomIdentifiersSent:false,clinicalReviewRequired:true,deidentificationIndependentlyCertified:false,
@@ -409,7 +410,7 @@ export async function reviewSanitizedSamples(
     coverage:"sampled-frames-only",
     results:[{reviewer:"gemini",model:PILOT_GEMINI,review:a},
       {reviewer:"opus",model:PILOT_OPUS,review:b}],
-    sourceFrames:checked.localFrameHashes,
+    sourceFrames:checked.localFrameHashes,outputLanguage,
     opusSynthesis:synthesis,
     callsAttempted:2,originalDicomSent:false,sourceDicomIdentifiersSent:false,
     clinicalReviewRequired:true,deidentificationIndependentlyCertified:false,

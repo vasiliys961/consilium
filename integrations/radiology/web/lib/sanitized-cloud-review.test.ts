@@ -381,3 +381,20 @@ test('An explicit one-reader image request returns the primary description despi
  assert.ok(result.opusSynthesis?.conflicts.length);
  assert.equal(result.sourceFrames?.[0].reviewedPixelSha256,source.frames[0].sha256);
 });
+
+test('the primary image reader receives the interface language directly and returns its language with the report',async()=>{
+ const {RADIOLOGY_REPORT_LANGUAGES}=await import('./report-language.ts');
+ for(const [language,group] of Object.entries(RADIOLOGY_REPORT_LANGUAGES)){
+  let calls=0;
+  const result=await reviewSanitizedSamples(packet('CT'),async request=>{
+   calls++;assert.match(String(request.messages[0].content),new RegExp('strictly in '+group.name));
+   const response=answer('synthetic-localized-primary');
+   const payload=JSON.parse(response.choices[0].message.content);
+   payload.opusSynthesis.summary=group.headings.map(heading=>heading+': Synthetic source-bound observation; only one image assessed.').join('\n');
+   response.choices[0].message.content=JSON.stringify(payload);
+   return response;
+  },undefined,null,null,null,null,null,language as import('./report-language.ts').RadiologyReportLanguage,{allowSecondOpinion:false});
+  assert.equal(calls,1);assert.equal(result.outputLanguage,language);
+  assert.ok(result.opusSynthesis?.summary.includes(group.headings[2]));
+ }
+});

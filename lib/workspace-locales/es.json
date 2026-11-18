@@ -1243,5 +1243,16 @@
   "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "Puede ver las imágenes. No se pudo comprobar la conexión del análisis.",
   "Подключение анализа · для администратора": "Conexión del análisis · para el administrador",
   "Эта проверка не отправляет снимки и не включает платные вызовы.": "Esta comprobación no envía imágenes ni inicia solicitudes de pago.",
-  "Открыть параметры подключения": "Abrir los ajustes de conexión"
+  "Открыть параметры подключения": "Abrir los ajustes de conexión",
+  "Создать случай из снимка и описания": "Crear caso con imagen e informe",
+  "Перевести описание": "Traducir informe",
+  "Переводим описание…": "Traduciendo el informe…",
+  "Исходное описание": "Informe original",
+  "Не удалось перевести описание. Исходный текст сохранён.": "No se pudo traducir el informe. El texto original se conserva.",
+  "Не удалось сохранить описание. Текст остался в Radiology.": "No se pudo guardar el informe. El texto permanece en Radiology.",
+  "Не удалось создать случай. Описание осталось в Radiology.": "No se pudo crear el caso. El informe permanece en Radiology.",
+  "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Caso creado. Puede añadir síntomas, antecedentes y otros materiales.",
+  "Сначала загрузите снимок или подготовьте описание.": "Primero cargue una imagen o prepare un informe.",
+  "Не удалось проверить исходные материалы. Случай не создан.": "No se pudieron verificar los materiales originales. No se creó el caso.",
+  "Не удалось сохранить описание и его исходные материалы.": "No se pudieron guardar el informe y sus materiales originales."
 }

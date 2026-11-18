@@ -6,6 +6,8 @@ import type {DicomSeries} from '../lib/dicom-series';
 import type {VisionPrivacyPacket} from '../lib/vision-privacy';
 import {MAX_PRIVACY_PIXELS} from '../lib/vision-privacy';
 import {decodeDicomPreview} from '../lib/dicom-lite';
+import {singleImageReport} from '../lib/single-image-report';
+import {radiologyReportLanguage,type RadiologyReportLanguage} from '../lib/report-language';
 import type {SanitizedModelReview} from '../lib/sanitized-cloud-review';
 import {reviewedConnectionReady,reviewedConnectionNotice} from '../lib/reviewed-connection-notice';
 
@@ -14,6 +16,7 @@ import {reviewedConnectionReady,reviewedConnectionNotice} from '../lib/reviewed-
  */
 export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:DicomSeries;files:ReadonlyMap<string,File>;onOpenSlice:(id:string)=>void}){
  const [report,setReport]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+ const [reportLanguage,setReportLanguage]=useState<RadiologyReportLanguage>('ru');
  const attempted=useRef(false),delivered=useRef(false),controller=useRef<AbortController|null>(null);
  useEffect(()=>()=>controller.current?.abort(),[]);
  useEffect(()=>{if(report&&!delivered.current){delivered.current=true;window.dispatchEvent(new Event('concilium.report-ready'));}},[report]);
@@ -44,7 +47,8 @@ export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:D
    if(result.callsAttempted!==1||result.results.length!==1||result.results[0].review.reviewedImageIds.length!==1||
     !result.opusSynthesis?.summary?.trim()||result.sourceFrames?.[0]?.reviewedPixelSha256!==packets[0].frames[0].sha256)
     throw Error('Не удалось подтвердить описание именно этого изображения. Повторной оплаты нет.');
-   setReport('Оценено одно представленное изображение. Полное исследование не оценивалось.\n\n'+result.opusSynthesis.summary);
+   const language=radiologyReportLanguage(result.outputLanguage);
+   setReportLanguage(language);setReport(singleImageReport(result.opusSynthesis.summary,language));
   }catch{if(!c.signal.aborted){setNotice(failure);throw Error(failure);}}
   finally{if(!c.signal.aborted)setBusy(false);}
  }
@@ -52,9 +56,9 @@ export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:D
   <h2><LocalizedUi value={"Описание изображения"}/></h2>
   {!report&&<StudyPrivacyReview compact count={1} modality={series.modality as 'CT'|'MR'} load={prepare} onReady={analyze}
    onOpenSlice={onOpenSlice} sourceIds={[[series.members[0].id]]} sourceNumbers={[[1]]} canRelease={true}
-   sendLabel="Подтверждаю · получить описание (платно)"/>}
+   sendLabel="Получить описание"/>}
   {busy&&<p role="status"><LocalizedUi value={"Формируется описание изображения…"}/></p>}
   {notice&&<p role="alert"><LocalizedUi value={notice}/></p>}
-  {report&&<label><LocalizedUi value={"Предварительное заключение · проверьте и отредактируйте"}/><textarea data-concilium-report="true" rows={18} style={{width:'100%'}} value={report} onChange={e=>setReport(e.target.value)}/></label>}
+  {report&&<label><LocalizedUi value={"Предварительное заключение · проверьте и отредактируйте"}/><textarea data-concilium-report="true" data-concilium-report-language={reportLanguage} lang={reportLanguage} dir={reportLanguage==='ar'?'rtl':'ltr'} rows={18} style={{width:'100%'}} value={report} onChange={e=>setReport(e.target.value)}/></label>}
  </section>;
 }

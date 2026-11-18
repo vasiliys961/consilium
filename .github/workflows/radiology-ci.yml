@@ -45,4 +45,4 @@ jobs:
         run: npm run build
       - name: Test reviewed-frame authorization, one-reader bounds and visible description
         working-directory: integrations/radiology/web
-        run: node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/reviewed-frame-session.test.ts lib/sanitized-cloud-review.test.ts lib/single-frame-report.test.ts
+        run: node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/reviewed-frame-session.test.ts lib/sanitized-cloud-review.test.ts lib/single-frame-report.test.ts lib/study-report-followup.test.ts lib/bridge-report-translation.test.ts lib/single-image-report.test.ts

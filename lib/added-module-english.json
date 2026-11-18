@@ -257,5 +257,16 @@
   "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "Image viewing is available. The analysis connection could not be checked right now.",
   "Подключение анализа · для администратора": "Analysis connection · for the administrator",
   "Эта проверка не отправляет снимки и не включает платные вызовы.": "This check does not send images or start paid requests.",
-  "Открыть параметры подключения": "Open connection settings"
+  "Открыть параметры подключения": "Open connection settings",
+  "Создать случай из снимка и описания": "Create case from image and report",
+  "Перевести описание": "Translate report",
+  "Переводим описание…": "Translating report…",
+  "Исходное описание": "Original report",
+  "Не удалось перевести описание. Исходный текст сохранён.": "Could not translate the report. The original text is preserved.",
+  "Не удалось сохранить описание. Текст остался в Radiology.": "Could not save the report. The text remains in Radiology.",
+  "Не удалось создать случай. Описание осталось в Radiology.": "Could not create the case. The report remains in Radiology.",
+  "Случай создан. Можно добавить жалобы, анамнез и другие материалы.": "Case created. You can add symptoms, history and other materials.",
+  "Сначала загрузите снимок или подготовьте описание.": "Upload an image or prepare a report first.",
+  "Не удалось проверить исходные материалы. Случай не создан.": "Could not verify the source materials. The case was not created.",
+  "Не удалось сохранить описание и его исходные материалы.": "Could not save the report and its source materials."
 }
