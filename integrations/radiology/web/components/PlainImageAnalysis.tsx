@@ -204,7 +204,7 @@ export default function PlainImageAnalysis({ series, files, photos, views, autoS
    <p><LocalizedUi value={"Это некалиброванные выходы одной модели. Низкое значение не исключает находку."}/></p></div>}/>
   <LocalizedUi value={gemini && <div><h3>Argon</h3><LocalizedUi value={gemini.observations.map(item => <p key={item.id}><strong><LocalizedUi value={item.anatomy}/>.</strong> <LocalizedUi value={item.sign}/> <LocalizedUi value={item.uncertainty}/></p>)}/>
    <LocalizedUi value={gemini.limitations.map(item => <p key={item}><LocalizedUi value={item}/></p>)}/></div>}/>
-  <LocalizedUi value={report?.opusSynthesis && <div><h3><LocalizedUi value={"Основное заключение Argon"}/></h3><textarea data-concilium-report="true" aria-label={__ui("Основное заключение Argon")} style={{width:"100%",fontSize:17}} rows={14} value={editableReport} onChange={e=>setEditableReport(e.target.value)}/></div>}/>
+  <LocalizedUi value={report?.opusSynthesis && <div><h3><LocalizedUi value={"Основное заключение Argon"}/></h3><textarea data-concilium-report="true" data-concilium-report-language={report?.outputLanguage} aria-label={__ui("Основное заключение Argon")} style={{width:"100%",fontSize:17}} rows={14} value={editableReport} onChange={e=>setEditableReport(e.target.value)}/></div>}/>
    {report&&<IndependentImageOpinion key={sourceKey} result={report} payload={requestPayload.current} onResult={setReport}/>}
 </section>;
 }

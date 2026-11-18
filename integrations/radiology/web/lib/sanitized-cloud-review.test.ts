@@ -366,3 +366,35 @@ test("Opus cannot omit one completed detector from integrated JSON",async()=>{
   request.model===PILOT_GEMINI?answer("gemini"):answer("opus"),undefined,null,bound),
   /opus_synthesis_missing_or_unbound_to_executed_detector_tasks/);
 });
+
+test('An explicit one-reader image request returns the primary description despite conflicts and never calls Opus',async()=>{
+ const calls:AiGatewayRequest[]=[];
+ const source=packet('CT');
+ const result=await reviewSanitizedSamples(source,async request=>{
+  calls.push(request);assert.equal(request.model,'google/gemini-4-argon');
+  if(calls.length>1)throw Error('Unauthorized additional paid call');
+  return answer('single-argon');
+ },undefined,null,null,null,null,null,'ru',{allowSecondOpinion:false});
+ assert.equal(calls.length,1);assert.equal(result.callsAttempted,1);assert.equal(result.results.length,1);
+ assert.equal(result.secondOpinion?.status,'not_requested');
+ assert.ok(result.opusSynthesis?.summary.includes('ОПИСАНИЕ'));
+ assert.ok(result.opusSynthesis?.conflicts.length);
+ assert.equal(result.sourceFrames?.[0].reviewedPixelSha256,source.frames[0].sha256);
+});
+
+test('the primary image reader receives the interface language directly and returns its language with the report',async()=>{
+ const {RADIOLOGY_REPORT_LANGUAGES}=await import('./report-language.ts');
+ for(const [language,group] of Object.entries(RADIOLOGY_REPORT_LANGUAGES)){
+  let calls=0;
+  const result=await reviewSanitizedSamples(packet('CT'),async request=>{
+   calls++;assert.match(String(request.messages[0].content),new RegExp('strictly in '+group.name));
+   const response=answer('synthetic-localized-primary');
+   const payload=JSON.parse(response.choices[0].message.content);
+   payload.opusSynthesis.summary=group.headings.map(heading=>heading+': Synthetic source-bound observation; only one image assessed.').join('\n');
+   response.choices[0].message.content=JSON.stringify(payload);
+   return response;
+  },undefined,null,null,null,null,null,language as import('./report-language.ts').RadiologyReportLanguage,{allowSecondOpinion:false});
+  assert.equal(calls,1);assert.equal(result.outputLanguage,language);
+  assert.ok(result.opusSynthesis?.summary.includes(group.headings[2]));
+ }
+});

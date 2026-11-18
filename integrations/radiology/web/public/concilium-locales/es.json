@@ -3391,5 +3391,11 @@
   "Второе мнение": "Segunda opinión",
   "Второе мнение по исходным изображениям": "Segunda opinión sobre las imágenes originales",
   "Проверка с учётом первого ответа": "Revisión con conocimiento de la primera respuesta",
-  "Микроскопия крови": "Microscopía sanguínea"
+  "Микроскопия крови": "Microscopía sanguínea",
+  "Описание изображения": "Descripción de la imagen",
+  "Подтверждаю · получить описание (платно)": "Confirmar · obtener descripción (de pago)",
+  "Формируется описание изображения…": "Se está preparando la descripción de la imagen…",
+  "Получить описание": "Obtener informe",
+  "Подготовка изображения…": "Preparando imagen…",
+  "Скрыть данные на снимке": "Ocultar datos personales en la imagen"
 }

@@ -61,7 +61,7 @@ test('C13: simulated cheap LLM that advertises capabilities is clinically correc
  const mockFetch:typeof fetch=async(_url,init)=>{
   requests++;
   const body=JSON.parse(String(init?.body));
-  assert.equal(body.model,MODELS.flash);
+  assert.equal(body.model,'anthropic/claude-haiku-5.5');
   assert.match(body.messages[0].content,/clinical question/);
   assert.match(body.messages[0].content,/Only propose protocol/);
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({

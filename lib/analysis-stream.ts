@@ -28,7 +28,7 @@ export async function collectChatStream(response:Response,onText:(text:string)=>
  return new Response(JSON.stringify({model,choices:[{message:{content:text},finish_reason:finish??'length'}],usage}),{status:200,headers:{'content-type':'application/json'}});
 }
 export async function requestStreamedJson<T>(url:string,body:unknown,options:{signal?:AbortSignal;onProgress?:(event:AnalysisProgressEvent)=>void;onPreview?:(text:string)=>void;fetch?:typeof fetch}={}):Promise<T>{
- if(url==='/api/protocol'){const value=body as Record<string,unknown>;const approved=await reviewBeforeSending({text:String(value.source??'')});body={...value,source:approved.text,privacyReview:approved};}
+ if(url==='/api/protocol'&&!(body&&typeof body==='object'&&'privacyReview'in body)){const value=body as Record<string,unknown>;const approved=await reviewBeforeSending({text:String(value.source??'')});body={...value,source:approved.text,privacyReview:approved};}
  const response=await (options.fetch??fetch)(url,{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify(body),signal:options.signal});
  if(response.status===428){const value=await response.clone().json().catch(()=>null);if(value?.error==='gemini_choice_required'){window.dispatchEvent(new CustomEvent('concilium-gemini-choice-required',{detail:value.policy}));throw new Error('Выберите модель Gemini в открывшемся окне и повторите разбор.');}}
  if(!response.ok)throw new Error(`Разбор не выполнен (HTTP ${response.status}).`);

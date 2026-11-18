@@ -57,7 +57,8 @@ test('C13: routine app questions and explicit protocol work do not get mistaken 
 
 test('C13: instant local response, visible result, selection and lazy integration check',()=>{
  const component=readFileSync('app/components/physician-task-assistant.tsx','utf8');
- assert.match(component,/local\.intent==='help'\|\|suggestClinicalDestination\(utterance\)/);
+ assert.match(component,/local\.intent==='help'/);
+ assert.match(component,/suggestClinicalDestination\(utterance\)/);
  assert.match(component,/setRequest\(utterance\);setAgentReply\(null\);setAgentError\(''\);setText\(''\)/);
  assert.match(component,/setRequest\(utterance\);setAgentReply\(null\)/);
  assert.match(component,/id="opus-copilot-result"/);

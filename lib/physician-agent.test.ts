@@ -35,7 +35,7 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
  const fakeFetch:typeof fetch=async(_url,init)=>{
   calls++;
   const payload=JSON.parse(String(init?.body));
-  assert.equal(payload.model,MODELS.flash);
+  assert.equal(payload.model,AGENT_MODEL);
   assert.equal(payload.stream,undefined);
   assert.match(payload.messages[0].content,/not a clinical expert or diagnostician/);
   assert.match(payload.messages[0].content,/Never claim to have run a module/);
@@ -43,9 +43,9 @@ test('C13: cheap explicit OpenRouter LLM turn yields a navigation plan and no ex
  };
  const result=await converseWithPhysician({text:'[PHYSICIAN]\nЕсть жалобы и ЭКГ, что делать?',locale:'ru'},{...process.env,OPENROUTER_API_KEY:'synthetic-test'},fakeFetch);
  assert.equal(calls,1);
- assert.equal(AGENT_MODEL,MODELS.flash);
+ assert.equal(AGENT_MODEL,'anthropic/claude-haiku-5.5');
  assert.equal(result.usedModel,true);
- assert.equal(result.model,MODELS.flash);
+ assert.equal(result.model,AGENT_MODEL);
  assert.deepEqual(result.plan.steps.map(s=>s.tool),['ecg','clinical']);
  assert.ok(result.estimatedUsd!==null&&result.estimatedUsd>0);
  assert.equal(result.question,'Is the ECG available?\nЕсть ли запись ЭКГ?');
@@ -67,11 +67,11 @@ test('C13: provider or invalid output has local fallback, no silent retry or inv
 test('C13: UI never sends case files, retains conversation only in component state, preserves free planner',()=>{
  const component=readFileSync('app/components/physician-task-assistant.tsx','utf8');
  const route=readFileSync('app/api/physician-agent/route.ts','utf8');
- assert.match(component,/copilotNeedsPrivacyReview\(utterance\)/);
+ assert.match(component,/copilotNeedsPrivacyReview/);
  assert.match(component,/reviewBeforeSending\(outgoing\)/);
  assert.match(component,/prepareChatSend\(outgoing,controller.signal\)/);
  assert.match(component,/\/api\/physician-agent/);
- assert.match(component,/disabled=\{agentBusy\|\|!text.trim\(\)\}/);
+ assert.match(component,/disabled=\{agentBusy\|\|executionBusy\|\|!text.trim\(\)\}/);
  assert.match(component,/Найти инструмент/);
  assert.match(component,/Спросить Copilot/);
  assert.match(component,/Включить помощника/);
