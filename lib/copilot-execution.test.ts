@@ -53,3 +53,15 @@ test('patient matching stays local and known identities never enter the coordina
  assert.doesNotMatch(copilotCaseContext(value),/SyntheticTestov|FAKE-ID-9911/);
  assert.equal(withoutCaseIdentity('SyntheticTestov eGFR 42 FAKE-ID-9911',value),'[patient] eGFR 42 [patient]');
 });
+
+test('protocol source guard is atomic with the case write and preserves the completed draft on a race',async()=>{
+ const value=fixture();await persistCase(value);let pending:CopilotPendingResult|null=null;
+ try{
+  await assert.rejects(()=>executeCopilotTask({caseId:value.id,signature:caseSignature(value),question:'Synthetic atomic save',steps:['clinical','protocol'],locale:'ru',signal:new AbortController().signal,onPendingResult:result=>{pending=result;}},{fetch:transport([]),saveProtocol:async(...args)=>{const current=(await readVaultCaseById(value.id))!;await persistCase({...current,context:'Changed immediately before serialized protocol write'});const {persistNativeProtocol}=await import('./casebook.ts');return persistNativeProtocol(...args);}}),/изменились/);
+  const saved=(await readVaultCaseById(value.id))!;assert.equal(saved.analyses.length,1);assert.equal(saved.protocols?.length??0,0);assert.ok((pending as CopilotPendingResult|null)?.document);
+ }finally{await clean(value.id);}
+});
+test('closed cases are rejected before any external request',async()=>{
+ const value=fixture();value.status='closed';await persistCase(value);let calls=0;
+ try{await assert.rejects(()=>executeCopilotTask({caseId:value.id,signature:caseSignature(value),question:'Synthetic',steps:['clinical'],locale:'en',signal:new AbortController().signal},{fetch:async()=>{calls++;throw Error();}}));assert.equal(calls,0);}finally{await clean(value.id);}
+});

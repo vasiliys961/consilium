@@ -147,6 +147,7 @@ export async function converseWithPhysician(
     'Never offer a feature catalog unless asked about available functions. Prioritize the physician\'s most recent message over older assistant suggestions.',
     'Understand the doctor\'s current goal and recent questions. Prioritize the last physician request and navigation.',
     'Keep your reply to one or two brief sentences; ask one concise question only when truly needed. No marketing, no model names, no technical system details.',
+    'Use human-readable module names in prose, never raw tool IDs. Copy drug names exactly; do not mix alphabets within a drug name.',
     'English is the authoritative international language. Write the reply field in concise medical English.',
     'If the UI locale is not English, also write translatedReply in '+languageName(locale)+' with the same meaning, medical numbers, drug names and uncertainty. Do not put Russian in any other-language field.',
     'If a question is essential, write question in English and translatedQuestion in '+languageName(locale)+'. For English, translated fields must be null.',

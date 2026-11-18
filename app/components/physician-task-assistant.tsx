@@ -317,7 +317,7 @@ export function PhysicianTaskAssistant({caseId,caseClosed=false,hasClinicalResul
    </details>
   </div>
   {(request.trim()||agentReply)&&(displayedPlan.intent!=='help'||capabilitiesOpen)&&<section id="opus-copilot-result" aria-label={ct('Предлагаемый маршрут')} aria-live="polite" style={{marginTop:12}}>
-   {agentReply?.message?<p dir="auto" style={{whiteSpace:'pre-line'}}>{agentReply.message}</p>:<div>
+   {agentReply?.message&&displayedPlan.intent!=='route'?<p dir="auto" style={{whiteSpace:'pre-line'}}>{agentReply.message}</p>:<div>
       <p lang="en">{workflow.english}</p>
       {workflow.localized&&<p lang={language} dir="auto" style={{marginTop:4}}>{workflow.localized}</p>}
      </div>}

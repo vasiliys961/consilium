@@ -73,7 +73,7 @@ export async function executeCopilotTask(input:{caseId:string;signature:string;q
    if(!output.document?.sections?.length||output.document.sourceAnalysisId!==analysis.id||output.document.locale!==input.locale)throw Error('Протокол не завершён.');
    input.onPendingResult?.({document:output.document});
    input.signal.throwIfAborted();await fresh();
-   await (deps.saveProtocol??persistNativeProtocol)(value.id,{...output.document,edition:input.locale==='ru'?'ru':'global'},input.locale==='ru'?'ru':'en',input.locale);
+   await (deps.saveProtocol??persistNativeProtocol)(value.id,{...output.document,edition:input.locale==='ru'?'ru':'global'},input.locale==='ru'?'ru':'en',input.locale,new Date().toISOString(),input.signature);
    input.onPendingResult?.(null);detail='Черновик протокола сохранён';
   }
   const receipt={tool,status:'completed' as const,detail};completed.push(receipt);input.onStep?.(receipt);

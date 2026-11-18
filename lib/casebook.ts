@@ -296,6 +296,7 @@ export async function persistNativeProtocol(
  edition:'ru'|'en',
  locale:import('./locale.ts').Locale,
  now=new Date().toISOString(),
+ expectedSignature?:string,
 ):Promise<ClinicalCase>{
  if(document.locale!==locale || (edition==='ru'&&document.edition!=='ru') ||
    (edition==='en'&&document.edition!=='global') ||
@@ -307,6 +308,7 @@ export async function persistNativeProtocol(
   const value=await readVaultCaseById(caseId);
   if(!value||value.deletedAt)throw Error('Случай не найден или удалён. Протокол остался в отдельном модуле.');
   if(value.status==='closed')throw Error('Случай завершён. Верните его в работу перед сохранением протокола.');
+  if(expectedSignature!==undefined&&(caseSignature(value)!==expectedSignature||value.analyses[0]?.id!==document.sourceAnalysisId||value.analyses[0]?.inputSignature!==expectedSignature))throw Error('Данные случая изменились. Задача остановлена.');
   const previous=(value.protocols??[]).find(item=>item.id===document.id);
   const comparable=(item:typeof document)=>JSON.stringify([item.edition,item.format,item.locale,item.sourceSnapshot,item.ambientSource,item.sections,item.nativeState]);
   if(previous&&comparable(previous)===comparable(document))return value;
