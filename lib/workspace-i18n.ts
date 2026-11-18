@@ -1,3 +1,4 @@
+import {medicationUiRows} from './medication-ui-i18n.ts';
 import {consultWorkflowRows} from './consult-workflow-i18n.ts';
 import {coordinatorLocales,coordinatorRows} from './copilot-workstation-i18n.ts';
 import addedModuleEnglish from './added-module-english.json' with {type:'json'};
@@ -90,4 +91,4 @@ Object.assign(english,{
  'Не создан':'Not created'
 });
 
-for(const row of [...coordinatorRows,...consultWorkflowRows]){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}
+for(const row of [...coordinatorRows,...consultWorkflowRows,...medicationUiRows]){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}
