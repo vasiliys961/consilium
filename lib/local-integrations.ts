@@ -3,6 +3,7 @@ import{radiologyPreviewApprovalOverrides}from'./radiology-preview-approval-env.t
 import {isPreviewInstance,localOrigin,localPorts,reservedLocalPorts} from './local-ports.ts';
 import {protocolStatus} from './protocol-integration.ts';
 import {radiologyTelemetry} from './radiology-telemetry.ts';
+import {radiologyAnalysisStatus} from './radiology-analysis-status.ts';
 import {writeTerminalEvent} from './telemetry.ts';
 import {spawn,type ChildProcess} from 'node:child_process';
 import {parseEnv} from 'node:util';
@@ -56,4 +57,4 @@ export function startRadiology(){if(!radiologyInstalled())return false;if(child&
   }catch{}
  }
  child=spawn(process.execPath,[resolve(home(),'node_modules/next/dist/bin/next'),'dev','--webpack','--hostname','127.0.0.1','--port',String(localPorts().radiology)],{cwd:home(),env:{...openRouterRuntime({...originalEnv,...process.env,...previewApproval}),NODE_ENV:'development',CONCILIUM_INTEGRATION:'1',NEXT_TELEMETRY_DISABLED:'1'},stdio:['ignore','pipe','ignore']});let pending='';child.stdout?.on('data',chunk=>{pending+=String(chunk);if(pending.length>16000)pending=pending.slice(-16000);const lines=pending.split('\n');pending=lines.pop()??'';for(const line of lines){const event=radiologyTelemetry(line);if(event)writeTerminalEvent(event);}});child.on('error',()=>{child=undefined;});child.unref();return true;}
-export async function integrationStatus(){const [running,protocol]=await Promise.all([radiologyHealth(),protocolStatus()]);return {protocol,ecg:{available:founderReadiness().available},radiology:{installed:radiologyInstalled(),running,origin:RADIOLOGY_ORIGIN,readiness:radiologyReadiness(),standaloneUrl:radiologyStandaloneUrl()}};}
+export async function integrationStatus(){const [running,protocol]=await Promise.all([radiologyHealth(),protocolStatus()]);const analysis=running?await radiologyAnalysisStatus():'unavailable';return {protocol,ecg:{available:founderReadiness().available},radiology:{installed:radiologyInstalled(),running,origin:RADIOLOGY_ORIGIN,readiness:radiologyReadiness(),analysis,standaloneUrl:radiologyStandaloneUrl()}};}

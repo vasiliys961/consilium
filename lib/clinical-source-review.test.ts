@@ -29,9 +29,11 @@ test('explicit claim cross-reference remains an unverified link, not invented ev
 });
 test('guideline handoff is browser-only, bounded, rejects unsafe links and does not change URL',()=>{
  const a=stage('s','summary',[citation('Guideline A','https://pubmed.ncbi.nlm.nih.gov/456/')]);
- const c={question:'',analyses:[a]} as ClinicalCase;
+ const c={id:'synthetic-case',question:'',analyses:[a]} as ClinicalCase;
  const payload=makeGuidelineTopicHandoff(c,a,clinicalSourcesForStage(c.analyses,0));
  assert.equal(payload.topic,'Heart failure guidance');assert.equal(payload.sources.length,1);
+ assert.equal(payload.caseId,'synthetic-case');
+ assert.equal(parseGuidelineTopicHandoff(JSON.stringify({...payload,caseId:'bad/id'})),null);
  assert.equal(parseGuidelineTopicHandoff(JSON.stringify(payload))?.sources[0].title,'Guideline A');
  assert.equal(parseGuidelineTopicHandoff(JSON.stringify({...payload,sources:[{title:'Unsafe',url:'javascript:alert(1)'}]})),null);
  assert.ok(GUIDELINE_HANDOFF_KEY);assert.equal(JSON.stringify(payload).includes('patientId='),false);

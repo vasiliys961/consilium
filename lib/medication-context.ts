@@ -7,11 +7,11 @@ import type {MedicationContext} from './drug-interaction-rules.ts';
 export type MedicationContextExtraction={context:MedicationContext;issues:string[]};
 type NumericKey='egfr'|'potassium'|'qtcMs'|'ageYears';
 type BooleanKey='activeBleeding'|'decompensatedCirrhosis'|'severeHepaticImpairment';
-const numericFields:ReadonlyArray<{key:NumericKey;name:string;pattern:RegExp;min:number;max:number}>= [
- {key:'egfr',name:'СКФ',pattern:/^(?:eGFR|СКФ)\s*[:=—–-]\s*(\d{1,3}(?:[.,]\d{1,2})?)(?=\s|$)/iu,min:0,max:130},
- {key:'potassium',name:'Калий',pattern:/^(?:Калий|Potassium|K\+)\s*[:=—–-]\s*(\d{1,2}(?:[.,]\d{1,2})?)(?=\s|$)/iu,min:1.5,max:10},
- {key:'qtcMs',name:'QTc',pattern:/^QTc\s*[:=—–-]\s*(\d{3})(?=\s|$)/iu,min:250,max:800},
- {key:'ageYears',name:'Возраст',pattern:/^(?:Возраст|Age)\s*[:=—–-]\s*(\d{1,3})(?=\s|$)/iu,min:0,max:120},
+const numericFields:ReadonlyArray<{key:NumericKey;name:string;label:RegExp;value:RegExp;min:number;max:number}>= [
+ {key:'egfr',name:'СКФ',label:/^(?:eGFR|СКФ)\s*[:=—–-]\s*(.*)$/iu,value:/^(\d{1,3}(?:[.,]\d{1,2})?)(?:\s*(?:ml|мл)\s*\/\s*(?:min|мин)\s*\/\s*1[.,]73\s*(?:m|м)[²2])?$/iu,min:0,max:130},
+ {key:'potassium',name:'Калий',label:/^(?:Калий|Potassium|K\+)\s*[:=—–-]\s*(.*)$/iu,value:/^(\d{1,2}(?:[.,]\d{1,2})?)(?:\s*(?:mmol|ммоль|mEq|мЭкв)\s*\/\s*(?:l|л))?$/iu,min:1.5,max:10},
+ {key:'qtcMs',name:'QTc',label:/^QTc\s*[:=—–-]\s*(.*)$/iu,value:/^(\d{3})(?:\s*(?:ms|мс))?$/iu,min:250,max:800},
+ {key:'ageYears',name:'Возраст',label:/^(?:Возраст|Age)\s*[:=—–-]\s*(.*)$/iu,value:/^(\d{1,3})(?:\s*(?:years?|лет|год|года))?$/iu,min:0,max:120},
 ];
 const booleanFields:ReadonlyArray<{key:BooleanKey;name:string;pattern:RegExp}>= [
  {key:'activeBleeding',name:'Активное патологическое кровотечение',pattern:/^(?:Активное\s+(?:патологическое\s+)?кровотечение|Active\s+(?:pathological\s+)?bleeding)\s*[:=—–-]\s*(.+)$/iu},
@@ -28,15 +28,23 @@ export function extractMedicationSafetyContext(text:string):MedicationContextExt
  const context:MedicationContext={},issues:string[]=[];
  // Never examine external search snippets, referenced literature or appended model discussions.
  // The caller supplies only the physician's immediate case narrative.
- const lines=text.slice(0,3500).split(/\r?\n/).map(v=>v.trim().replace(/^[-•*]\s*/,'' )).filter(Boolean);
+ // Inspect the entire supplied narrative: a late conflicting value must not
+ // leave an earlier apparently normal value trusted. No units are converted.
+ // A bare number retains the field's existing canonical-unit convention.
+ const lines=text.split(/\r?\n/).map(v=>v.trim().replace(/^[-•*]\s*/,'' )).filter(Boolean);
  for(const field of numericFields){
+  let unresolved=false;
   const values=lines.flatMap(line=>{
-   const found=line.match(field.pattern);if(!found)return [];
+   const labelled=line.match(field.label);if(!labelled)return [];
+   const found=labelled[1].trim().match(field.value);
+   if(!found){unresolved=true;return [];}
    const number=Number(found[1].replace(',','.'));
-   return Number.isFinite(number)&&number>=field.min&&number<=field.max?[number]:[];
+   if(!Number.isFinite(number)||number<field.min||number>field.max){unresolved=true;return [];}
+   return [number];
   });
   const unique=[...new Set(values)];
   if(unique.length>1)issues.push('Несогласованные значения: '+field.name+' — уточните актуальный результат.');
+  else if(unresolved)issues.push('Не удалось однозначно прочитать '+field.name+' — уточните актуальное значение и единицы.');
   else if(unique.length===1)context[field.key]=unique[0];
  }
  for(const field of booleanFields){

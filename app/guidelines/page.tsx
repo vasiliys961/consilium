@@ -2,7 +2,10 @@
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {useGuidelineCaseWorkspace} from '@/app/components/use-guideline-case-workspace';
+import {guidelineResultFromResponse} from '@/lib/guideline-case-return';
+import {caseTitle} from '@/lib/casebook';
 import {reviewBeforeSending} from '@/lib/privacy-client';
 import {downloadDocx} from '@/lib/download-docx';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
@@ -11,9 +14,7 @@ import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {guidelineUi} from '@/lib/guideline-ui';
 import {guidelineLocalePolicy} from '@/lib/guideline-locale-policy';
 import type {GuidelineMode} from '@/lib/parent-guideline-search';
-import {GUIDELINE_HANDOFF_KEY,parseGuidelineTopicHandoff,type GuidelineTopicHandoff} from '@/lib/clinical-source-review';
 
-type SearchResult={text:string;model:string;estimatedUsd:number;inputTokens:number;outputTokens:number;searchMode:GuidelineMode;language:WorkspaceLanguage};
 const specialtyChoices:readonly [string,string][]=[
  ['Кардиология','Cardiology'],['Пульмонология','Pulmonology'],['Неврология','Neurology'],
  ['Эндокринология','Endocrinology'],['Гастроэнтерология','Gastroenterology'],
@@ -26,29 +27,33 @@ export default function ClinicalGuidelines(){
  const {language}=useWorkspaceLanguage();
  const t=(key:Parameters<typeof guidelineUi>[1])=>guidelineUi(language,key);
  const legacy=(ru:string,en:string)=>language==='ru'?ru:en;
- const [query,setQuery]=useState(''),[specialty,setSpecialty]=useState(''),[mode,setMode]=useState<GuidelineMode>('standard');
- const [answerLanguage,setAnswerLanguage]=useState<WorkspaceLanguage>(language),[matchInterface,setMatchInterface]=useState(true);
- const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<SearchResult|null>(null),[editing,setEditing]=useState(false);
- const [handoff,setHandoff]=useState<GuidelineTopicHandoff|null>(null);
- useEffect(()=>{
-  const raw=sessionStorage.getItem(GUIDELINE_HANDOFF_KEY);
-  if(!raw)return;
-  sessionStorage.removeItem(GUIDELINE_HANDOFF_KEY);
-  const selected=parseGuidelineTopicHandoff(raw);
-  if(selected){setQuery(selected.topic);setHandoff(selected);}
- },[]);
- useEffect(()=>{if(matchInterface)setAnswerLanguage(language);},[language,matchInterface]);
+ const workspace=useGuidelineCaseWorkspace(language);
+ const {draft,setDraft,cases,selected,current,ready,locked,busy,setBusy,saving,notice,setNotice,handoff,setHandoff,changeCase,flush,acceptResult,saveResult,createFromResult,navigate}=workspace;
+ const {query,specialty,mode,answerLanguage,matchInterface,result}=draft;
+ const [editing,setEditing]=useState(false);
+ const requestRef=useRef<AbortController>();
+ const setQuery=(query:string)=>setDraft(old=>({...old,query}));
+ const setSpecialty=(specialty:string)=>setDraft(old=>({...old,specialty}));
+ const setMode=(mode:GuidelineMode)=>setDraft(old=>({...old,mode}));
+ const setAnswerLanguage=(answerLanguage:WorkspaceLanguage)=>setDraft(old=>({...old,answerLanguage}));
+ const setMatchInterface=(matchInterface:boolean)=>setDraft(old=>({...old,matchInterface}));
+ useEffect(()=>{if(ready&&matchInterface&&current?.status!=='closed')setAnswerLanguage(language);},[language,matchInterface,ready,selected]);
+ useEffect(()=>{setEditing(false);},[selected,result?.id]);
+ useEffect(()=>()=>requestRef.current?.abort(),[]);
+ const readOnly=current?.status==='closed';
  const policy=guidelineLocalePolicy(answerLanguage);
  async function search(){
-  if(busy||query.trim().length<3)return;
-  setBusy(true);setNotice('');setResult(null);setEditing(false);
+  if(!ready||locked||readOnly||query.trim().length<3)return;
+  const request=new AbortController();requestRef.current=request;
+  setBusy(true);setNotice('');setEditing(false);
   try{
+   await flush();
    const reviewed=await reviewBeforeSending({
     text:query.trim(),task:'evidence',locale:answerLanguage,sourceLocale:language,
     retain:false,externalSearch:mode==='online'
    });
    const response=await fetch('/api/protocols/search',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({...reviewed,modelMode:mode,specialty})
+    body:JSON.stringify({...reviewed,modelMode:mode,specialty}),signal:request.signal
    });
    if(!response.ok){
     const data=await response.json().catch(()=>({error:'unknown'}));
@@ -63,49 +68,52 @@ export default function ClinicalGuidelines(){
     };
     throw Error(errors[reason]??legacy('Ошибка получения рекомендаций ('+reason+').','Guideline search failed ('+reason+').'));
    }
-   const data=await response.json() as SearchResult;
-   if(!data.text?.trim())throw Error(legacy('Модель вернула пустой ответ.','Empty model response.'));
-   setResult({...data,language:answerLanguage});
-  }catch(error){setNotice(error instanceof Error?error.message:legacy('Ошибка запроса.','Search error.'));}
-  finally{setBusy(false);}
+   const data=guidelineResultFromResponse(await response.json(),{topic:reviewed.text??query.trim(),specialty,language:answerLanguage,caseId:selected||undefined});
+   if(!request.signal.aborted)await acceptResult(data);
+  }catch(error){if(!request.signal.aborted)setNotice(error instanceof Error?error.message:legacy('Ошибка запроса.','Search error.'));}
+  finally{requestRef.current=undefined;setBusy(false);}
  }
  async function share(){
   if(!result)return;
-  try{if(navigator.share)await navigator.share({title:query,text:result.text});
+  try{if(navigator.share)await navigator.share({title:result.topic,text:result.text});
    else{await navigator.clipboard.writeText(result.text);setNotice(legacy('Скопировано для отправки.','Copied for sharing.'));}}
   catch{setNotice(legacy('Отправка отменена.','Sharing canceled.'));}
  }
- return <main className="module-page" style={{maxWidth:1080,margin:'auto',padding:28,lineHeight:1.6}}>
-  <p><Link href="/workspace">← {t('back')}</Link></p>
-  <LanguageSwitcher disabled={busy}/>
+ return <main onClickCapture={navigate} className="module-page" style={{maxWidth:1080,margin:'auto',padding:28,lineHeight:1.6}}>
+  <p><Link href={selected?`/workspace?case=${encodeURIComponent(selected)}`:'/workspace'}>← {t('back')}</Link></p>
+  <LanguageSwitcher disabled={locked}/>
   <h1>📚 {t('title')}</h1>
   <p>{t('intro')}</p>
+  <label>{t('pickCase')}<select aria-label={t('pickCase')} disabled={!ready||locked} value={selected} onChange={event=>void changeCase(event.target.value)}>
+   <option value="">{t('standalone')}</option>{cases.map(value=><option key={value.id} value={value.id}>{caseTitle(value,value.id.slice(0,8))}</option>)}
+  </select></label>
+  {readOnly&&<p role="status">{t('caseClosed')}</p>}
   {handoff&&<section aria-label={legacy('Источники из клинического разбора','Sources from case review')} style={{padding:14,border:'1px solid #c4d1c7',borderRadius:8}}>
    <h2>{legacy('Тема и источники из предыдущего разбора','Topic and sources from case review')}</h2>
    <p>{legacy('Тема заполнена локально. Проверьте и обезличьте её перед поиском; ссылки ниже только для просмотра, автоматически в запрос модели не отправляются.','Topic is filled locally. Review and de-identify it before searching; references below are for review only and are not automatically sent to the model.')}</p>
    {handoff.sources.length>0?<ul>{handoff.sources.map((s,i)=><li key={i}>{s.url?<a href={s.url} target="_blank" rel="noopener noreferrer">{s.title}</a>:s.title}</li>)}</ul>:<p>{legacy('Сохранённых ссылок нет.','No saved links.')}</p>}
-   <button type="button" onClick={()=>{setHandoff(null);setQuery('');}}>{legacy('Очистить переданную тему','Clear imported topic')}</button>
+   <button type="button" disabled={locked||readOnly} onClick={()=>{setHandoff(null);setQuery('');}}>{legacy('Очистить переданную тему','Clear imported topic')}</button>
   </section>}
   <section style={{padding:20,background:'#fcfdfb',border:'1px solid #c4d1c7',borderRadius:10,margin:'18px 0'}}>
    <label>{t('specialty')}
-    <select disabled={busy} value={specialty} onChange={e=>setSpecialty(e.target.value)}>
+    <select disabled={!ready||locked||readOnly} value={specialty} onChange={e=>setSpecialty(e.target.value)}>
      <option value="">{t('any')}</option>
      {specialtyChoices.map(([ru,en])=><option key={ru} value={ru}>{language==='ru'?ru:en}</option>)}
     </select>
    </label>
    <label>{t('topic')}
-    <textarea rows={3} maxLength={550} disabled={busy} value={query}
-     onChange={e=>{setQuery(e.target.value);setResult(null);}}
+    <textarea rows={3} maxLength={550} disabled={!ready||locked||readOnly} value={query}
+     onChange={e=>setQuery(e.target.value)}
      onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();void search();}}}
      placeholder={language==='ru'?'Например: плеврит, пневмония':language==='en'?'e.g. pleuritis, pneumonia':'Pleuritis / pneumonia / pleuritis'}/>
    </label>
    <label>{t('output')}
-    <select disabled={busy} value={answerLanguage} onChange={e=>{setAnswerLanguage(e.target.value as WorkspaceLanguage);setMatchInterface(false);}}>
+    <select disabled={!ready||locked||readOnly} value={answerLanguage} onChange={e=>{setAnswerLanguage(e.target.value as WorkspaceLanguage);setMatchInterface(false);}}>
      {WORKSPACE_LANGUAGES.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}
     </select>
    </label>
    <label style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
-    <input type="checkbox" disabled={busy} checked={matchInterface}
+    <input type="checkbox" disabled={!ready||locked||readOnly} checked={matchInterface}
      onChange={e=>{setMatchInterface(e.target.checked);if(e.target.checked)setAnswerLanguage(language);}}/>
     {t('same')}
    </label>
@@ -113,26 +121,28 @@ export default function ClinicalGuidelines(){
    <p><small>{legacy('Основные международные рекомендации США и Европы + национальные источники выбранного языка. Язык не всегда определяет страну пациента.','International US/European guidance plus relevant national-language authorities. Language alone does not identify the patient’s jurisdiction.')} {policy.localAuthorities.join(' · ')}</small></p>
    <p><strong>{t('depth')}</strong></p>
    <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:9}}>
-    {(['standard','detailed','online'] as const).map(value=><button type="button" key={value} disabled={busy} aria-pressed={mode===value}
+    {(['standard','detailed','online'] as const).map(value=><button type="button" key={value} disabled={!ready||locked||readOnly} aria-pressed={mode===value}
      onClick={()=>setMode(value)} style={{border:'1px solid #8c9c90',background:mode===value?'#20543d':'#edf3ee',color:mode===value?'#fff':'#1c3b2d',borderRadius:6,padding:'9px 12px'}}>{t(value)}</button>)}
    </div>
    <p><small>{mode==='online'
     ?legacy('Sonar выполняет онлайн-поиск. Проверь, что приведённые ссылки действительно подтверждают рекомендации.','Sonar searches online. Verify that linked sources support the clinical advice.')
     :legacy('Стандарт — Gemini Flash; подробный разбор — Sonnet. В этих режимах актуальность документов не проверяется через интернет.','Standard uses Gemini Flash; detailed uses Sonnet. Neither mode independently verifies live documents.')}</small></p>
-   <button disabled={busy||query.trim().length<3} onClick={()=>void search()}>{busy?t('searching'):t('search')}</button>
+   <button disabled={!ready||locked||readOnly||query.trim().length<3} onClick={()=>void search()}>{busy?t('searching'):t('search')}</button>
    <p><small>{legacy('Перед отправкой — проверка обезличивания. Запросы могут расходовать API-баланс.','Privacy review precedes external model requests, which may incur API charges.')}</small></p>
   </section>
   {notice&&<p role="status">{notice}</p>}
   {result&&<section style={{padding:22,background:'white',border:'1px solid #d2ded6',borderRadius:9}}>
-   <h2>{t('result')}</h2>
-   <p><small>{t('model')}: {result.model} · {t('cost')}: {'$'+result.estimatedUsd.toFixed(5)} · {result.inputTokens+result.outputTokens} tokens · {WORKSPACE_LANGUAGES.find(item=>item.code===result.language)?.name}</small></p>
-   {editing?<label>{t('edit')}<textarea rows={24} value={result.text} dir={result.language==='ar'?'rtl':'auto'}
-    onChange={e=>setResult(prev=>prev&&({...prev,text:e.target.value}))}/></label>:
+   <h2>{t('result')}</h2><p><strong>{result.topic}</strong></p>
+   {!selected&&<button type="button" disabled={locked||!result.text.trim()} onClick={()=>void createFromResult()}>{saving?t('saving'):t('newCase')}</button>}
+   {selected&&<><button type="button" disabled={locked||readOnly||!result.text.trim()} onClick={()=>void saveResult()}>{saving?t('saving'):t('save')}</button><p><small>{t('referenceHint')}</small></p></>}
+   <details><summary>{t('details')}</summary><p><small>{t('model')}: {result.model} · {t('cost')}: {'$'+result.estimatedUsd.toFixed(5)} · {result.inputTokens+result.outputTokens} tokens · {WORKSPACE_LANGUAGES.find(item=>item.code===result.language)?.name}</small></p></details>
+   {editing?<label>{t('edit')}<textarea rows={24} disabled={locked||readOnly} value={result.text} dir={result.language==='ar'?'rtl':'auto'}
+    onChange={e=>setDraft(old=>({...old,result:old.result&&({...old.result,text:e.target.value})}))}/></label>:
     <article className="clinical-guideline-markdown" dir={result.language==='ar'?'rtl':'auto'}
      style={{whiteSpace:'normal',lineHeight:1.75}}><ReactMarkdown remarkPlugins={[remarkGfm]}>{result.text}</ReactMarkdown></article>}
    <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:20}}>
-    <button type="button" onClick={()=>setEditing(prev=>!prev)}>{editing?t('preview'):t('edit')}</button>
-    <button type="button" onClick={()=>void downloadDocx(query,result.text,result.language).catch(()=>setNotice('DOCX failed'))}>DOCX</button>
+    <button type="button" disabled={locked||readOnly} onClick={()=>setEditing(prev=>!prev)}>{editing?t('preview'):t('edit')}</button>
+    <button type="button" onClick={()=>void downloadDocx(result.topic,result.text,result.language).catch(()=>setNotice('DOCX failed'))}>DOCX</button>
     <button type="button" onClick={()=>window.print()}>{t('print')}</button>
     <button type="button" onClick={()=>void share()}>{t('share')}</button>
     <button type="button" onClick={()=>void navigator.clipboard.writeText(result.text).then(()=>setNotice(legacy('Скопировано','Copied'))).catch(()=>setNotice('Clipboard unavailable'))}>{t('copy')}</button>
@@ -142,7 +152,7 @@ export default function ClinicalGuidelines(){
   {!busy&&!result&&<section>
    <h3>{t('examples')}</h3>
    <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-    {['Плеврит','Острый коронарный синдром','Декомпенсация сердечной недостаточности','Фибрилляция предсердий','Внебольничная пневмония'].map(item=><button type="button" key={item} onClick={()=>setQuery(item)}>{item}</button>)}
+    {['Плеврит','Острый коронарный синдром','Декомпенсация сердечной недостаточности','Фибрилляция предсердий','Внебольничная пневмония'].map(item=><button type="button" disabled={locked||readOnly} key={item} onClick={()=>setQuery(item)}>{item}</button>)}
    </div>
   </section>}
  </main>;

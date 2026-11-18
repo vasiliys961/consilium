@@ -53,6 +53,6 @@ export function ClinicalSourcesPanel({value,analysis,index}:{value:ClinicalCase;
   {review.current.length>0&&<section><h4>{t('Найдены на этом этапе')} · {review.currentCount}</h4><ol>{review.current.map(renderEntry)}</ol></section>}
   {review.earlier.length>0&&<section><h4>{t('Найдены на предыдущих этапах')} · {review.earlierCount}</h4><ol>{review.earlier.map(renderEntry)}</ol></section>}
   {review.currentCount+review.earlierCount>shown&&<small>{t('Показаны наиболее релевантные источники')} · {shown} / {review.currentCount+review.earlierCount}</small>}
-  {analysis.kind==='summary'&&<p><Link href="/guidelines" onClick={storeTopic}>{t('Найти клинические рекомендации по этому выводу')} →</Link><br/><small>{t('Тема и найденные ссылки передаются только в браузере. Поиск не запускается автоматически; сначала проверьте тему и обезличивание.')}</small></p>}
+  {analysis.kind==='summary'&&<p><Link href={`/guidelines?case=${encodeURIComponent(value.id)}`} onClick={storeTopic}>{t('Найти клинические рекомендации по этому выводу')} →</Link><br/><small>{t('Тема и найденные ссылки передаются только в браузере. Поиск не запускается автоматически; сначала проверьте тему и обезличивание.')}</small></p>}
  </details>;
 }

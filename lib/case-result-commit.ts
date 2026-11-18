@@ -1,4 +1,4 @@
-import { decisionDraftFrom, persistCase, persistCaseAutosave, type Analysis, type ClinicalCase } from './casebook.ts';
+import { decisionDraftFrom, persistCompletedClinicalAnalysis, persistCaseAutosave, type Analysis, type ClinicalCase } from './casebook.ts';
 
 /**
  * Promote an editor-only question into this request's in-memory analysis snapshot.
@@ -47,7 +47,7 @@ export async function commitClinicalAnalysis(
   snapshot: ClinicalCase,
   entry: Analysis,
   workspaceDraft: NonNullable<ClinicalCase['workspaceDraft']>,
-  save: (value: ClinicalCase) => Promise<void> = persistCase,
+  save?: (value: ClinicalCase) => Promise<void>,
 ): Promise<{ value: ClinicalCase; stored: boolean }> {
   const value: ClinicalCase = {
     ...snapshot,
@@ -59,8 +59,8 @@ export async function commitClinicalAnalysis(
       : {}),
   };
   try {
-    await save(value);
-    return { value, stored: true };
+    if(save){await save(value);return { value, stored: true };}
+    return {value:await persistCompletedClinicalAnalysis(snapshot,entry,workspaceDraft),stored:true};
   } catch {
     // Preserve the just-completed result in memory even if IndexedDB is full.
     // The UI can still export it, and must never pretend it has been persisted.

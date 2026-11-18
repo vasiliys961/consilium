@@ -1,4 +1,5 @@
 import type {ClinicalCase} from './casebook.ts';
+import {validGuidelineDraft,validGuidelineReport,rebindGuidelineCaseCopy} from './guideline-case-return.ts';
 import {flushVault,readVaultCaseById,insertVaultCaseIfAbsent} from './local-vault.ts';
 import {deriveVaultKey,seal,unseal,fromBase64,toBase64,type Sealed} from './vault-crypto.ts';
 
@@ -34,6 +35,18 @@ function validCase(value:unknown):value is ClinicalCase{
    ||!['note','question','decision'].includes(String(ev.kind))))return false;
  if(value.analyses.some(a=>!isRecord(a)||typeof a.id!=='string'||!isDate(a.at)||typeof a.context!=='string'
    ||!isRecord(a.result)||!isRecord(a.result.draft)||!Array.isArray(a.result.citations)))return false;
+ if(value.guidelineDraft!==undefined&&!validGuidelineDraft(value.guidelineDraft,value.id))return false;
+ if(value.guidelineReports!==undefined&&(!Array.isArray(value.guidelineReports)||value.guidelineReports.length>400
+  ||value.guidelineReports.some(item=>!validGuidelineReport(item,String(value.id)))))return false;
+ if(value.geneticsDraft!==undefined){
+  const draft=value.geneticsDraft;
+  if(!isRecord(draft)||typeof draft.context!=='string'||typeof draft.question!=='string'||typeof draft.focus!=='string'
+   ||!Array.isArray(draft.files)||draft.files.length>400||draft.files.some(file=>!isRecord(file)||typeof file.name!=='string'||typeof file.sha256!=='string'||!/^[a-f0-9]{64}$/i.test(file.sha256))
+   ||!Array.isArray(draft.discussion)||draft.discussion.length>100||draft.discussion.some(turn=>!isRecord(turn)
+    ||typeof turn.id!=='string'||!isDate(turn.at)||turn.caseId!==undefined&&turn.caseId!==value.id
+    ||typeof turn.question!=='string'||typeof turn.clinicalContext!=='string'||typeof turn.filesKey!=='string'
+    ||!isRecord(turn.result)||!isRecord(turn.result.draft)||!Array.isArray(turn.result.ledger)||!Array.isArray(turn.result.citations)))return false;
+ }
  return true;
 }
 function decodeCaseFile(text:string):CaseEnvelope{
@@ -76,6 +89,11 @@ export async function restorePortableCaseFile(text:string,password:string,collis
  if(collision==='reject'&&await readVaultCaseById(originalId))throw new PortableCaseCollisionError();
  const newId=collision==='copy'?crypto.randomUUID():originalId;
  const value:ClinicalCase={...decrypted.value,id:newId,...(collision==='copy'?{number:undefined}:{}),deletedAt:undefined};
+ if(collision==='copy')Object.assign(value,rebindGuidelineCaseCopy(decrypted.value,newId));
+ // A copied case retains the same original material and historical input signatures.
+ // Rebind only the verified local workspace owner, never reinterpret its results.
+ if(collision==='copy'&&value.geneticsDraft)value.geneticsDraft={...value.geneticsDraft,
+  discussion:value.geneticsDraft.discussion.map(turn=>turn.caseId?{...turn,caseId:newId}:turn)};
  // The source and clinical conclusions are preserved as historical data; attachments are NOT reinterpreted.
  try{await insertVaultCaseIfAbsent(value);}
  catch(error){

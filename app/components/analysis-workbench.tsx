@@ -1144,8 +1144,8 @@ export default function AnalysisWorkbench({fixedProfile}:{fixedProfile?:ImagePro
           const selector=target==='materials'?'.studies':target==='context'?'.action textarea':'.draft';
           document.querySelector(selector)?.scrollIntoView({behavior:'smooth'});
         }}/></details>
-        <details className="station-extra" open={referenceFiles.length>0}><summary>{t("Рекомендации и статьи · необязательно")}</summary><ReferenceInstructions expanded station/>
-          <p>{t('Поиск по загруженной книге использует текстовые фрагменты. Автоматическое сравнение с её иллюстрациями пока недоступно.')}</p>
+        <details className="station-extra" ><summary>{t("Рекомендации и статьи · необязательно")}</summary><ReferenceInstructions expanded station/>
+          <p>{t('Для большой книги используйте «Личную библиотеку». Подобранные страницы, таблицы и изображения можно проверить перед разбором.')}</p>
           <label className="file">{t("Добавить руководство или статью")}<input disabled={analyzing} type="file" multiple accept=".pdf,.docx,.txt,.md" onChange={async event=>{const selected=Array.from(event.target.files??[]);event.target.value="";try{const prepared=await Promise.all(selected.map(prepareFile));setReferenceFiles(old=>[...old,...prepared]);setLibraryNotice("");}catch(error){setLibraryNotice(error instanceof Error?error.message:"Library upload failed");}}}/></label>
           {referenceFiles.map((file,index)=><p key={`${file.name}-${index}`}>{file.name} <button disabled={analyzing} onClick={()=>setReferenceFiles(old=>old.filter((_,i)=>i!==index))}>{t("Удалить")}</button></p>)}{libraryNotice&&<p role="status">{libraryNotice}</p>}
         </details>
