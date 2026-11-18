@@ -1,5 +1,6 @@
 "use client";
 import {LocalizedUi,useUiTranslator} from './ConciliumBridge';
+import SingleDicomAnalysis from './SingleDicomAnalysis';
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DicomSeries } from "../lib/dicom-series";
 import { planVisionFrameSamples, MAX_VISION_SAMPLE_FRAMES, type VisionFramePlan } from "../lib/vision-frame-plan";
@@ -475,6 +476,8 @@ export default function VisionFramePlanningPanel({ series, comparisonSeries = se
     <p className="ora-vision-plan-footnote"><LocalizedUi value={"\u041E\u0442\u0431\u0438\u0440\u0430\u0435\u043C \u043F\u043E \u0440\u0430\u0432\u043D\u043E\u043C\u0435\u0440\u043D\u044B\u043C \u0438\u043D\u0434\u0435\u043A\u0441\u0430\u043C \u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043D\u043E\u0439 \u0441\u0435\u0440\u0438\u0438, \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u044F \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0435 SOPInstanceUID \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E. \u0412\u044B\u0431\u043E\u0440\u043A\u0430 \u043D\u0435 \u0433\u0430\u0440\u0430\u043D\u0442\u0438\u0440\u0443\u0435\u0442 \u043E\u0431\u043D\u0430\u0440\u0443\u0436\u0435\u043D\u0438\u044F \u043E\u0447\u0430\u0433\u043E\u0432 \u043C\u0435\u0436\u0434\u0443 \u0441\u0440\u0435\u0437\u0430\u043C\u0438."}/></p>
   </section>;
     const selected = series.find(s => s.key === choice.seriesKey);
+    if (!researchMode && fromPrimaryAnalysis && selected && selected.members.length===1 && ['CT','MR'].includes(selected.modality))
+        return <SingleDicomAnalysis key={'single-'+selected.key} series={selected} files={fileById} onOpenSlice={onOpenSlice}/>;
     if (!researchMode && fromPrimaryAnalysis && selected && ["CR", "DX"].includes(selected.modality))
         return <PlainImageAnalysis key={"plain-" + selected.key} series={selected} files={fileById} autoStart/>;
     if (!researchMode && fromPrimaryAnalysis && selected && ["CT", "MR"].includes(selected.modality))

@@ -7,7 +7,8 @@ import { reviewPreparedStudy } from '../lib/review-prepared-study';
 import VisionPrivacyPreparation from './VisionPrivacyPreparation';
 // Compressed copies only, ephemeral tab memory. No IndexedDB, disk or source DICOM copy.
 const MAX_REVIEW_MEMORY = 96 * 1024 * 1024;
-export default function StudyPrivacyReview({ count, modality, load, onReady, onOpenSlice, sourceIds, sourceNumbers, clinicalContext, canRelease = false, releaseNotice, connectionNotice, singleSliceTest = false, windows }: {
+export default function StudyPrivacyReview({ count, modality, load, onReady, onOpenSlice, sourceIds, sourceNumbers, clinicalContext, canRelease = false, releaseNotice, connectionNotice, singleSliceTest = false, sendLabel, windows }: {
+    sendLabel?:string;
     clinicalContext?: string;
     sourceNumbers?: number[][];
     canRelease?: boolean;
@@ -135,7 +136,7 @@ export default function StudyPrivacyReview({ count, modality, load, onReady, onO
    <LocalizedUi value={!preparing && !canRelease && <p role="status"><LocalizedUi value={(connectionNotice || "Подключение не подтверждено.") + " Кнопка отправки перепроверит подключение без оплаты. Если оно отсутствует, снимки останутся локально."}/></p>}/>
    <LocalizedUi value={!preparing && groups.length === count && !error && <>
     <p role="note"><LocalizedUi value={"Нажимая кнопку, врач подтверждает проверку подготовленных кадров и надписей, право передачи этих копий в OpenRouter и разрешение на платный анализ. Исходные DICOM остаются локально."}/></p>
-    <button type="button" disabled={sending || preparing || released || !!error || groups.length !== count} onClick={() => void release()}><LocalizedUi value={released ? "Запрос передан; повторная оплата заблокирована" : singleSliceTest ? "Проверил снимок · отправить в Gemini (платно)" : "Проверил снимки · отправить в анализ (платно)"}/></button>
+    <button type="button" disabled={sending || preparing || released || !!error || groups.length !== count} onClick={() => void release()}><LocalizedUi value={released ? "Запрос передан; повторная оплата заблокирована" : sendLabel ?? (singleSliceTest ? "Проверил снимок · отправить в Gemini (платно)" : "Проверил снимки · отправить в анализ (платно)")}/></button>
    </>}/>
   </>}/>
  </section>;
