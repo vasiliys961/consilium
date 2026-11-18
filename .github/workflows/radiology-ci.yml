@@ -43,6 +43,6 @@ jobs:
       - name: Build Radiology
         working-directory: integrations/radiology/web
         run: npm run build
-      - name: Test reviewed-frame authorization and standalone frame bounds
+      - name: Test reviewed-frame authorization, one-reader bounds and visible description
         working-directory: integrations/radiology/web
-        run: node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/reviewed-frame-session.test.ts
+        run: node --disable-warning=ExperimentalWarning --experimental-strip-types --test lib/reviewed-frame-session.test.ts lib/sanitized-cloud-review.test.ts lib/single-frame-report.test.ts
