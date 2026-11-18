@@ -3373,5 +3373,11 @@
   "Добавить одну проекцию": "Ajouter une projection",
   "Анализировать исследование": "Analyser l'examen",
   "Идёт анализ исследования…": "Analyse de l'examen en cours…",
-  "Описание слишком длинное для передачи.": "La description est trop longue pour être transmise."
+  "Описание слишком длинное для передачи.": "La description est trop longue pour être transmise.",
+  "Описание изображения": "Description de l’image",
+  "Подтверждаю · получить описание (платно)": "Confirmer · obtenir la description (payant)",
+  "Формируется описание изображения…": "Préparation de la description de l’image…",
+  "Получить описание": "Obtenir le compte rendu",
+  "Подготовка изображения…": "Préparation de l’image…",
+  "Скрыть данные на снимке": "Masquer les données personnelles sur l’image"
 }

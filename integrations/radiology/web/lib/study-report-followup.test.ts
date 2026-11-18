@@ -31,3 +31,17 @@ test('English translation receives the entire provisional report',async()=>{
   return {choices:[{message:{content:JSON.stringify({text:'Full English report.'})}}],usage:{prompt_tokens:12,completion_tokens:5}};
  });
 });
+
+test('report translation obeys requested language without an image-review checklist or workflow commentary',async()=>{
+ for(const language of ['ru','en','fr'] as const){
+  const name={ru:'Russian',en:'English',fr:'French'}[language];
+  const result=await followupStudyReport({...input,mode:'translate',outputLanguage:language},async request=>{
+   const prompt=String(request.messages[0].content);
+   assert.ok(prompt.includes('professional '+name));
+   assert.match(prompt,/not a new image review/);assert.doesNotMatch(prompt,/No mm\/HU|Patient orientation is not provided/);
+   assert.equal(JSON.parse(String(request.messages[1].content)).report,input.report);
+   return {choices:[{message:{content:JSON.stringify({text:'Synthetic complete translation'})}}]};
+  });
+  assert.equal(result.text,'Synthetic complete translation');assert.equal(result.receipt.usageAvailable,false);
+ }
+});

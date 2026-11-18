@@ -23,3 +23,23 @@ test('every internal navigation, guide and technical UI string has a catalog in 
  for(const key of keys){assert.ok(typeof catalog[key]==='string'&&catalog[key].trim(),`${locale}: ${key}`);assert.equal(served[key],catalog[key]);for(const token of key.match(/\{\d+\}/g)??[])assert.ok(catalog[key].includes(token),`${locale}: missing ${token}`);}
  }
 });
+
+test('reopened English and Arabic reports retain their source language even when the interface has changed',async()=>{
+ const {radiologyDescriptionLanguage}=await import('./radiology-bridge.ts');
+ for(const [language,group] of Object.entries(RADIOLOGY_REPORT_LANGUAGES)){
+  const text=group.headings.map(heading=>heading+': Synthetic bounded observation.').join('\n');
+  assert.equal(radiologyDescriptionLanguage(text,'ru'),language);
+ }
+ assert.equal(radiologyDescriptionLanguage('Unstructured synthetic physician text','ar'),'ar');
+});
+
+test('ordinary image action and preparation controls are localized in every supported interface',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ for(const locale of ['en','es','fr','ar','hi','pt-BR','id','tr','zh-CN']){
+  const catalog=JSON.parse(await readFile(new URL(`./radiology-locales/${locale}.json`,import.meta.url),'utf8'));
+  const served=JSON.parse(await readFile(new URL(`../integrations/radiology/web/public/concilium-locales/${locale}.json`,import.meta.url),'utf8'));
+  for(const key of ['Получить описание','Подготовка изображения…','Скрыть данные на снимке']){
+   assert.equal(served[key],catalog[key]);assert.ok(catalog[key]);assert.doesNotMatch(catalog[key],/[а-яё]/i);
+  }
+ }
+});

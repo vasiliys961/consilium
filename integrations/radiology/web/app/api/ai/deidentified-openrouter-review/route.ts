@@ -3,7 +3,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {createHash,timingSafeEqual} from "node:crypto";
 import {callAiGateway} from "../../../../lib/ai-gateway";
 import {HttpBodyTooLarge} from "../../../../lib/limited-body";
-import {reviewSanitizedSamples,type SanitizedModelReview} from "../../../../lib/sanitized-cloud-review";
+import {reviewSanitizedSamples,normalizeReviewedCloudPilot,type SanitizedModelReview} from "../../../../lib/sanitized-cloud-review";
 import {createSyntheticTrialLimiter} from "../../../../lib/synthetic-live-research";
 import {REVIEWED_FRAME_COOKIE,reviewedFrameSessionEnabled,createReviewedFrameSession,
   validReviewedFrameSession,reviewedFrameConnectionStatus} from "../../../../lib/reviewed-frame-session";
@@ -15,6 +15,7 @@ const HEADERS={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff","Re
 const LOCAL_HOST=/^(?:localhost|127\.0\.0\.1)(?::[0-9]{1,5})?$/;
 const BODY_LIMIT=2_350_000;
 const imageResults=new Map<string,{expires:number;result:SanitizedModelReview}>();
+const singleReaderAttempts=new Map<string,number>();
 const limiter=createSyntheticTrialLimiter(30,20*60_000);
 /** Separate pixel-sized bounded reader. Global readLimitedText is intentionally
  * capped at 64 KiB for clinical metadata and must not be weakened for images. */
@@ -93,10 +94,13 @@ export async function POST(req:NextRequest){
   catch(e){return reply(e instanceof HttpBodyTooLarge?413:400,"Invalid or oversized data");}
   if(!raw||typeof raw!=="object"||Array.isArray(raw))return reply(400,"Invalid request");
   const v=raw as Record<string,unknown>;
+  if(v.singleReader!==undefined&&typeof v.singleReader!=='boolean')return reply(400,'Invalid reader limit');
+  const singleReader=v.singleReader===true;delete v.singleReader;
   const allowed=["packet","acknowledgeClinicianLawfulDisclosure","acknowledgeProviderHealthDataTerms",
-    "acknowledgePixelIdentityReviewed","acknowledgeTwoPaidCalls"];
+    "acknowledgePixelIdentityReviewed",singleReader?'acknowledgeOnePaidCall':"acknowledgeTwoPaidCalls"];
   if(v.secondOpinion!==undefined&&typeof v.secondOpinion!=="boolean")return reply(400,"Invalid second opinion request");
   const forceOpus=v.secondOpinion===true;delete v.secondOpinion;
+  if(singleReader&&forceOpus)return reply(400,'One reader only');
   const keys=Object.keys(v);
   const specialistProvided=Object.hasOwn(v,"specialistFacts");
   const detectorProvided=Object.hasOwn(v,"detectorEvidence");
@@ -111,27 +115,34 @@ export async function POST(req:NextRequest){
      v.acknowledgeClinicianLawfulDisclosure!==true||
      v.acknowledgeProviderHealthDataTerms!==true||
      v.acknowledgePixelIdentityReviewed!==true||
-     v.acknowledgeTwoPaidCalls!==true)
+     (singleReader?v.acknowledgeOnePaidCall!==true:v.acknowledgeTwoPaidCalls!==true))
     return reply(400,"Study-level clinician, image privacy, provider, and two-call approvals required");
   // Review packet validation happens BEFORE a paid remote call in the model
   // executor. Failure is closed. These declarations are NOT an independent
   // deidentification certificate or legal authority; clinical production is off.
   for(const [id,entry]of imageResults)if(entry.expires<Date.now())imageResults.delete(id);
-  const cacheKey=createHash('sha256').update(req.cookies.get(REVIEWED_FRAME_COOKIE)?.value??req.headers.get('x-opus-local-operator-token')??'').update(req.cookies.get('concilium-ui-language')?.value??'ru').update(JSON.stringify(v)).digest('hex');
+  for(const [id,expires]of singleReaderAttempts)if(expires<Date.now())singleReaderAttempts.delete(id);
+  let singleIdentity='';
+  if(singleReader){try{const checked=normalizeReviewedCloudPilot(v.packet);if(checked.frames.length!==1)return reply(400,'One reviewed image required');singleIdentity=JSON.stringify({modality:checked.modality,frames:checked.localFrameHashes});}catch{return reply(400,'Invalid reviewed image');}}
+  // Session renewal changes its cookie expiry. The one-reader identity instead
+  // binds exact reviewed pixels on this already authenticated local workstation.
+  const cacheKey=createHash('sha256').update(singleReader?'single-reader':req.cookies.get(REVIEWED_FRAME_COOKIE)?.value??req.headers.get('x-opus-local-operator-token')??'').update(req.cookies.get('concilium-ui-language')?.value??'ru').update(singleReader?singleIdentity:JSON.stringify(v)).digest('hex');
   const checkpoint=imageResults.get(cacheKey)?.result;
   if(forceOpus&&!checkpoint)return reply(409,"Сохранённый основной разбор истёк. Выполните новый разбор явно; Argon автоматически повторно не запускается.");
   if(checkpoint&&(!forceOpus||checkpoint.secondOpinion?.status==='completed'))return NextResponse.json(checkpoint,{headers:HEADERS});
+  if(singleReader&&singleReaderAttempts.has(cacheKey))return reply(409,'This image request was already sent; automatic paid repetition is blocked');
   const savePrimary=(result:SanitizedModelReview)=>{if(imageResults.size>=2&&!imageResults.has(cacheKey))imageResults.delete(imageResults.keys().next().value!);imageResults.set(cacheKey,{expires:Date.now()+10*60_000,result});};
   const release=limiter.acquire();
   if(!release)return reply(429,"Один разбор ещё идёт либо за 20 минут уже начато 30. Подождите окончания текущего.");
   try{
+    if(singleReader)singleReaderAttempts.set(cacheKey,Date.now()+10*60_000);
     const result=await reviewSanitizedSamples(
       v.packet,callAiGateway,AbortSignal.any([req.signal,AbortSignal.timeout(process.env.NODE_ENV==="development"&&
        process.env.RADIOLOGY_PUBLIC_ORIGINAL_DICOM_EXTENDED_REVIEW==="1"?540_000:75_000)]),
       specialistProvided?v.specialistFacts:null,
       detectorProvided?v.detectorEvidence:null,
       cxrProvided?v.cxrModelEvidence:null,null,
-      spatialProvided?v.frameRelativeClnEvidence:null,radiologyReportLanguage(req.cookies.get("concilium-ui-language")?.value),{forceOpus,primary:checkpoint,onPrimary:savePrimary});
+      spatialProvided?v.frameRelativeClnEvidence:null,radiologyReportLanguage(req.cookies.get("concilium-ui-language")?.value),{forceOpus,allowSecondOpinion:!singleReader,primary:checkpoint,onPrimary:savePrimary});
     savePrimary(result);
     return NextResponse.json(result,{headers:HEADERS});
   }catch{
