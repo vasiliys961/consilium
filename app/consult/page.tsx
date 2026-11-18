@@ -249,7 +249,7 @@ export default function ConsultPage() {
     // the editable question. The file itself is never uploaded here.
     setDrafts(current=>{
       const old=current[specialty]??'';
-      const inserted='\n\n[Фрагмент документа — проверьте извлечённый текст]\n'+attachmentPreview.text;
+      const inserted='\n\n['+t('Фрагмент документа — проверьте извлечённый текст')+']\n'+attachmentPreview.text;
       return {...current,[specialty]:(old+inserted).trim().slice(0,QUESTION_LIMIT)};
     });
     setPreparedDocuments(current=>({...current,[specialty]:true}));
@@ -259,11 +259,11 @@ export default function ConsultPage() {
     // A deliberately bounded and clearly marked *draft*, not a clinical summary.
     // Copy the latest turns without pretending this is the entire consultation.
     const recent=dialogue.turns.slice(-2).map(turn=>
-      'Вопрос врача: '+turn.question.slice(0,700)+'\n' +
-      'Ответ специалиста (требует проверки врачом):\n'+turn.text.slice(0,1000));
+      t('Вопрос врача')+': '+turn.question.slice(0,700)+'\n' +
+      t('Ответ специалиста · проверить врачу')+':\n'+turn.text.slice(0,1000));
     const current=question.trim();
-    const doc=['Черновик для клинического случая. Последние реплики — не вся консультация; проверьте сведения перед разбором.',
-      ...recent,current?'Новый вопрос врача: '+current:''].filter(Boolean).join('\n\n');
+    const doc=[t('Черновик для клинического случая. Последние реплики — не вся консультация; проверьте сведения перед разбором.'),
+      ...recent,current?t('Новый вопрос врача')+': '+current:''].filter(Boolean).join('\n\n');
     if(!recent.length&&!current){setError('Сначала сформулируйте вопрос.');return}
     if(doc.length>6000){
       setError('Черновик слишком длинный. Сократите новый вопрос или перенесите документы через клинический случай.');return;
