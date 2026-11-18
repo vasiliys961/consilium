@@ -50,7 +50,7 @@ export default function ConciliumBridge({children,initialLanguage='ru',initialTr
   window.addEventListener('message',receive);
   return()=>{controller.abort();window.removeEventListener('message',receive);};
  },[session,origin]);
- function transfer(saveRequested=false){const fields=[...document.querySelectorAll<HTMLTextAreaElement>('textarea[data-concilium-report]')].filter(e=>e.value.trim());const reportLanguage=fields[0]?.dataset.conciliumReportLanguage??language;const outputs=fields.map(e=>e.value.trim());if(!outputs.length){setNotice(copy.empty);return;}const text=[...new Set(outputs)].join('\n\n');if(text.length>100000){setNotice(copy.tooLong);return;}window.parent.postMessage({type:'concilium.report',session,text,language:reportLanguage,...(saveRequested?{saveRequested:true}:{})},origin);setNotice(copy.sent);}
+ function transfer(saveRequested=false){const fields=[...document.querySelectorAll<HTMLTextAreaElement>('textarea[data-concilium-report]')].filter(e=>e.value.trim());const reportLanguage=fields[0]?.dataset.conciliumReportLanguage??language;const outputs=fields.map(e=>e.value.trim());if(!outputs.length){if(saveRequested)window.parent.postMessage({type:'concilium.save-report',session},origin);else setNotice(copy.empty);return;}const text=[...new Set(outputs)].join('\n\n');if(text.length>100000){setNotice(copy.tooLong);return;}window.parent.postMessage({type:'concilium.report',session,text,language:reportLanguage,...(saveRequested?{saveRequested:true}:{})},origin);setNotice(copy.sent);}
  useEffect(()=>{
   if(!session)return;
   const completed=()=>transfer();
