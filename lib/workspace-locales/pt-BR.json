@@ -1234,5 +1234,14 @@
   "Языковые версии протокола": "Versões do relatório por idioma",
   "Сохранённый клинический разбор повторно не запускается. Создавайте и сохраняйте отдельную версию в каждом языке; формирование текста в модуле может стоить денег.": "A análise clínica salva não será repetida. Crie e salve uma versão para cada idioma; a geração do texto no módulo pode ter custo.",
   "Сохранён": "Salvo",
-  "Не создан": "Não criado"
+  "Не создан": "Não criado",
+  "Анализ подключён. Отправка снимков — после вашей проверки и подтверждения.": "A análise está conectada. As imagens são enviadas após sua revisão e confirmação.",
+  "Просмотр снимков доступен. Для анализа требуется разрешение администратора рабочего места.": "A visualização de imagens está disponível. A análise requer autorização do administrador da estação.",
+  "Просмотр снимков доступен. Подключение к службе анализа ещё не настроено.": "A visualização de imagens está disponível. A conexão com o serviço de análise ainda não foi configurada.",
+  "Просмотр снимков доступен. Администратору нужно завершить подключение анализа.": "A visualização de imagens está disponível. O administrador precisa concluir a conexão da análise.",
+  "Просмотр снимков доступен. Анализ не разрешён в этом режиме рабочего места.": "A visualização de imagens está disponível. A análise não é permitida neste modo da estação.",
+  "Просмотр снимков доступен. Сейчас не удалось проверить подключение анализа.": "A visualização de imagens está disponível. Não foi possível verificar a conexão da análise agora.",
+  "Подключение анализа · для администратора": "Conexão da análise · para o administrador",
+  "Эта проверка не отправляет снимки и не включает платные вызовы.": "Esta verificação não envia imagens nem inicia solicitações pagas.",
+  "Открыть параметры подключения": "Abrir configurações de conexão"
 }

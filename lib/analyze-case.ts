@@ -123,6 +123,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
   emit("run.started",{files:body.files?.length??0,referenceFiles:body.referenceFiles?.length??0,requestedTask:body.task??"auto"});
   const transport = deps.fetch ?? fetch;
   const modelCalls: NonNullable<CaseResult["cost"]["calls"]> = [];
+  let modelResponses=0;
   const fetchImpl = async (input: Parameters<typeof fetch>[0],init?:RequestInit,stage?:CostCallStage):Promise<Response> => {
     const started=Date.now();const isModel=String(input).includes("/chat/completions");
     const request=isModel?JSON.parse(String(init?.body??"{}")):{};
@@ -130,11 +131,24 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     if(isModel){emit("model.started",{model:request.model,provider,stage:stage??"unclassified"});if(deps.streaming)deps.onPreview?.("");}
     let response:Response;
     try{response=await transport(input,{...init,...(isModel?{body:JSON.stringify({...request,usage:{include:true},...(deps.streaming?{stream:true,stream_options:{include_usage:true}}:{})})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
+      if(isModel)modelResponses++;
       if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value);}});}}
-    catch(error){if(isModel)emit("model.failed",{model:request.model,provider,durationMs:Date.now()-started,reason:error instanceof Error?error.name:"transport_error"});throw error;}
+    catch(error){
+      // A lost connection may occur after the provider has already charged.
+      // Keep the attempt with unknown usage instead of reporting a complete $0.
+      if(isModel){
+        modelCalls.push({model:String(request.model??"unknown"),stage,status:'failed',inputTokens:0,outputTokens:0,
+          durationMs:Date.now()-started,usageAvailable:false,usd:0,billingSource:'estimate'});
+        emit("model.failed",{model:request.model,provider,durationMs:Date.now()-started,reason:error instanceof Error?error.name:"transport_error"});
+      }
+      throw error;
+    }
     if(String(input).includes("/chat/completions")){
 
-      const data=await response.clone().json().catch(()=>null);
+      // Billing observation must never discard a response that the clinical
+      // gateway can still read. clone() itself can throw, before json().catch().
+      let data: any=null;
+      try{data=await response.clone().json();}catch{}
       const usageAvailable=typeof data?.usage?.prompt_tokens==="number"&&typeof data?.usage?.completion_tokens==="number";
       const inputTokens=Number(data?.usage?.prompt_tokens)||0,outputTokens=Number(data?.usage?.completion_tokens)||0;
       const charged=chargeForCall(String(data?.model??request.model??"unknown"),data?.usage);
@@ -565,7 +579,7 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       })
     : null;
 
-  emit(deps.signal?.aborted?"run.aborted":"run.completed",{usageComplete:modelCalls.every(call=>call.usageAvailable!==false),durationMs:Date.now()-startedAt,task:plan.task,clinicalDraft,modelResponses:modelCalls.length,readFiles:ledger.filter(entry=>entry.status==="read").length,unassessedFiles:ledger.filter(entry=>entry.status!=="read").length,estimatedUsd:modelCalls.reduce((sum,call)=>sum+call.usd,0)});
+  emit(deps.signal?.aborted?"run.aborted":"run.completed",{usageComplete:modelCalls.every(call=>call.usageAvailable!==false),durationMs:Date.now()-startedAt,task:plan.task,clinicalDraft,modelResponses,readFiles:ledger.filter(entry=>entry.status==="read").length,unassessedFiles:ledger.filter(entry=>entry.status!=="read").length,estimatedUsd:modelCalls.reduce((sum,call)=>sum+call.usd,0),...(modelCalls.length&&modelCalls.every(call=>call.billingSource==='openrouter')?{billedUsd:modelCalls.reduce((sum,call)=>sum+call.usd,0)}:{})});
   return {
     ...result,
     clinicalDraft,
