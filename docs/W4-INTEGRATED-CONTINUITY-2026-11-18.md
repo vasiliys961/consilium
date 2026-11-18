@@ -17,7 +17,7 @@ This branch applies the already implemented runtime/tests of #86 (`615d95c`), #8
 
 Full combined suite: **1240 tests passed, 0 failed**. Production build including TypeScript passed. Tests use synthetic local/mocked results; no provider reasoning or clinical validity is inferred.
 
-Installed Preview/browser verification and CI are recorded below after execution. Until then, combined runtime browser acceptance remains pending. Main/3107 and the original standalone apps remain unchanged. The copied historical G-WORKSTATION register describes its earlier independent branch, not a completed gate for this runtime.
+Actual installed Preview/browser verification and CI are recorded below. Main/3107 and the original standalone apps remain unchanged. The copied historical G-WORKSTATION register describes its earlier independent branch, not a completed gate for this runtime.
 
 ### Installed browser acceptance
 
@@ -29,7 +29,7 @@ Combined runtime `5596a9fd7ef865fa2941977c24ff486b32247ca7` was installed on Pre
 - These tests establish local VCF extraction, per-case draft isolation, reopening and source-material return. They **do not** establish new paid genetic interpretation, annotation quality or clinical validity.
 - Four missing genetic return labels observed in the English UI are now supplied in all ten interface languages; this is not a claim that every legacy dynamic clinical/error string is localized.
 
-CI for commit `0e767acdc1718dfc4d4f6508429489e6ba330e8e` (same runtime plus owner documentation): [core](https://github.com/vasiliys961/consilium/actions/runs/44383360347) and [Radiology integration](https://github.com/vasiliys961/consilium/actions/runs/44383359550) passed. Final label update is checked separately before closing the work session.
+CI for commit `0e767acdc1718dfc4d4f6508429489e6ba330e8e` (same runtime plus owner documentation): [core](https://github.com/vasiliys961/consilium/actions/runs/44383360347) and [Radiology integration](https://github.com/vasiliys961/consilium/actions/runs/44383359550) passed. The final label update is verified below.
 
 ## Deferred owner material
 
@@ -38,3 +38,14 @@ CI for commit `0e767acdc1718dfc4d4f6508429489e6ba330e8e` (same runtime plus owne
 ## Remaining boundaries
 
 The per-case queue serializes writers within this browser process; this is not a verified cross-tab/process lock. Full actual model-return journeys for ECG, ultrasound, genetics and DICOM series still need their own evidence and cost allowance where required. Camera, microphone and clinical correctness have not been tested by these regressions. Hub remains deferred. G-WORKSTATION is IN PROGRESS.
+
+
+### Final installed state
+
+- Runtime **`d38aa3b178dba03125969478d5e2383f6f49fc52`**, installed branch **`chatgpt/codex-w4-continuity-localized-20261118`** on Preview 3207. Preflight passes; only the pre-existing generated Radiology `next-env.d.ts` is dirty.
+- Final CI: [core tests, TypeScript and build](https://github.com/vasiliys961/consilium/actions/runs/44384363034), [Radiology integration](https://github.com/vasiliys961/consilium/actions/runs/44384362699): **success**. Local full suite 1240 passed; after the final label change, targeted language/genetics/combined-write checks and TypeScript also passed.
+- Actual English browser check: `Genetic source files`, `Continue genetic review` and the saved-report notice are translated; the material list contains both the earlier TXT and the new VCF, with the expected locally extracted GENE1/0/1 and no invented ACMG class or external match.
+- Browser evidence (synthetic only): `/private/tmp/doctor-opus-continuity-acceptance/genetics-returned.jpg` (full context), `genetics-returned-viewport.jpg` (compact). Temporary agent tabs were closed; owner tabs preserved. The synthetic book/case/drafts remain clearly named; nothing was permanently deleted.
+- [Draft PR #96](https://github.com/vasiliys961/consilium/pull/96) is reviewable, not merged. Development worktree: `/private/tmp/doctor-opus-workstation-continuity`. #95 retains the independently reviewable book-transfer package.
+
+Next work remains the actual module-return acceptance for ECG/ultrasound/guidelines/DICOM series, completion of genetics interpretation evidence when a fresh paid allowance is given, remaining interface language gaps, and cross-tab write protection. The successful local material route is not a replacement for those checks. W4/W5 and G-WORKSTATION remain in progress; avatar/cost-manager material and Hub remain deferred.
