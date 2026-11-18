@@ -17,14 +17,14 @@ test('250 MiB originals are checked with bounded reads, progress and no whole-fi
  // Virtual original: this test must not itself allocate another 250 MiB file.
  const file={size:total,arrayBuffer:()=>{throw Error('Whole file must not be read');},slice:(start:number,end:number)=>{
   maximumRead=Math.max(maximumRead,end-start);reads++;return new Blob([part.subarray(0,end-start)]);
- }} as Blob;
+ }} as unknown as Blob;
  const actual=await hashBlobSha256(file,{onProgress:(done,size)=>{assert.equal(size,total);assert.ok(done>lastProgress);lastProgress=done;}});
  assert.equal(actual,expected.digest('hex'));assert.equal(lastProgress,total);assert.equal(reads,250);assert.equal(maximumRead,HASH_CHUNK_BYTES);
 });
 
 test('cancelled hash stops before reading or producing a fingerprint',async()=>{
  const controller=new AbortController();let reads=0;
- const file={size:4*HASH_CHUNK_BYTES,slice:()=>{reads++;return new Blob([new Uint8Array(HASH_CHUNK_BYTES)]);}} as Blob;
+ const file={size:4*HASH_CHUNK_BYTES,slice:()=>{reads++;return new Blob([new Uint8Array(HASH_CHUNK_BYTES)]);}} as unknown as Blob;
  await assert.rejects(()=>hashBlobSha256(file,{signal:controller.signal,onProgress:()=>controller.abort()}),{name:'AbortError'});
  assert.equal(reads,1,'cancellation must stop before the next chunk read');
  reads=0;
