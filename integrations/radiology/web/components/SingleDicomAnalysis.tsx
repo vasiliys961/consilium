@@ -29,10 +29,11 @@ export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:D
   if(attempted.current)return;
   if(packets.length!==1||packets[0].frames.length!==1)throw Error('Разрешено одно проверенное изображение.');
   const c=new AbortController();controller.current=c;setBusy(true);setNotice('');
+  let failure='Описание не получено. Повторный платный запрос автоматически не выполняется.';
   try{
    const probe=await fetch('/api/ai/deidentified-openrouter-review',{cache:'no-store',credentials:'same-origin',signal:c.signal});
    const ready=probe.ok?await probe.json():null;
-   if(!reviewedConnectionReady(ready))throw Error(reviewedConnectionNotice(ready));
+   if(!reviewedConnectionReady(ready)){failure=reviewedConnectionNotice(ready);throw Error(failure);}
    attempted.current=true;
    const response=await fetch('/api/ai/deidentified-openrouter-review',{method:'POST',credentials:'same-origin',signal:c.signal,
     headers:{'Content-Type':'application/json'},body:JSON.stringify({packet:packets[0],singleReader:true,
@@ -44,7 +45,7 @@ export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:D
     !result.opusSynthesis?.summary?.trim()||result.sourceFrames?.[0]?.reviewedPixelSha256!==packets[0].frames[0].sha256)
     throw Error('Не удалось подтвердить описание именно этого изображения. Повторной оплаты нет.');
    setReport('Оценено одно представленное изображение. Полное исследование не оценивалось.\n\n'+result.opusSynthesis.summary);
-  }catch(error){if(!c.signal.aborted){setNotice(error instanceof Error?error.message:'Описание не получено.');throw error;}}
+  }catch{if(!c.signal.aborted){setNotice(failure);throw Error(failure);}}
   finally{if(!c.signal.aborted)setBusy(false);}
  }
  return <section className="reviewed-study">
