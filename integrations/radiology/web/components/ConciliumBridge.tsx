@@ -36,5 +36,11 @@ export default function ConciliumBridge({children,initialLanguage='ru',initialTr
  function setWide(value:boolean){setWideState(value);if(session)window.parent.postMessage({type:'concilium.viewer-layout',session,wideView:value},origin);}
  useEffect(()=>{const close=(event:KeyboardEvent)=>{if(event.key==='Escape'&&wide)setWide(false);};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[wide,session]);
  function transfer(){const outputs=[...document.querySelectorAll<HTMLTextAreaElement>('textarea[data-concilium-report]')].map(e=>e.value.trim()).filter(Boolean);if(!outputs.length){setNotice(copy.empty);return;}const text=[...new Set(outputs)].join('\n\n');if(text.length>100000){setNotice(copy.tooLong);return;}window.parent.postMessage({type:'concilium.report',session,text},origin);setNotice(copy.sent);}
+ useEffect(()=>{
+  if(!session)return;
+  const completed=()=>transfer();
+  window.addEventListener('concilium.report-ready',completed);
+  return()=>window.removeEventListener('concilium.report-ready',completed);
+ },[session,copy]);
  return <ViewerLayout.Provider value={{wide,setWide}}><ViewerCopy.Provider value={copy}><UiLocale.Provider value={translate}>{session&&<section lang={language} dir={language==='ar'?'rtl':'ltr'} style={{padding:16,background:'#e8f4e9',color:'#18462d',fontSize:17,fontFamily:'system-ui,sans-serif',lineHeight:1.6,borderBottom:'1px solid #afc8b6'}} aria-label={copy.title}><strong>{copy.title}</strong>{context&&<details><summary>{copy.question}</summary><p style={{whiteSpace:'pre-wrap'}}>{context}</p></details>}<button type="button" style={{font:'inherit',padding:'9px 14px',background:'#2b6048',color:'#fff',border:0,borderRadius:6,cursor:'pointer'}} onClick={transfer}>{copy.transfer}</button>{notice&&<p role="status">{notice}</p>}</section>}{children}</UiLocale.Provider></ViewerCopy.Provider></ViewerLayout.Provider>;
 }

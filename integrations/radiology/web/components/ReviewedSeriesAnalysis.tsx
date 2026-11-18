@@ -20,6 +20,7 @@ import MrSeriesComparison from './MrSeriesComparison';
 import StudyPrivacyReview from './StudyPrivacyReview';
 import {reviewedConnectionNotice,reviewedConnectionReady} from '../lib/reviewed-connection-notice';
 import {singleFramePilotAllowed} from '../lib/single-frame-pilot';
+import {singleFrameReport} from '../lib/single-frame-report';
 import StudyReportDiscussion from './StudyReportDiscussion';
 import { estimateStudyCost, opusUsageEstimate, argonUsageEstimate } from '../lib/study-cost-estimate';
 import { splitReviewedTransport } from '../lib/reviewed-packet-transport';
@@ -83,6 +84,15 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
     const [singleSliceTest, setSingleSliceTest] = useState(false);
     const [connectionDiagnostic, setConnectionDiagnostic] = useState('');
     const [receipts, setReceipts] = useState<LocalVolumeReceipt[]>([]), [report, setReport] = useState('');
+    const publishCompletedReport=useRef<{series:DicomSeries;files:ReadonlyMap<string,File>}|null>(null);
+    useEffect(()=>{
+        const completed=publishCompletedReport.current;
+        if(report&&completed){
+            publishCompletedReport.current=null;
+            if(completed.series!==series||completed.files!==files)return;
+            window.dispatchEvent(new Event('concilium.report-ready'));
+        }
+    },[report]);
     const ctl = useRef<AbortController | null>(null), sending = useRef(false);
     const detector = useRef({ stage: detectorStage, evidence: detectorEvidence });
     useEffect(() => { detector.current = { stage: detectorStage, evidence: detectorEvidence }; }, [detectorStage, detectorEvidence]);
@@ -143,6 +153,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         setAcceptedMeasurements([]);
         setStage('idle');
         setSingleSliceTest(false);
+        publishCompletedReport.current=null;
         setReceipts([]);
         setReport('');
     }, [series, files]);
@@ -222,6 +233,12 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             ? 'Подготавливается один срез локально. После проверки нажмите кнопку отправки для платного Gemini.'
             : 'Подготавливаются снимки локально. После проверки нажмите одну кнопку отправки.');
     }
+    // Selecting the explicit ONE-call pilot is already a request to prepare
+    // that slice. Do not send the physician through another Prepare button.
+    // No remote request is made until the exact-copy SEND action below.
+    useEffect(()=>{
+        if(singleSliceTest&&stage==='idle'&&plan&&singleFramePilotAllowed(selectionResult.indices,plan.batches))void start();
+    },[singleSliceTest,stage,plan,selectionResult]);
     async function finalize(done: LocalVolumeReceipt[], signal: AbortSignal, executionPlan = plan) {
         const plan = executionPlan;
         if (!plan)
@@ -298,6 +315,7 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
         setVisualResult(output.visualReview);
         setOpusUsage(output.receipt);
         setOpusSpent(argonUsageEstimate(output.receipt) + (output.visualReview?.status === 'completed' ? opusUsageEstimate(output.visualReview.receipt) : 0));
+        publishCompletedReport.current={series,files};
         setReport(output.finalReport);
         setStage('completed');
         setNotice('Заключение готово. Проверьте его по исходным изображениям.');
@@ -382,6 +400,9 @@ export default function ReviewedSeriesAnalysis({ series, files, onOpenSlice, onI
             }
             approvedPackets.current = packets;
             if (singleSliceTest) {
+                const text=singleFrameReport(current,series.modality as 'CT'|'MR',selectionResult.indices[0],series.members.length);
+                publishCompletedReport.current={series,files};
+                setReport(text);
                 setStage('completed');
                 setNotice('Тест завершён: наблюдения Gemini по одному срезу получены. Argon/Opus не вызывались. Остальная серия не оценена.');
                 return;
