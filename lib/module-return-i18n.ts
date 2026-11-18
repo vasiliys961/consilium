@@ -1,0 +1,7 @@
+// RU, EN, ES, FR, AR, HI, PT-BR, ID, TR, ZH-CN.
+export const moduleReturnRows:readonly (readonly string[])[]=[
+['Генетические исходные файлы','Genetic source files','Archivos genéticos originales','Fichiers génétiques sources','الملفات الجينية الأصلية','मूल आनुवंशिक फ़ाइलें','Arquivos genéticos originais','Berkas sumber genetik','Genetik kaynak dosyaları','遗传学原始文件'],
+['Продолжить генетический разбор','Continue genetic review','Continuar el análisis genético','Poursuivre l’analyse génétique','متابعة المراجعة الجينية','आनुवंशिक समीक्षा जारी रखें','Continuar a análise genética','Lanjutkan tinjauan genetik','Genetik incelemeye devam et','继续遗传学分析'],
+['Сохранённые генетические заключения доступны в истории анализов.','Saved genetic reports are available in the analysis history.','Los informes genéticos guardados están disponibles en el historial de análisis.','Les rapports génétiques enregistrés sont disponibles dans l’historique des analyses.','التقارير الجينية المحفوظة متاحة في سجل التحليلات.','सहेजी गई आनुवंशिक रिपोर्ट विश्लेषण इतिहास में उपलब्ध हैं।','Os relatórios genéticos salvos estão no histórico de análises.','Laporan genetik tersimpan tersedia dalam riwayat analisis.','Kaydedilen genetik raporlar analiz geçmişinde bulunur.','已保存的遗传学报告可在分析历史中查看。'],
+['Использовать VCF из случая','Use VCF from this case','Usar VCF de este caso','Utiliser le VCF de ce cas','استخدام VCF من هذه الحالة','इस केस की VCF फ़ाइल उपयोग करें','Usar VCF deste caso','Gunakan VCF dari kasus ini','Bu vakanın VCF dosyasını kullan','使用此病例的 VCF 文件'],
+];

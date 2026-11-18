@@ -1,3 +1,4 @@
+import {moduleReturnRows} from './module-return-i18n.ts';
 import {bookTransferRows} from './book-transfer-i18n.ts';
 import {medicationUiRows} from './medication-ui-i18n.ts';
 import {consultWorkflowRows} from './consult-workflow-i18n.ts';
@@ -114,4 +115,4 @@ Object.assign(english,{
  'После этого разбора данные случая изменились. Учтите новые сведения перед решением; прежний ответ не пересчитывался.':'Case data changed after this analysis. Review the new information before deciding; the earlier answer has not been updated.',
 });
 
-for(const row of [...coordinatorRows,...consultWorkflowRows,...medicationUiRows,...bookTransferRows]){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}
+for(const row of [...coordinatorRows,...consultWorkflowRows,...medicationUiRows,...bookTransferRows,...moduleReturnRows]){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}

@@ -19,6 +19,18 @@ Full combined suite: **1240 tests passed, 0 failed**. Production build including
 
 Installed Preview/browser verification and CI are recorded below after execution. Until then, combined runtime browser acceptance remains pending. Main/3107 and the original standalone apps remain unchanged. The copied historical G-WORKSTATION register describes its earlier independent branch, not a completed gate for this runtime.
 
+### Installed browser acceptance
+
+Combined runtime `5596a9fd7ef865fa2941977c24ff486b32247ca7` was installed on Preview 3207, branch `chatgpt/codex-w4-continuity-live-20261118`; preflight passes. The original generated Radiology `next-env.d.ts` change is preserved.
+
+- Uploaded a real **synthetic** VCF (`GENE1`, `17-123-A-G`, `0/1`) through the browser chooser. The local parser displayed the actual variant and genotype without calling a clinical model or external annotation service.
+- Case A (the synthetic transfer copy): entered distinct family history and an unsent question. Switched to synthetic case B: A's file and both inputs were absent. Entered B's question and returned to A: A's own VCF/history/question were restored.
+- Opened A's genetics page in a fresh browser tab: the same source and unsent question survived. `Add material to case` saved the VCF and returned to **the same case ID**. Materials increased from 1 to 2; the earlier clinical analysis and RU protocol remained. The saved earlier analysis is visibly marked as based on older case data after adding the VCF, rather than being silently relabeled as current.
+- These tests establish local VCF extraction, per-case draft isolation, reopening and source-material return. They **do not** establish new paid genetic interpretation, annotation quality or clinical validity.
+- Four missing genetic return labels observed in the English UI are now supplied in all ten interface languages; this is not a claim that every legacy dynamic clinical/error string is localized.
+
+CI for commit `0e767acdc1718dfc4d4f6508429489e6ba330e8e` (same runtime plus owner documentation): [core](https://github.com/vasiliys961/consilium/actions/runs/44383360347) and [Radiology integration](https://github.com/vasiliys961/consilium/actions/runs/44383359550) passed. Final label update is checked separately before closing the work session.
+
 ## Deferred owner material
 
 [Copilot Avatar + Unified Cost Manager](future/copilot-avatar-cost-manager/README.md) and its visual reference are saved byte for byte as **future material only**, at the owner's explicit request. They are not the current assignment and do not authorize providers, payments, services or a UI redesign. Workstation continuity remains the priority.
