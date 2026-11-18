@@ -30,7 +30,7 @@ export function physicianToolSteps(ids:readonly PhysicianTool[]):PhysicianStep[]
  return steps;
 }
 const word=(s:string)=>new RegExp('(?:^|[^a-zа-яё])(?:'+s+')(?![a-zа-яё])','i');
-const RAD=word('кт|мрт|кт\\/мрт|рентген|dicom|ct|mri|xray|x-ray|tomografía|tomografia|scanner|irm|tomografia|tomografi');
+const RAD=word('кт|мрт|кт\\/мрт|рентген(?:ография|ограммы?|овские? снимки)?|radiology|dicom|ct|mri|xray|x-ray|tomografía|tomografia|scanner|irm|tomografia|tomografi');
 const ECG=/экг|электрокарди|ecg|ekg/i;
 const US=word('узи|сонограф|эхокардиограф|эхокг|ultrasound|echo');
 const GEN=/генет|геном|vcf|фармакогеном|вариантов.*днк/i;
@@ -40,7 +40,7 @@ const SPECIALIST=/especialista|spécialiste|specialist|especialista|spesialis|uz
 const CLIN=/консилиум|комплексн|дифференциал|разбор|тактик|диагноз|сопостав|клиническ.*случай|second opinion/i;
 const PROTO=/protocolo|compte rendu|clinical note|nota clínica|relatório clínico|catatan klinis|klinik not|تقرير طبي|临床记录|प्रोटोकॉल|протокол|soap|(?:подготов|созд|состав|оформ|напис|сгенер|сдел).{0,35}заключен|документир|оформлен.*прием|запис.*в карт/i;
 const AMBIENT=/ambient|grabar (?:la )?consulta|enregistrer (?:la )?consultation|record (?:the )?(?:visit|encounter)|gravar (?:a )?consulta|rekam konsultasi|muayeneyi kaydet|تسجيل الزيارة|录制问诊|परामर्श रिकॉर्ड|запис.*при[её]м|запис.*бесед|расшифров|транскриб|диктов|микрофон|запис.*разговор/i;
-const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализы|документ|таблиц|laboratorio|documentos|document|documents|lab|bloodwork');
+const DOC=word('pdf|xlsx|docx|выписк|лаборатор|анализ(?:ы|ов)?|документ(?:ы|ов|а)?|таблиц|laboratorio|documentos|document|documents|lab|bloodwork');
 const RESPIRATORY=/(?:кашел|кашель|кашл|одышк|диспноэ|cough|dyspn|shortness of breath|breathlessness)/i;
 const CARDIAC=/(?:болит\s+сердц|боль\s+(?:в|за)\s+(?:груд|грудин|сердц)|бол[ьи]\s+(?:в\s+)?груд|давит\s+(?:в\s+)?груд|дискомфорт\s+(?:в\s+)?груд|chest\s+(?:pain|tightness|discomfort)|heart\s+pain)/i;
 export const isCardiacPresentation=(value:string)=>CARDIAC.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
@@ -53,6 +53,9 @@ export const isCopilotHelpQuery=(value:string)=>{
 export function planPhysicianTask(task:string):PhysicianTaskPlan {
  const value=task.trim().slice(0,4000);
  if(!value)return {intent:'welcome',steps:[],message:'Опишите задачу или выберите пример. Помощник предложит инструменты, не выполняя анализ автоматически.'};
+ if(/(?:integration\s*hub|интеграционн.*хаб|\bhub\b)/i.test(value))return {intent:'welcome',steps:[],message:'Integration Hub пока недоступен. Выберите действующий инструмент станции.'};
+ if(/(?:удал(?:и|ить|яй).*(?:вс[её]|случа|пациент)|delete.*(?:all|case|patient))/i.test(value))return {intent:'welcome',steps:[],message:'Удаление выполняется в списке случаев. Случаи из корзины можно восстановить.'};
+ if(/^(?:open|открой(?:те)?|открыть)\s+(?:opus\s+)?(?:radiology|радиологи[яю]|рентген)[.!?]?$/i.test(value))return {intent:'route',steps:physicianToolSteps(['radiology']),message:'Opus Radiology'};
  if(isCopilotHelpQuery(value))
   return {intent:'help',steps:(['clinical','specialist','radiology','ecg','medications','guidelines','ambient','protocol','genetics','ultrasound','documents'] as const).map(tool=>({tool,...catalog[tool]})),message:'Могу помочь выбрать инструмент Doctor Opus. Выберите модуль ниже или напишите, что хотите сделать.'};
  const specialty=suggestClinicalDestination(value);
@@ -84,6 +87,10 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
  if(tools.includes('ambient')&&tools.includes('protocol'))tools.splice(tools.indexOf('protocol'),1);
  const respiratoryOnly=RESPIRATORY.test(value)&&!PROTO.test(value)&&!AMBIENT.test(value);
  if(respiratoryOnly&&!tools.includes('clinical'))tools.unshift('clinical');
+ if(/сначала|затем|потом|после|\bthen\b|\bfirst\b|\bbefore\b/i.test(value)){
+  const patterns:Partial<Record<PhysicianTool,RegExp>>={radiology:RAD,ecg:ECG,ultrasound:US,genetics:GEN,medications:MED,guidelines:GUIDE,specialist:SPECIALIST,clinical:CLIN,protocol:PROTO,ambient:AMBIENT,documents:DOC};
+  tools.sort((a,b)=>(value.search(patterns[a]!)<0?Infinity:value.search(patterns[a]!))-(value.search(patterns[b]!)<0?Infinity:value.search(patterns[b]!)));
+ }
  const message=respiratoryOnly
   ? 'При кашле с одышкой сначала оцените срочность: SpO₂, ЧДД, пульс, АД, температуру, давность симптомов и боль в груди. При выраженной дыхательной недостаточности, гипоксемии или нестабильности требуется срочная очная оценка. Каковы SpO₂, ЧДД и начало симптомов? После этого можно открыть клинический разбор.'
   : 'Предлагаю последовательность по вашему запросу. Это навигация, а не диагностическое заключение. Каждый инструмент запускается только по вашему нажатию.';
@@ -96,7 +103,7 @@ export function planPhysicianTask(task:string):PhysicianTaskPlan {
 export function copilotRequestedOpen(task:string):PhysicianTool|null{
  const phrase=task.trim();
  if(!/^(?:открой|открыть|перейди|перейти|покажи|open|go to|abre|abrir|ouvre|ouvrir|ouvrir|abra|abrir|buka|aç|فتح|افتح|खोलें|打开)\s+/i.test(phrase))return null;
- if(!/(?:\b(?:ecg|ekg|ct|mri|radiology|protocol|ambient|ultrasound|genetics|guidelines|documents)\b|экг|кт|мрт|специалист|консультаци|протокол|при[её]м|разбор|консилиум|радиологи|узи|генетик|лекарств|рекомендаци|документ)/i.test(phrase))
+ if(!/(?:\b(?:ecg|ekg|ct|mri|radiology|protocol|ambient|ultrasound|genetics|guidelines|documents)\b|экг|кт|мрт|специалист|консультаци|протокол|при[её]м|разбор|консилиум|радиологи|рентген|узи|генетик|лекарств|рекомендаци|документ)/i.test(phrase))
   return null;
  const plan=planPhysicianTask(phrase);
  return plan.intent==='route'&&plan.steps.length===1?plan.steps[0].tool:null;

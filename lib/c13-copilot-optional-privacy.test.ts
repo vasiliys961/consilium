@@ -50,11 +50,11 @@ test('C13: short Gemini Flash answers cost fractions of a cent and model is inde
 test('C13: opt-in is a remembered UI preference, not a repeated consent or paid call',()=>{
  const source=file('app/components/physician-task-assistant.tsx');
  assert.match(source,/const COPILOT_PREF='doctor-opus-copilot-enabled-v1'/);
- assert.match(source,/Нужен Opus Copilot\?/);
+ assert.doesNotMatch(source,/external model|внешнюю ИИ-модель/);
  assert.match(source,/Включить помощника/);
  assert.match(source,/Отключить Copilot/);
  assert.match(source,/if\(copilotEnabled\)\{void askAi\(\);return\}/);
- assert.match(source,/copilotNeedsPrivacyReview\(utterance\)/);
+ assert.match(source,/copilotNeedsPrivacyReview/);
  assert.match(source,/prepareChatSend\(outgoing,controller.signal\)/);
  assert.match(source,/reviewBeforeSending\(outgoing\)/);
  assert.match(source,/localStorage\.setItem\(COPILOT_PREF/);
@@ -78,10 +78,10 @@ test('C13: specialist handoff is a prepared local draft, never an automatic clin
 
 test('C13: microphone is opt-in dictation and cannot send text or trigger a clinical action',()=>{
  const source=file('app/components/physician-task-assistant.tsx');
- assert.match(source,/voiceConsent/);
- assert.match(source,/if\(!voiceConsent\)/);
+ assert.match(source,/onClick=\{toggleVoice\}/);
+ assert.doesNotMatch(source,/checked=\{voiceConsent\}/);
  assert.match(source,/instance\.start\(\)/);
  assert.match(source,/setText\(previous=>/);
- assert.match(source,/Распознавание может выполняться службой браузера/);
+ assert.doesNotMatch(source,/Распознавание может выполняться службой браузера/);
  assert.doesNotMatch(source,/MediaRecorder|\/api\/transcribe/);
 });

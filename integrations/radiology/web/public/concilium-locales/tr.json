@@ -3391,5 +3391,11 @@
   "Второе мнение": "İkinci görüş",
   "Второе мнение по исходным изображениям": "Orijinal görüntüler için ikinci görüş",
   "Проверка с учётом первого ответа": "İlk yanıt dikkate alınarak yapılan inceleme",
-  "Микроскопия крови": "Kan hücresi mikroskopisi"
+  "Микроскопия крови": "Kan hücresi mikroskopisi",
+  "Описание изображения": "Görüntü açıklaması",
+  "Подтверждаю · получить описание (платно)": "Onayla · açıklamayı al (ücretli)",
+  "Формируется описание изображения…": "Görüntü açıklaması hazırlanıyor…",
+  "Получить описание": "Rapor al",
+  "Подготовка изображения…": "Görüntü hazırlanıyor…",
+  "Скрыть данные на снимке": "Görüntüdeki kişisel verileri gizle"
 }

@@ -8,7 +8,7 @@ function model(response:{reply:string;question:string|null;tools:string[];transl
  const mock:typeof fetch=async(_input,init)=>{
   calls++;
   const payload=JSON.parse(String(init?.body));
-  assert.equal(payload.model,MODELS.flash);
+  assert.equal(payload.model,'anthropic/claude-haiku-5.5');
   assert.equal(payload.stream,undefined);
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(response)}}],usage:{prompt_tokens:70,completion_tokens:66}});
  };
