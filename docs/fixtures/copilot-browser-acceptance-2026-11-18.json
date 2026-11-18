@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-18",
+  "environment": "independent Preview 3207",
+  "data": "synthetic text laboratory fixture only; no real patient",
+  "routing": [
+    "documents",
+    "medications",
+    "clinical",
+    "protocol"
+  ],
+  "paidCoordinatorRequestsInBrowser": 1,
+  "paidClinicalRequestsInBrowser": 1,
+  "paidProtocolFormattingRequestsInBrowser": 1,
+  "providerReceiptsUsd": {
+    "coordinator": 0.0003119,
+    "clinical": 0.115992,
+    "protocol": 0.011291
+  },
+  "browserChainTotalBilledUsd": 0.1275949,
+  "entirePilotTotalBilledUsd": 0.1299662,
+  "repeatedConsentDialogs": 0,
+  "caseReopenedWithFileAnalysisProtocol": true,
+  "localCaseLookupUsedModel": false,
+  "trashRestoreKeptAnalysisAndMaterial": true,
+  "originalUserDicomCaseChanged": false,
+  "clinicalValidation": false
+}

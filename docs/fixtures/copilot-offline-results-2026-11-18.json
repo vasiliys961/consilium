@@ -1,0 +1,322 @@
+{
+  "method": "Existing deterministic router + hand-authored response/transport fixtures. No candidate model was executed.",
+  "date": "2026-11-18",
+  "paidCalls": 0,
+  "unexpectedNetworkCalls": 0,
+  "candidateModelQualityMeasured": false,
+  "candidateLatencyMeasured": false,
+  "localRoutes": {
+    "count": 18,
+    "matches": 18,
+    "directCount": 11,
+    "directMatches": 11,
+    "details": [
+      {
+        "id": "nav-ecg-ru",
+        "expected": [
+          "ecg"
+        ],
+        "actual": [
+          "ecg"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "ecg",
+        "actualDirect": "ecg",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-ecg-en",
+        "expected": [
+          "ecg"
+        ],
+        "actual": [
+          "ecg"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "ecg",
+        "actualDirect": "ecg",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-ecg-es",
+        "expected": [
+          "ecg"
+        ],
+        "actual": [
+          "ecg"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "ecg",
+        "actualDirect": "ecg",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-ecg-fr",
+        "expected": [
+          "ecg"
+        ],
+        "actual": [
+          "ecg"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "ecg",
+        "actualDirect": "ecg",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-genetics",
+        "expected": [
+          "genetics"
+        ],
+        "actual": [
+          "genetics"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "genetics",
+        "actualDirect": "genetics",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-protocol",
+        "expected": [
+          "protocol"
+        ],
+        "actual": [
+          "protocol"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "protocol",
+        "actualDirect": "protocol",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-ultrasound",
+        "expected": [
+          "ultrasound"
+        ],
+        "actual": [
+          "ultrasound"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "ultrasound",
+        "actualDirect": "ultrasound",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-radiology-en",
+        "expected": [
+          "radiology"
+        ],
+        "actual": [
+          "radiology"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "radiology",
+        "actualDirect": "radiology",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-documents-ru",
+        "expected": [
+          "documents"
+        ],
+        "actual": [
+          "documents"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "documents",
+        "actualDirect": "documents",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-documents-en",
+        "expected": [
+          "documents"
+        ],
+        "actual": [
+          "documents"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "documents",
+        "actualDirect": "documents",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "nav-xray-ru",
+        "expected": [
+          "radiology"
+        ],
+        "actual": [
+          "radiology"
+        ],
+        "routeMatches": true,
+        "expectedDirect": "radiology",
+        "actualDirect": "radiology",
+        "directMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "help",
+        "expected": [
+          "clinical",
+          "specialist",
+          "radiology",
+          "ecg",
+          "medications",
+          "guidelines",
+          "ambient",
+          "protocol",
+          "genetics",
+          "ultrasound",
+          "documents"
+        ],
+        "actual": [
+          "clinical",
+          "specialist",
+          "radiology",
+          "ecg",
+          "medications",
+          "guidelines",
+          "ambient",
+          "protocol",
+          "genetics",
+          "ultrasound",
+          "documents"
+        ],
+        "routeMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "sequence-ecg-note",
+        "expected": [
+          "ecg",
+          "clinical",
+          "protocol"
+        ],
+        "actual": [
+          "ecg",
+          "clinical",
+          "protocol"
+        ],
+        "routeMatches": true,
+        "coordinationRequired": true,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "sequence-medication-note",
+        "expected": [
+          "medications",
+          "protocol"
+        ],
+        "actual": [
+          "medications",
+          "protocol"
+        ],
+        "routeMatches": true,
+        "coordinationRequired": true,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "sequence-reverse-order",
+        "expected": [
+          "medications",
+          "ecg",
+          "clinical"
+        ],
+        "actual": [
+          "medications",
+          "ecg",
+          "clinical"
+        ],
+        "routeMatches": true,
+        "coordinationRequired": true,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "clinical-delegation",
+        "expected": [
+          "specialist",
+          "clinical"
+        ],
+        "actual": [
+          "specialist",
+          "clinical"
+        ],
+        "routeMatches": true,
+        "coordinationRequired": true,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "no-hub",
+        "expected": [],
+        "actual": [],
+        "routeMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      },
+      {
+        "id": "no-deletion",
+        "expected": [],
+        "actual": [],
+        "routeMatches": true,
+        "coordinationRequired": false,
+        "sequenceExecutionImplemented": false
+      }
+    ]
+  },
+  "parserCases": 5,
+  "transport": [
+    {
+      "scenario": "valid",
+      "stubbedResponses": 1,
+      "usedSyntheticModelResult": true,
+      "warning": null
+    },
+    {
+      "scenario": "invalid-json",
+      "stubbedResponses": 1,
+      "usedSyntheticModelResult": false,
+      "warning": "invalid_response"
+    },
+    {
+      "scenario": "unavailable",
+      "stubbedResponses": 1,
+      "usedSyntheticModelResult": false,
+      "warning": "provider_error"
+    },
+    {
+      "scenario": "payment-required",
+      "stubbedResponses": 1,
+      "usedSyntheticModelResult": false,
+      "warning": "payment_required"
+    },
+    {
+      "scenario": "network-error",
+      "stubbedResponses": 1,
+      "usedSyntheticModelResult": false,
+      "warning": "provider_error"
+    }
+  ]
+}

@@ -3391,5 +3391,11 @@
   "Второе мнение": "Second opinion",
   "Второе мнение по исходным изображениям": "Second opinion on original images",
   "Проверка с учётом первого ответа": "Review informed by the first response",
-  "Микроскопия крови": "Blood cell microscopy"
+  "Микроскопия крови": "Blood cell microscopy",
+  "Описание изображения": "Image description",
+  "Подтверждаю · получить описание (платно)": "Confirm · get description (paid)",
+  "Формируется описание изображения…": "Preparing the image description…",
+  "Получить описание": "Get report",
+  "Подготовка изображения…": "Preparing image…",
+  "Скрыть данные на снимке": "Hide personal data in image"
 }

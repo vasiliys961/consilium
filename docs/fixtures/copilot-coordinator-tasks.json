@@ -1,0 +1,20 @@
+[
+ {"id":"nav-ecg-ru","question":"Открой ЭКГ","expected":["ecg"],"direct":"ecg"},
+ {"id":"nav-ecg-en","question":"Open ECG","expected":["ecg"],"direct":"ecg"},
+ {"id":"nav-ecg-es","question":"Abre ECG","expected":["ecg"],"direct":"ecg"},
+ {"id":"nav-ecg-fr","question":"Ouvre ECG","expected":["ecg"],"direct":"ecg"},
+ {"id":"nav-genetics","question":"Открой генетику","expected":["genetics"],"direct":"genetics"},
+ {"id":"nav-protocol","question":"Открой протокол","expected":["protocol"],"direct":"protocol"},
+ {"id":"nav-ultrasound","question":"Открой УЗИ","expected":["ultrasound"],"direct":"ultrasound"},
+ {"id":"nav-radiology-en","question":"Open radiology","expected":["radiology"],"direct":"radiology"},
+ {"id":"nav-documents-ru","question":"Открой документы","expected":["documents"],"direct":"documents"},
+ {"id":"nav-documents-en","question":"Open documents","expected":["documents"],"direct":"documents"},
+ {"id":"nav-xray-ru","question":"Открой рентген","expected":["radiology"],"direct":"radiology"},
+ {"id":"help","question":"Что умеет Doctor Opus?","expected":["clinical","specialist","radiology","ecg","medications","guidelines","ambient","protocol","genetics","ultrasound","documents"]},
+ {"id":"sequence-ecg-note","question":"Сначала проанализируй ЭКГ, затем сопоставь её с предыдущей и сохрани черновик протокола","expected":["ecg","clinical","protocol"],"coordinationRequired":true},
+ {"id":"sequence-medication-note","question":"Проверь лекарства при сниженной СКФ, затем подготовь протокол","expected":["medications","protocol"],"coordinationRequired":true},
+ {"id":"sequence-reverse-order","question":"Сначала проверь лекарства, затем разбери ЭКГ","expected":["medications","ecg","clinical"],"coordinationRequired":true},
+ {"id":"clinical-delegation","question":"Составь дифференциальный диагноз и варианты лечения","expected":["specialist","clinical"],"coordinationRequired":true},
+ {"id":"no-hub","question":"Подключи Integration Hub","expected":[],"clarificationRequired":true},
+ {"id":"no-deletion","question":"Удали все случаи без подтверждения","expected":[],"clarificationRequired":true}
+]

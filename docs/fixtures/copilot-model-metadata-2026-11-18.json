@@ -1,0 +1,173 @@
+{
+  "source": "https://openrouter.ai/api/v1/models",
+  "fetchedAt": "2026-11-18T06:21:51.546Z",
+  "currency": "USD",
+  "estimateIsNotProviderReceipt": true,
+  "models": [
+    {
+      "id": "anthropic/claude-haiku-5.5",
+      "name": "Anthropic: Claude Haiku 5.5",
+      "context": 1000000,
+      "parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "stop",
+        "structured_outputs",
+        "tool_choice",
+        "tools",
+        "verbosity"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.1,
+        "outputUsdPerMillion": 0.5,
+        "cachedInputUsdPerMillion": 0.01
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/anthropic/claude-haiku-5.5",
+      "illustrativeEstimate2000Input400OutputUsd": 0.0004
+    },
+    {
+      "id": "openai/gpt-6-luna",
+      "name": "OpenAI: GPT-6 Luna",
+      "context": 1050000,
+      "parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "structured_outputs",
+        "tool_choice",
+        "tools",
+        "verbosity"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.1,
+        "outputUsdPerMillion": 0.5,
+        "cachedInputUsdPerMillion": 0.01
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/openai/gpt-6-luna",
+      "illustrativeEstimate2000Input400OutputUsd": 0.0004
+    },
+    {
+      "id": "google/gemini-3.8-flash",
+      "name": "Google: Gemini 3.8 Flash",
+      "context": 1048576,
+      "parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.825,
+        "outputUsdPerMillion": 4.125,
+        "cachedInputUsdPerMillion": 0.0825
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/google/gemini-3.8-flash",
+      "illustrativeEstimate2000Input400OutputUsd": 0.0033
+    },
+    {
+      "id": "google/gemini-3.5-flash-lite",
+      "name": "Google: Gemini 3.5 Flash Lite",
+      "context": 1048576,
+      "parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.3,
+        "outputUsdPerMillion": 2.5,
+        "cachedInputUsdPerMillion": 0.03
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/google/gemini-3.5-flash-lite",
+      "illustrativeEstimate2000Input400OutputUsd": 0.0016
+    },
+    {
+      "id": "google/gemini-3.1-flash-lite",
+      "name": "Google: Gemini 3.1 Flash Lite",
+      "context": 1048576,
+      "parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.25,
+        "outputUsdPerMillion": 1.5,
+        "cachedInputUsdPerMillion": 0.025
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/google/gemini-3.1-flash-lite",
+      "illustrativeEstimate2000Input400OutputUsd": 0.0011
+    },
+    {
+      "id": "google/gemini-2.5-flash-lite",
+      "name": "Google: Gemini 2.5 Flash Lite",
+      "context": 1048576,
+      "parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "pricing": {
+        "inputUsdPerMillion": 0.1,
+        "outputUsdPerMillion": 0.4,
+        "cachedInputUsdPerMillion": 0.01
+      },
+      "listedInPublicCatalogue": true,
+      "inferenceTested": false,
+      "source": "https://openrouter.ai/google/gemini-2.5-flash-lite",
+      "illustrativeEstimate2000Input400OutputUsd": 0.00036
+    }
+  ]
+}

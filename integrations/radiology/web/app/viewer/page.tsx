@@ -107,6 +107,7 @@ export default function ViewerPage() {
     const suggestion = useMemo(() => suggestPrimaryDicomSeries(series, new Set(indexed.map(item => item.id))), [series, indexed]);
     const selected: DicomSeries | undefined = series.find(item => item.key === (currentSeriesKey || suggestion.key)) ?? series[0];
     const visionSeries = useMemo(() => selected ? [selected] : [], [selected]);
+    const singleDicom = !researchMode && selected?.members.length===1 && ['CT','MR'].includes(selected.modality);
     const indexedById = useMemo(() => new Map(indexed.map((item) => [item.id, item.file])), [indexed]);
     const radiographViews = useMemo(() => {
         const raw = series.flatMap(item => {
@@ -339,7 +340,7 @@ export default function ViewerPage() {
             <div className="cs-series-list"><LocalizedUi value={series.map((s) => <button type="button" className={selected?.key === s.key ? "cs-series active" : "cs-series"} key={s.key} onClick={() => { setWmhSlice(undefined); setViewMode("2d"); setVisionOpen(false); setVisionFromPrimary(false); setPrimaryStage(null); setVisionDetectorEvidence(null); setClnVerified(null); setCurrentSeriesKey(s.key); }}><LocalizedUi value={s.label}/></button>)}/></div>
           </>}/>
           <LocalizedUi value={researchMode && selected && <details className="cs-geometry"><summary><LocalizedUi value={"\u0421\u0432\u0435\u0434\u0435\u043D\u0438\u044F \u043E\u0431 \u0438\u0441\u0441\u043B\u0435\u0434\u043E\u0432\u0430\u043D\u0438\u0438"}/></summary><h3><LocalizedUi value={"\u041A\u043E\u043D\u0442\u0440\u043E\u043B\u044C \u0433\u0435\u043E\u043C\u0435\u0442\u0440\u0438\u0438"}/></h3><p><LocalizedUi value={selected.spatiallySorted ? "✓ Пространственный порядок подтверждён" : "⚠ Порядок условный"}/></p><p><LocalizedUi value={selected.volumeReady ? `✓ Предварительная геометрия для будущего 3D · ${selected.sliceSpacingMm?.toFixed(2)} мм` : "3D/MPR НЕ РАЗРЕШЕНЫ"}/></p><LocalizedUi value={selected.warning && <p><LocalizedUi value={selected.warning}/></p>}/></details>}/>
-          <LocalizedUi value={selected && <UnifiedDicomStudyAnalysis researchMode={researchMode} key={"unified-" + selected.key} series={selected} allSeries={series} files={indexedById} onMonaiReady={(file, session, report) => {
+          <LocalizedUi value={selected && !singleDicom && <UnifiedDicomStudyAnalysis researchMode={researchMode} key={"unified-" + selected.key} series={selected} allSeries={series} files={indexedById} onMonaiReady={(file, session, report) => {
                     setPreparedMonaiSource(file);
                     setPreparedMonaiSession(session);
                     setPreparedMonaiResult(report ?? null);
@@ -411,8 +412,8 @@ export default function ViewerPage() {
               <LocalizedUi value={visionOpen ? "Закрыть дополнительные инструменты" : "Анализировать отдельные срезы"}/>
             </button>}/>
 
-            <LocalizedUi value={visionOpen && <AnalysisSoundProvider>
-              <VisionFramePlanningPanel key={"vision-" + selected.key} series={visionSeries} comparisonSeries={series} activeSeriesKey={selected.key} fileById={indexedById} originalDetectorEvidence={visionDetectorEvidence?.seriesKey === selected.key ? visionDetectorEvidence.bundle : null} clnVerifiedLocal={clnVerified?.seriesKey === selected.key ? clnVerified.value : null} fromPrimaryAnalysis={visionFromPrimary} researchMode={researchMode} primaryActionAvailable={true} primaryAnalysisStage={visionFromPrimary && primaryStage?.seriesKey === selected.key ? primaryStage.stage : "idle"} onOpenSlice={id => {
+            <LocalizedUi value={(visionOpen || singleDicom) && <AnalysisSoundProvider>
+              <VisionFramePlanningPanel key={"vision-" + selected.key} series={visionSeries} comparisonSeries={series} activeSeriesKey={selected.key} fileById={indexedById} originalDetectorEvidence={visionDetectorEvidence?.seriesKey === selected.key ? visionDetectorEvidence.bundle : null} clnVerifiedLocal={clnVerified?.seriesKey === selected.key ? clnVerified.value : null} fromPrimaryAnalysis={visionFromPrimary || singleDicom} researchMode={researchMode} primaryActionAvailable={true} primaryAnalysisStage={visionFromPrimary && primaryStage?.seriesKey === selected.key ? primaryStage.stage : "idle"} onOpenSlice={id => {
                         const index = selected.members.findIndex(m => m.id === id);
                         if (index >= 0)
                             setWmhSlice(index);
