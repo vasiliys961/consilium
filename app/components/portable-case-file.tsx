@@ -64,8 +64,8 @@ export function PortableCaseImport({onImported}:{onImported:(id:string)=>Promise
   finally{setBusy(false);}
  }
  return <details open={open} onToggle={event=>setOpen(event.currentTarget.open)}>
-  <summary>{t('Восстановить отдельный клинический случай')}</summary>
-  <p>{t('Используйте файл .doctor-opus-case и пароль, заданный при экспорте. Восстановление работает локально и не вызывает медицинские модели.')}</p>
+  <summary>{t('Восстановить случай из файла')}</summary>
+  <p>{t('Для переноса или резервной копии выберите ранее сохранённый файл .doctor-opus-case и его пароль. Случай из корзины восстанавливается в списке без пароля.')}</p>
   <label>{t('Файл случая')}<input type="file" accept={PORTABLE_CASE_EXTENSION} disabled={busy} onChange={event=>{setFile(event.target.files?.[0]??null);setStatus('');}}/></label>
   <label>{t('Пароль файла')}<input type="password" autoComplete="current-password" disabled={busy} value={password} onChange={event=>setPassword(event.target.value)}/></label>
   <p><button type="button" disabled={busy||!file||!password} onClick={()=>void importOne()}>{t(busy?'Проверяем и восстанавливаем…':'Восстановить случай')}</button></p>

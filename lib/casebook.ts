@@ -224,6 +224,17 @@ export async function persistRadiologyMaterials(caseId:string,materials:import('
   return updated;
  });
 }
+/** Coordinator commits into the latest case; a changed source or closed case cannot receive a stale result. */
+export async function persistCopilotAnalysis(caseId:string,expectedSignature:string,entry:Analysis):Promise<ClinicalCase>{
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt||current.status==='closed')throw Error('Случай недоступен для сохранения.');
+  if(caseSignature(current)!==expectedSignature)throw Error('Данные случая изменились. Полученный ответ требует отдельной проверки.');
+  if(current.analyses.some(value=>value.id===entry.id))return current;
+  const value={...current,updated:entry.at,analyses:[entry,...current.analyses]};
+  await writeVaultCase(value);return value;
+ });
+}
 /** Create the image-first case in one vault write: originals and report travel together. */
 export async function createRadiologyCase(materials:CaseFile[],report?:{text:string;fileKeys:string[];sources:string[]}):Promise<ClinicalCase>{
  if(!materials.every(item=>typeof item.sha256==='string'&&SHA256.test(item.sha256)&&item.processingModule==='radiology'))

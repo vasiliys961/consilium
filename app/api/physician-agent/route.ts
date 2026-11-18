@@ -1,4 +1,5 @@
 import {converseWithPhysician,parsePhysicianAgentRequest} from '@/lib/physician-agent';
+import {terminalEvent,writeTerminalEvent} from '@/lib/telemetry';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -27,8 +28,9 @@ export async function POST(request:Request){
  if(active>=1||recent.length>=12)return Response.json({error:'busy',retryManually:true},{status:429,headers:{'Cache-Control':'no-store'}});
  recent.push(now);active++;
  try{
-  // One OpenRouter call, never run any module, no app state mutation.
+  // At most two bounded OpenRouter attempts; reserve only when the primary is unavailable. No module execution or app state mutation.
   const value=await converseWithPhysician(checked,process.env,fetch,request.signal);
+  writeTerminalEvent(terminalEvent(crypto.randomUUID(),'copilot.completed',{model:value.model,usageAvailable:value.billedUsd!==undefined,...(value.billedUsd===undefined?{}:{billedUsd:value.billedUsd}),...(value.estimatedUsd===null?{}:{estimatedUsd:value.estimatedUsd})}));
   return Response.json(value,{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  }catch{
   return Response.json({error:'agent_failed'},{status:502,headers:{'Cache-Control':'no-store'}});

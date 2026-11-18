@@ -8,14 +8,13 @@ import {CONSULT_MODELS} from './specialist-options.ts';
 
 const source=(path:string)=>readFileSync(path,'utf8');
 
-test('C13: assistant is encountered before the homepage hero instead of below metrics',()=>{
+test('C13: assistant precedes the collapsed guide without a second homepage hero or metrics',()=>{
  const workspace=source('app/components/clinical-workspace.tsx');
  const assistant=source('app/components/physician-task-assistant.tsx');
- const header=workspace.indexOf('{home ? <section className={styles.welcome}>');
- const before=workspace.indexOf('<PhysicianTaskAssistant/>');
- const metrics=workspace.indexOf('{storageAvailable&&<div className={styles.metrics}>');
- assert.ok(before>0&&before<header&&header<metrics);
- assert.equal(workspace.match(/<PhysicianTaskAssistant\/>/g)?.length,1);
+ const before=workspace.indexOf('<PhysicianTaskAssistant ');
+ const guide=workspace.indexOf('<ProductGuide');
+ assert.ok(before>0&&before<guide);
+ assert.doesNotMatch(workspace,/styles\.welcome|styles\.metrics/);
  assert.match(workspace,/getElementById\('doctor-opus-assistant'\)/);
  assert.match(workspace,/aria-label=\{t\("Помощник Doctor Opus"\)\}/);
  assert.match(assistant,/id="doctor-opus-assistant"/);

@@ -1,3 +1,4 @@
+import {coordinatorLocales,coordinatorRows} from './copilot-workstation-i18n.ts';
 import addedModuleEnglish from './added-module-english.json' with {type:'json'};
 import libraryEnglish from './library-english.json' with {type:'json'};
 import privacyEnglish from './privacy-english.json' with {type:'json'};
@@ -87,3 +88,5 @@ Object.assign(english,{
  'Сохранён':'Saved',
  'Не создан':'Not created'
 });
+
+for(const row of coordinatorRows){english[row[0]]=row[1];for(const [locale,catalog] of Object.entries(workspaceCatalogs)){const index=coordinatorLocales.indexOf(locale as typeof coordinatorLocales[number]);if(index>=0)(catalog as Record<string,string>)[row[0]]=row[index+1];}}

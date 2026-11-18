@@ -1,0 +1,306 @@
+{
+  "date": "2026-11-18T11:55:28.150Z",
+  "method": "Same synthetic tasks, production plan parser and OpenRouter transport; no module execution",
+  "primary": "anthropic/claude-haiku-5.5",
+  "reserve": "openai/gpt-6-luna",
+  "pilotCeilingUsd": 0.05,
+  "reservedMaximumUsd": 0.029999999999999995,
+  "knownProviderChargeUsd": 0.0020977,
+  "callsWithUnknownCharge": 0,
+  "rows": [
+    {
+      "id": "multi-step-ru",
+      "locale": "ru",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "actual": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 2651,
+      "receipts": [
+        {
+          "billedUsd": 0.0002388,
+          "inputTokens": 1648,
+          "outputTokens": 148
+        }
+      ]
+    },
+    {
+      "id": "medication-order",
+      "locale": "en",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "medications",
+        "ecg"
+      ],
+      "actual": [
+        "medications",
+        "ecg"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1565,
+      "receipts": [
+        {
+          "billedUsd": 0.0001966,
+          "inputTokens": 1596,
+          "outputTokens": 74
+        }
+      ]
+    },
+    {
+      "id": "completed-to-document",
+      "locale": "ru",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "protocol"
+      ],
+      "actual": [
+        "protocol"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 2096,
+      "receipts": [
+        {
+          "billedUsd": 0.0002473,
+          "inputTokens": 1603,
+          "outputTokens": 174
+        }
+      ]
+    },
+    {
+      "id": "genetic-route",
+      "locale": "en",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "genetics",
+        "clinical"
+      ],
+      "actual": [
+        "genetics",
+        "clinical"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 980,
+      "receipts": [
+        {
+          "billedUsd": 0.0002015,
+          "inputTokens": 1600,
+          "outputTokens": 83
+        }
+      ]
+    },
+    {
+      "id": "no-destructive-tool",
+      "locale": "ru",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [],
+      "actual": [],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1657,
+      "receipts": [
+        {
+          "billedUsd": 0.0002279,
+          "inputTokens": 1589,
+          "outputTokens": 138
+        }
+      ]
+    },
+    {
+      "id": "arabic-route",
+      "locale": "ar",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "actual": [
+        "medications",
+        "documents"
+      ],
+      "matched": false,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1772,
+      "receipts": [
+        {
+          "billedUsd": 0.0002713,
+          "inputTokens": 1638,
+          "outputTokens": 215
+        }
+      ]
+    },
+    {
+      "id": "multi-step-ru",
+      "locale": "ru",
+      "model": "openai/gpt-6-luna",
+      "expected": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "actual": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1923,
+      "receipts": [
+        {
+          "billedUsd": 0.0001234,
+          "inputTokens": 814,
+          "outputTokens": 84
+        }
+      ]
+    },
+    {
+      "id": "medication-order",
+      "locale": "en",
+      "model": "openai/gpt-6-luna",
+      "expected": [
+        "medications",
+        "ecg"
+      ],
+      "actual": [
+        "medications",
+        "ecg"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1367,
+      "receipts": [
+        {
+          "billedUsd": 0.0001076,
+          "inputTokens": 786,
+          "outputTokens": 58
+        }
+      ]
+    },
+    {
+      "id": "completed-to-document",
+      "locale": "ru",
+      "model": "openai/gpt-6-luna",
+      "expected": [
+        "protocol"
+      ],
+      "actual": [],
+      "matched": false,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 2960,
+      "receipts": [
+        {
+          "billedUsd": 0.000133,
+          "inputTokens": 790,
+          "outputTokens": 108
+        }
+      ]
+    },
+    {
+      "id": "genetic-route",
+      "locale": "en",
+      "model": "openai/gpt-6-luna",
+      "expected": [
+        "genetics",
+        "clinical"
+      ],
+      "actual": [
+        "genetics",
+        "clinical"
+      ],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1495,
+      "receipts": [
+        {
+          "billedUsd": 0.0001062,
+          "inputTokens": 787,
+          "outputTokens": 55
+        }
+      ]
+    },
+    {
+      "id": "no-destructive-tool",
+      "locale": "ru",
+      "model": "openai/gpt-6-luna",
+      "expected": [],
+      "actual": [],
+      "matched": true,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 1528,
+      "receipts": [
+        {
+          "billedUsd": 0.0001198,
+          "inputTokens": 778,
+          "outputTokens": 84
+        }
+      ]
+    },
+    {
+      "id": "arabic-route",
+      "locale": "ar",
+      "model": "openai/gpt-6-luna",
+      "expected": [
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "actual": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "matched": false,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 2553,
+      "receipts": [
+        {
+          "billedUsd": 0.0001243,
+          "inputTokens": 798,
+          "outputTokens": 89
+        }
+      ]
+    }
+  ]
+}
