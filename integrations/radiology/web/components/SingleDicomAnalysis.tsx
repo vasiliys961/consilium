@@ -50,7 +50,7 @@ export default function SingleDicomAnalysis({series,files,onOpenSlice}:{series:D
  }
  return <section className="reviewed-study">
   <h2><LocalizedUi value={"Описание изображения"}/></h2>
-  {!report&&<StudyPrivacyReview count={1} modality={series.modality as 'CT'|'MR'} load={prepare} onReady={analyze}
+  {!report&&<StudyPrivacyReview compact count={1} modality={series.modality as 'CT'|'MR'} load={prepare} onReady={analyze}
    onOpenSlice={onOpenSlice} sourceIds={[[series.members[0].id]]} sourceNumbers={[[1]]} canRelease={true}
    sendLabel="Подтверждаю · получить описание (платно)"/>}
   {busy&&<p role="status"><LocalizedUi value={"Формируется описание изображения…"}/></p>}
