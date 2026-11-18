@@ -1,3 +1,4 @@
+import {hashBlobSha256,LIBRARY_SOURCE_LIMIT,checkBookOperation,type BlobHashOptions} from './blob-sha256.ts';
 import {checkLibraryFolderSource,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveDocument,type LibraryChunkInput,type LibraryDocument} from './library-db.ts';
 import {EMBEDDING_DIM} from './embeddings.ts';
 
@@ -5,7 +6,7 @@ import {EMBEDDING_DIM} from './embeddings.ts';
 const MAGIC='DOPUS-LIBRARY-BOOK-V1\n';
 const MAGIC_BYTES=new TextEncoder().encode(MAGIC);
 const META_LIMIT=32*1024*1024;
-const SOURCE_LIMIT=64*1024*1024;
+const SOURCE_LIMIT=LIBRARY_SOURCE_LIMIT;
 const MAX_CHUNKS=25000;
 const HEADER_BYTES=MAGIC_BYTES.length+4+32;
 const EMBEDDING_MODEL='Xenova/multilingual-e5-small';
@@ -20,8 +21,6 @@ type BookMeta={
  document:{pageCount?:number;textPages?:number;vectorized:boolean;ocrMissingPages?:number[]};
  chunks:PackedChunk[];
 };
-function shaHex(buffer:ArrayBuffer):string{return Array.from(new Uint8Array(buffer),byte=>byte.toString(16).padStart(2,'0')).join('');}
-async function digest(blob:Blob):Promise<string>{return shaHex(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()));}
 function isRecord(x:unknown):x is Record<string,unknown>{return x!==null&&typeof x==='object'&&!Array.isArray(x);}
 function countPage(x:unknown):x is number{return typeof x==='number'&&Number.isSafeInteger(x)&&x>=1&&x<=1000000;}
 function packEmbedding(vector:Int8Array|Float32Array|undefined):PackedEmbedding|undefined{
@@ -72,7 +71,8 @@ function parseMeta(data:unknown):{meta:BookMeta;chunks:LibraryChunkInput[]}{
   document:{pageCount:doc.pageCount as number|undefined,textPages:doc.textPages as number|undefined,vectorized:doc.vectorized as boolean,ocrMissingPages:validPageList(doc.ocrMissingPages)},chunks:[]};
  return {meta,chunks};
 }
-export async function exportBookArchive(documentId:string):Promise<Blob>{
+export async function exportBookArchive(documentId:string,options:BlobHashOptions={}):Promise<Blob>{
+ checkBookOperation(options.signal);
  const doc=(await getAllDocuments()).find(item=>item.id===documentId);
  if(!doc)throw Error('Книга не найдена в локальной библиотеке.');
  if(doc.storage==='folder'){
@@ -81,8 +81,8 @@ export async function exportBookArchive(documentId:string):Promise<Blob>{
  }
  const original=await getDocumentSourceFile(documentId);
  if(!original)throw Error('Оригинал книги отсутствует: архив с неподтверждённым текстом создавать нельзя.');
- if(original.size>SOURCE_LIMIT)throw Error('Переносимый архив пока поддерживает книги до 64 МБ. Оригинал сохраните отдельно.');
- const sha256=await digest(original);
+ if(original.size>SOURCE_LIMIT)throw Error('Переносимый архив пока поддерживает книги до 250 МБ. Разделите более крупную книгу на тома.');
+ const sha256=await hashBlobSha256(original,options);
  if(doc.fileSha256&&doc.fileSha256!==sha256)throw Error('Контрольная сумма оригинала отличается от импортированной версии.');
  const raw=await getDocumentChunkRecords(documentId);
  if(raw.length>MAX_CHUNKS)throw Error('Для этой книги слишком много фрагментов для одиночного архива.');
@@ -100,10 +100,12 @@ export async function exportBookArchive(documentId:string):Promise<Blob>{
  if(bytes.length>META_LIMIT)throw Error('Текстовый индекс книги слишком велик для одиночного архива.');
  const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
  const size=new Uint8Array(4);new DataView(size.buffer).setUint32(0,bytes.length,true);
+ checkBookOperation(options.signal);
  return new Blob([MAGIC_BYTES,size,hash,bytes,original],{type:'application/octet-stream'});
 }
 export type BookRestoreResult={document:LibraryDocument;alreadyPresent:boolean;visualIndexRebuildRequired:true};
-export async function restoreBookArchive(archive:Blob):Promise<BookRestoreResult>{
+export async function restoreBookArchive(archive:Blob,options:BlobHashOptions={}):Promise<BookRestoreResult>{
+ checkBookOperation(options.signal);
  if(archive.size<HEADER_BYTES||archive.size>HEADER_BYTES+META_LIMIT+SOURCE_LIMIT)throw Error('Размер архива книги недопустим.');
  const head=new Uint8Array(await archive.slice(0,HEADER_BYTES).arrayBuffer());
  if(!MAGIC_BYTES.every((byte,index)=>head[index]===byte))throw Error('Это не архив книги Doctor Opus.');
@@ -117,7 +119,7 @@ export async function restoreBookArchive(archive:Blob):Promise<BookRestoreResult
  const {meta,chunks}=parseMeta(data);
  const original=archive.slice(HEADER_BYTES+metaLength);
  if(original.size!==meta.original.bytes)throw Error('Размер оригинала внутри архива не совпадает.');
- const actual=await digest(original);
+ const actual=await hashBlobSha256(original,options);
  if(actual!==meta.original.sha256)throw Error('Контрольная сумма оригинала книги не совпадает.');
  const existing=(await getAllDocuments()).find(doc=>doc.fileSha256===actual);
  if(existing){
@@ -132,6 +134,7 @@ export async function restoreBookArchive(archive:Blob):Promise<BookRestoreResult
  // The complete document, chunks (including OCR) and original Blob are committed in one IndexedDB transaction.
  // Never trust a MIME type supplied by an untrusted archive when later opening the original.
  const safeMime=/\.pdf$/i.test(meta.original.name)?'application/pdf':'text/plain';
+ checkBookOperation(options.signal);
  await saveDocument(doc,chunks,original.slice(0,original.size,safeMime));
  return {document:doc,alreadyPresent:false,visualIndexRebuildRequired:true};
 }

@@ -3,6 +3,44 @@ import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
 import {saveDocument,getAllDocuments,getDocumentChunkRecords,getDocumentSourceFile,saveChunkEmbeddings,saveLibraryPageOcr,searchLibraryLocalWithMeta,deleteDocument} from './library-db.ts';
 import {exportBookArchive,restoreBookArchive,BOOK_ARCHIVE_EXTENSION} from './library-book-archive.ts';
+import {importLibraryFile} from './library-import.ts';
+import {createHash} from 'node:crypto';
+
+test('large book archive crosses the old 64 MiB limit, restores source and searchable page, and deduplicates reimport',async()=>{
+ const id=crypto.randomUUID(),part=new Uint8Array(1024*1024);part.fill(32);
+ const source=new Blob([...Array.from({length:65},()=>part),'Synthetic large-book end.'],{type:'application/pdf'});
+ const expected=createHash('sha256');for(let i=0;i<65;i++)expected.update(part);expected.update('Synthetic large-book end.');
+ let restoredId='';
+ try{
+  await saveDocument({id,name:'SYNTHETIC large handbook.pdf',size:source.size,uploaded_at:'2026',chunksCount:1,pageCount:810,textPages:1},[{content:'Synthetic rareword nephrology dose verification',pageId:809}],source);
+  const archive=await exportBookArchive(id);await deleteDocument(id);
+  const restored=await restoreBookArchive(archive);restoredId=restored.document.id;
+  assert.equal(restored.document.size,source.size);assert.equal(restored.document.fileSha256,expected.digest('hex'));
+  assert.equal((await getDocumentSourceFile(restoredId))?.size,source.size);
+  const hits=await searchLibraryLocalWithMeta('rareword nephrology',5,restoredId);assert.equal(hits[0].pageId,809);
+  const duplicate=await importLibraryFile(new File([source],'Renamed same handbook.pdf'),()=>{});
+  assert.equal(duplicate.alreadyPresent,true);assert.equal(duplicate.document.id,restoredId);
+  // A tail change beyond the old cutoff must be detected before any database write.
+  await deleteDocument(restoredId);restoredId='';
+  const before=(await getAllDocuments()).length;
+  await assert.rejects(()=>restoreBookArchive(new Blob([archive.slice(0,-1),'!'])),/Контрольная сумма/);
+  assert.equal((await getAllDocuments()).length,before);
+ }finally{await deleteDocument(id);if(restoredId)await deleteDocument(restoredId);}
+});
+
+test('cancelling archive restore never writes a partial book; cancelling export does not change the original',async()=>{
+ const id=crypto.randomUUID(),source=new Blob([new Uint8Array(3*1024*1024)],{type:'text/plain'});
+ try{
+  await saveDocument({id,name:'SYNTHETIC cancellation.txt',size:source.size,uploaded_at:'2026',chunksCount:1},[{content:'Original search text',pageId:1}],source);
+  const exporting=new AbortController();
+  await assert.rejects(()=>exportBookArchive(id,{signal:exporting.signal,onProgress:()=>exporting.abort()}),{name:'AbortError'});
+  assert.equal((await getDocumentChunkRecords(id))[0].content,'Original search text');
+  const archive=await exportBookArchive(id);await deleteDocument(id);
+  const before=(await getAllDocuments()).length,restoring=new AbortController();
+  await assert.rejects(()=>restoreBookArchive(archive,{signal:restoring.signal,onProgress:()=>restoring.abort()}),{name:'AbortError'});
+  assert.equal((await getAllDocuments()).length,before);
+ }finally{await deleteDocument(id);}
+});
 
 test('C8 portable book restores original, per-page OCR and local 384-dim vectors atomically',async()=>{
  const id=crypto.randomUUID(),name='Synthetic respiratory book.txt';
