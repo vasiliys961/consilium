@@ -1,5 +1,6 @@
 import {mergeGeneticsIntoCase,geneticsWorkspaceForCase,type GeneticsDiscussionTurn} from './genetics-case-handoff.ts';
-import {readVaultCases,readVaultCaseById,writeVaultCase} from './local-vault.ts';
+import {guidelineCaseReference,validGuidelineDraft,type GuidelineDraft,type GuidelineResult,type GuidelineCaseReport} from './guideline-case-return.ts';
+import {readVaultCases,readVaultCaseById,writeVaultCase,insertVaultCaseIfAbsent} from './local-vault.ts';
 import {clinicalReportText} from "./clinical-report.ts";
 import{materialRoute,materialKey}from'./material-routing.ts';
 import {CURRENT_MEDICATIONS_HEADING} from './drug-interaction-rules.ts';
@@ -11,6 +12,8 @@ type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualRea
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
 export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
 export type ClinicalCase = {
+  guidelineDraft?:GuidelineDraft;
+  guidelineReports?:GuidelineCaseReport[];
   structuredProtocolDrafts?:Record<string,{source:string;document:import('../packages/protocol/document').ProtocolDocument|null;at:string}>;
   geneticsDraft?:import('./genetics-case-handoff').GeneticsWorkspaceDraft;
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
@@ -245,6 +248,50 @@ export async function persistGeneticsDraft(caseId:string,draft:import('./genetic
   await writeVaultCase(updated);return updated;
  });
 }
+/** Keep unfinished guidance separate from approved notes and clinical observations. */
+export async function persistGuidelineDraft(caseId:string,draft:GuidelineDraft):Promise<ClinicalCase>{
+ if(!validGuidelineDraft(draft,caseId))throw Error('guideline_draft_case_mismatch');
+ const snapshot=structuredClone(draft);
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt)throw Error('case_not_active');
+  if(JSON.stringify(current.guidelineDraft)===JSON.stringify(snapshot))return current;
+  if(current.status==='closed')throw Error('case_not_active');
+  const now=new Date().toISOString();
+  const updated={...current,updated:current.updated>now?current.updated:now,guidelineDraft:snapshot};
+  await writeVaultCase(updated);return updated;
+ });
+}
+/** Explicit save adds a reference, never a diagnosis/decision, using the latest case. */
+export async function persistGuidelineResult(caseId:string,result:GuidelineResult):Promise<ClinicalCase>{
+ const snapshot=structuredClone(result);
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt||current.status==='closed')throw Error('case_not_active');
+  const {report,file}=await guidelineCaseReference(snapshot,caseId);
+  const reports=current.guidelineReports??[],existing=reports.some(item=>item.id===report.id);
+  // Earlier edits remain historical; do not submit contradicting revisions of
+  // the same response as simultaneous active reference material.
+  const earlier=new Set(reports.filter(item=>item.result.id===snapshot.id&&item.referenceSha256!==file.sha256).map(item=>item.referenceSha256));
+  const library=(current.library??[]).filter(item=>!earlier.has(item.sha256??''));
+  const hasReference=library.some(item=>item.sha256===file.sha256&&item.text===file.text);
+  if(existing&&hasReference&&library.length===(current.library?.length??0))return current;
+  if(!existing&&reports.length>=400||!hasReference&&library.length>=400)throw Error('guideline_case_capacity');
+  const now=new Date().toISOString();
+  const updated:ClinicalCase={...current,updated:current.updated>now?current.updated:now,
+   guidelineReports:existing?reports:[report,...reports],
+   library:[...library.filter(item=>item.sha256!==file.sha256),file]};
+  await writeVaultCase(updated);return updated;
+ });
+}
+/** A standalone guidance result can start a case without inventing patient facts. */
+export async function createCaseFromGuideline(draft:GuidelineDraft):Promise<ClinicalCase>{
+ if(!validGuidelineDraft(draft)||!draft.result)throw Error('guideline_standalone_result_required');
+ const value=newCase(),result={...structuredClone(draft.result),caseId:value.id};
+ const {report,file}=await guidelineCaseReference(result,value.id);
+ const created:ClinicalCase={...value,title:result.topic,guidelineReports:[report],library:[file],guidelineDraft:{...structuredClone(draft),result}};
+ await insertVaultCaseIfAbsent(created);return created;
+}
 /** Autosave snapshots can complete after newer analysis/attachment writes.
  * Never allow an older snapshot to overwrite newer physician work.
  * This preserves all current in-memory fields, unlike an editor-only patch.
@@ -264,6 +311,8 @@ export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
     JSON.stringify(latest.protocolRevisions)!==JSON.stringify(value.protocolRevisions)||
     JSON.stringify(latest.structuredProtocolDrafts)!==JSON.stringify(value.structuredProtocolDrafts)||
     JSON.stringify(latest.geneticsDraft)!==JSON.stringify(value.geneticsDraft)||
+    JSON.stringify(latest.guidelineDraft)!==JSON.stringify(value.guidelineDraft)||
+    JSON.stringify(latest.guidelineReports)!==JSON.stringify(value.guidelineReports)||
     latest.analyses.length>value.analyses.length||
     latest.events.length>value.events.length||
     latest.files.length>value.files.length||
@@ -421,6 +470,8 @@ export function exportCase(value: ClinicalCase): string {
     ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...Object.values(value.structuredProtocolDrafts??{}).map(draft=>'\n## Незавершённый протокол · не является утверждённым документом\n'+[draft.source,...(draft.document?.sections.map(part=>part.title+'\n'+part.text)??[])].join('\n\n')),
     ...(value.geneticsDraft?['\n## Незавершённая генетическая консультация · не является заключением',value.geneticsDraft.context,value.geneticsDraft.question,...value.geneticsDraft.files.map(file=>file.name),...value.geneticsDraft.discussion.map(turn=>turn.question+'\n'+turn.result.draft.summary)]:[]),
+    ...(value.guidelineReports??[]).map(item=>'\n## Подборка рекомендаций · справочный материал, не назначение · '+((value.library??[]).some(file=>file.sha256===item.referenceSha256)?'для следующего разбора':'история; не используется в следующем разборе')+'\n'+item.result.topic+'\n'+item.result.text),
+    ...(value.guidelineDraft?['\n## Незавершённый поиск рекомендаций\n'+value.guidelineDraft.query,value.guidelineDraft.result?.text??'']:[]),
     '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
     ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
