@@ -55,7 +55,7 @@ export async function callAiGateway(request: AiGatewayRequest, signal?: AbortSig
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     // All research completions have an explicit output token ceiling to avoid
     // accidental unbounded spending. This is not an account spending limit.
-    body: JSON.stringify({ model: request.model, messages: request.messages,
+    body: JSON.stringify({ model: request.model, messages: request.messages, usage:{include:true},
       // These evaluator versions do not advertise temperature in either catalogue.
       ...(["openai/gpt-6.1-sol","anthropic/claude-sonnet-5.5","anthropic/claude-opus-5.5"].includes(request.model)?{}:
         {temperature:request.temperature??0.1}),
@@ -68,7 +68,7 @@ export async function callAiGateway(request: AiGatewayRequest, signal?: AbortSig
   });
   if (!response.ok){receipt('model.responded',{httpStatus:response.status,durationMs:Date.now()-started,usageAvailable:false});throw new Error(`AI provider returned HTTP ${response.status}`);}
   const payload = await response.json();
-  receipt('model.responded',{httpStatus:response.status,durationMs:Date.now()-started,finishReason:payload.choices?.[0]?.finish_reason??null,inputTokens:payload.usage?.prompt_tokens??0,outputTokens:payload.usage?.completion_tokens??0,usageAvailable:typeof payload.usage?.prompt_tokens==='number'&&typeof payload.usage?.completion_tokens==='number'});
+  receipt('model.responded',{httpStatus:response.status,durationMs:Date.now()-started,finishReason:payload.choices?.[0]?.finish_reason??null,inputTokens:payload.usage?.prompt_tokens??0,outputTokens:payload.usage?.completion_tokens??0,usageAvailable:typeof payload.usage?.prompt_tokens==='number'&&typeof payload.usage?.completion_tokens==='number',...(typeof payload.usage?.cost==='number'&&Number.isFinite(payload.usage.cost)&&payload.usage.cost>=0?{billedUsd:payload.usage.cost}:{})});
   return { provider: request.provider, model: payload.model ?? request.model, choices: payload.choices ?? [], usage: payload.usage ?? null };
   }catch(error){receipt('model.failed',{durationMs:Date.now()-started});throw error;}
 }

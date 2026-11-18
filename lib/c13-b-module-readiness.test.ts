@@ -55,7 +55,7 @@ test('C13-B: clear localized readiness copy is present in every supported worksp
 test('C13-B: unavailable destinations are visibly disabled rather than hidden in tooltip only',()=>{
  const ui=readFileSync('app/components/physician-task-assistant.tsx','utf8');
  assert.match(ui,/copilotModuleReadiness\(tool,language,integration,healthError\)/);
- assert.match(ui,/disabled=\{!allowed\}/);
+ assert.match(ui,/disabled=\{!allowed\|\|executionBusy\}/);
  assert.match(ui,/\{visible&&<small/);
  assert.match(ui,/setIntegration\(null\);setHealthError\(true\)/);
  assert.match(ui,/title=\{hint\}/);

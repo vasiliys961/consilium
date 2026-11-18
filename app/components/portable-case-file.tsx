@@ -9,8 +9,8 @@ export function PortableCaseExport({caseId,beforeExport}:{caseId:string;beforeEx
  const [opened,setOpened]=useState(false),[password,setPassword]=useState(''),[repeat,setRepeat]=useState('');
  const [busy,setBusy]=useState(false),[status,setStatus]=useState('');
  const [prepared,setPrepared]=useState<{url:string;filename:string}|null>(null);
- const urlRef=useRef<string|null>(null);
- useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
+ const urlRef=useRef<string|null>(null),mounted=useRef(true);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;if(urlRef.current)URL.revokeObjectURL(urlRef.current);};},[]);
  async function exportOne(){
   if(password.length<12){setStatus(t('Пароль должен содержать не менее 12 символов.'));return;}
   if(password!==repeat){setStatus(t('Пароли не совпадают.'));return;}
@@ -18,6 +18,7 @@ export function PortableCaseExport({caseId,beforeExport}:{caseId:string;beforeEx
   try{
    if(!(await beforeExport())){setStatus(t('Не удалось сохранить последние изменения случая. Архив не создан.'));return;}
    const text=await createPortableCaseFile(caseId,password);
+   if(!mounted.current)return;
    if(urlRef.current)URL.revokeObjectURL(urlRef.current);
    const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
    const filename=`case-${caseId.slice(0,8)}${PORTABLE_CASE_EXTENSION}`;
@@ -64,8 +65,8 @@ export function PortableCaseImport({onImported}:{onImported:(id:string)=>Promise
   finally{setBusy(false);}
  }
  return <details open={open} onToggle={event=>setOpen(event.currentTarget.open)}>
-  <summary>{t('Восстановить отдельный клинический случай')}</summary>
-  <p>{t('Используйте файл .doctor-opus-case и пароль, заданный при экспорте. Восстановление работает локально и не вызывает медицинские модели.')}</p>
+  <summary>{t('Восстановить случай из файла')}</summary>
+  <p>{t('Для переноса или резервной копии выберите ранее сохранённый файл .doctor-opus-case и его пароль. Случай из корзины восстанавливается в списке без пароля.')}</p>
   <label>{t('Файл случая')}<input type="file" accept={PORTABLE_CASE_EXTENSION} disabled={busy} onChange={event=>{setFile(event.target.files?.[0]??null);setStatus('');}}/></label>
   <label>{t('Пароль файла')}<input type="password" autoComplete="current-password" disabled={busy} value={password} onChange={event=>setPassword(event.target.value)}/></label>
   <p><button type="button" disabled={busy||!file||!password} onClick={()=>void importOne()}>{t(busy?'Проверяем и восстанавливаем…':'Восстановить случай')}</button></p>

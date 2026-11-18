@@ -6,6 +6,26 @@ import {newCase,type ClinicalCase} from './casebook.ts';
 import {createPortableCaseFile,restorePortableCaseFile,PortableCaseCollisionError} from './portable-case-file.ts';
 import {writeVaultCase,readVaultCaseById,createLocalVault,lockVault,openLocalVault,insertVaultCaseIfAbsent,vaultDatabase} from './local-vault.ts';
 import {passageCitations} from './local-rag.ts';
+import {geneticsWorkspaceForCase,geneticFilesKey} from './genetics-case-handoff.ts';
+
+test('portable copy preserves unfinished genetics and rebinds only its verified case owner',async()=>{
+ const value=syntheticCase(),file={name:'SYNTHETIC.vcf',sha256:'c'.repeat(64),text:'##fileformat=VCFv4.2'};
+ value.geneticsDraft={files:[file],context:'Unfinished family history',question:'Unsent genetic question',focus:'variant-1',discussion:[{
+  id:'genetic-turn',at:value.created,caseId:value.id,inputSignature:'historical-input',filesKey:geneticFilesKey([file]),question:'Earlier question',clinicalContext:'Earlier facts',result:value.analyses[0].result,
+ }]};
+ value.structuredProtocolDrafts={draft:{source:'Unfinished source',document:null,at:value.created}};
+ await writeVaultCase(value);
+ const text=await createPortableCaseFile(value.id,'synthetic copy password');
+ const copy=await restorePortableCaseFile(text,'synthetic copy password','copy');
+ const restored=await readVaultCaseById(copy.id);assert.ok(restored);
+ const draft=geneticsWorkspaceForCase(restored);
+ assert.equal(draft.discussion[0].caseId,copy.id);assert.equal(draft.discussion[0].inputSignature,'historical-input');
+ assert.deepEqual(draft.files,[file]);assert.equal(draft.question,'Unsent genetic question');
+ assert.deepEqual(restored.structuredProtocolDrafts,value.structuredProtocolDrafts);
+ assert.equal((await readVaultCaseById(value.id))?.geneticsDraft?.discussion[0].caseId,value.id,'source case must remain untouched');
+ await writeVaultCase({...value,geneticsDraft:{...value.geneticsDraft,discussion:[{...value.geneticsDraft.discussion[0],caseId:'foreign-case'}]}});
+ await assert.rejects(()=>createPortableCaseFile(value.id,'synthetic copy password'),/несовместимый формат/);
+});
 
 function normalized(value:unknown){return JSON.parse(JSON.stringify(value));}
 function syntheticCase():ClinicalCase{

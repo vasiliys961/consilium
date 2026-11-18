@@ -26,3 +26,8 @@ export function savedStructuredProtocol(
   return !doc.sourceAnalysisId&&!doc.sourceProtocolId&&doc.generationMode!=='from-analysis'&&doc.generationMode!=='from-protocol';
  });
 }
+
+/** Distinct drafts per language, layout, source analysis and explicitly reopened note. */
+export function structuredProtocolDraftKey(kind:ProtocolKind,locale:Locale,mode:ProtocolGenerationMode,presentation:ProtocolPresentation,analysisId?:string,documentId?:string):string{
+ return JSON.stringify([kind,locale,mode,presentation,mode==='from-analysis'?analysisId??'':'',documentId??'']);
+}

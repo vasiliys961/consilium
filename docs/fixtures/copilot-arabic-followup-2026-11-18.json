@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-18T14:19:29.438Z",
+  "method": "Same synthetic tasks, production plan parser and OpenRouter transport; no module execution",
+  "primary": "anthropic/claude-haiku-5.5",
+  "reserve": "openai/gpt-6-luna",
+  "pilotCeilingUsd": 0.05,
+  "reservedMaximumUsd": 0.0025,
+  "knownProviderChargeUsd": 0.0002736,
+  "callsWithUnknownCharge": 0,
+  "rows": [
+    {
+      "id": "arabic-route",
+      "locale": "ar",
+      "model": "anthropic/claude-haiku-5.5",
+      "expected": [
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "actual": [
+        "documents",
+        "medications",
+        "clinical",
+        "protocol"
+      ],
+      "matched": false,
+      "usedModel": true,
+      "warning": null,
+      "requests": 1,
+      "durationMs": 3222,
+      "receipts": [
+        {
+          "billedUsd": 0.0002736,
+          "inputTokens": 1826,
+          "outputTokens": 182
+        }
+      ]
+    }
+  ]
+}

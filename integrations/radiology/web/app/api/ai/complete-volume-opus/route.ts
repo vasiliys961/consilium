@@ -76,7 +76,7 @@ export async function POST(req:NextRequest){
  if(!release)return reply(429,"Opus request already running or limited");
  try{
    const signal=AbortSignal.any([req.signal,AbortSignal.timeout(270000)]);
-   const result=followup?await followupStudyReport(raw,localizedCall,signal):await analyzeVolumeWithArgon(raw,localizedCall,signal,{primary:checkpoint?.result as ArgonVolumeResult|undefined,onPrimary:result=>recovery.put(recoveryKey,{result})});
+   const result=followup?await followupStudyReport(raw,callAiGateway,signal,outputLanguage):await analyzeVolumeWithArgon(raw,localizedCall,signal,{primary:checkpoint?.result as ArgonVolumeResult|undefined,onPrimary:result=>recovery.put(recoveryKey,{result})});
    if(!followup)recovery.put(recoveryKey,{visual:'visualReview' in result?result.visualReview:undefined,result:result as import('../../../../lib/full-volume-opus-synthesis').FullVolumeOpusResult});
    return NextResponse.json(result,{headers:HEADERS});
  }catch(error){

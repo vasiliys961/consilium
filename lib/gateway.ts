@@ -35,6 +35,7 @@ export interface ModelResult {
   inputTokens: number;
   outputTokens: number;
   durationMs: number;
+  billedUsd?:number;
 }
 
 export type ModelFailure = 'truncated' | 'invalid_response' | 'provider_error' | 'schema_rejected' | 'payment_required';
@@ -50,7 +51,9 @@ export async function complete(
     signal?: AbortSignal;
     retryInvalidResponse?: boolean;
     jsonSchema?: { name: string; schema: Record<string, unknown> };
-    reasoningEffort?: 'low' | 'medium';
+    reasoningEffort?: 'none' | 'low' | 'medium';
+    omitTemperature?:boolean;includeUsage?:boolean;maxRequests?:number;maxInputBytes?:number;allowSchemaFallback?:boolean;
+    provider?:{require_parameters?:boolean;allow_fallbacks?:boolean;max_price?:{prompt:number;completion:number}};
     validate?: (text: string) => boolean;
     onFailure?: (reason: ModelFailure) => void;
   },
@@ -61,7 +64,8 @@ export async function complete(
   ].filter((endpoint) => endpoint !== null);
   const models = [request.model, request.fallbackModel].filter((model): model is string => Boolean(model)).map(model=>model===MODELS.pro&&!request.pinModel?geminiModel(env):model);
 
-  let fallbackAllowed=false;
+  if(request.maxInputBytes!==undefined&&new TextEncoder().encode(JSON.stringify(request.messages)+JSON.stringify(request.jsonSchema??{})).byteLength>request.maxInputBytes){request.onFailure?.('invalid_response');return null;}
+  let fallbackAllowed=false,requestsSent=0;
   for (const [modelIndex,model] of models.entries()) {
     // Strict clinical fallback: only a provider's explicit unavailable-model
     // rejection with no reported usage permits a second model attempt.
@@ -73,6 +77,8 @@ export async function complete(
       for (let attempt = 0; attempt < 2; attempt += 1) {
       if (request.signal?.aborted) return null;
       try {
+        if(request.maxRequests!==undefined&&requestsSent>=request.maxRequests)return null;
+        requestsSent++;
         const started = Date.now();
         const timeout = AbortSignal.timeout(request.timeoutMs ?? (request.messages.some(turn => Array.isArray(turn.content) && turn.content.some(part => part.type === "image_url")) ? 90000 : 45000));
         const response = await fetchImpl(endpoint.url, {
@@ -83,8 +89,10 @@ export async function complete(
           },
           body: JSON.stringify({
             model,
-            ...(model===MODELS.terra?{}:{temperature:0}),
+            ...(request.omitTemperature||model===MODELS.terra?{}:{temperature:0}),
             max_tokens: Math.min(request.maxTokens * (attempt + 1), 10000),
+            ...(request.includeUsage?{usage:{include:true}}:{}),
+            ...(request.provider?{provider:request.provider}:{}),
             messages: schemaFallback ? [{ role: 'system', content: `Return a JSON object matching this schema. Treat the schema as the output contract: ${JSON.stringify(request.jsonSchema!.schema)}` }, ...request.messages] : request.messages,
             ...(request.jsonSchema ? { response_format: schemaFallback ? { type: 'json_object' } : { type: 'json_schema', json_schema: { ...request.jsonSchema, strict: true } } } : {}),
             ...(request.reasoningEffort ? { reasoning: { effort: request.reasoningEffort } } : {}),
@@ -94,7 +102,7 @@ export async function complete(
         const data = (await response.json()) as {
           error?: unknown;
           choices?: Array<{ finish_reason?: string; message?: { content?: string } }>;
-          usage?: { prompt_tokens?: number; completion_tokens?: number };
+          usage?: { prompt_tokens?: number; completion_tokens?: number;cost?:unknown };
         };
         if (!response.ok || data.error || data.choices?.[0]?.finish_reason === 'error') {
           const errorMessage=JSON.stringify(data.error??'');
@@ -107,7 +115,7 @@ export async function complete(
           if(request.fallbackOnlyIfUnavailable&&modelUnavailability)fallbackAllowed=true;
           request.onFailure?.(response.status === 402 ? 'payment_required' : schemaRejected ? 'schema_rejected' : 'provider_error');
           // A bounded compatibility retry; keep local validation mandatory in JSON mode.
-          if (schemaRejected && request.jsonSchema && request.validate && !schemaFallback) {
+          if (request.allowSchemaFallback!==false && schemaRejected && request.jsonSchema && request.validate && !schemaFallback) {
             schemaFallback = true;
             attempt -= 1;
             continue;
@@ -132,6 +140,7 @@ export async function complete(
           inputTokens: Number(data.usage?.prompt_tokens) || 0,
           outputTokens: Number(data.usage?.completion_tokens) || 0,
           durationMs: durationMs(started),
+          ...(typeof data.usage?.cost==='number'&&Number.isFinite(data.usage.cost)&&data.usage.cost>=0?{billedUsd:data.usage.cost}:{}),
         };
       } catch {
         request.onFailure?.("provider_error");
