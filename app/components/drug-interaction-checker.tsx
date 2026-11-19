@@ -29,8 +29,8 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
   const [standalone,setStandalone]=useState(''),[localProposed,setProposed]=useState(initialProposed);
   const [stopped,setStopped]=useState(''),[alternatives,setAlternatives]=useState('');
   const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState(''),[ageText,setAgeText]=useState(''),[qtcText,setQtcText]=useState('');
-  const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false);
-  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,ageYears:ageText.trim()?Number(ageText):null,qtcMs:qtcText.trim()?Number(qtcText):null,decompensatedCirrhosis,severeHepaticImpairment};
+  const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false),[activeBleeding,setActiveBleeding]=useState(false);
+  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,ageYears:ageText.trim()?Number(ageText):null,qtcMs:qtcText.trim()?Number(qtcText):null,decompensatedCirrhosis:decompensatedCirrhosis||undefined,severeHepaticImpairment:severeHepaticImpairment||undefined,activeBleeding:activeBleeding||undefined};
   const proposed=controlledProposed??localProposed;
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
@@ -47,6 +47,7 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
       <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="0" max="15" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Возраст, годы (если известен)')}<input type="number" min="0" max="120" step="1" disabled={disabled} value={ageText} onChange={e=>{setAgeText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('QTc, мс (если известен)')}<input type="number" min="200" max="900" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
+      <label><input type="checkbox" disabled={disabled} checked={activeBleeding} onChange={e=>{setActiveBleeding(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённое активное патологическое кровотечение')}</label>
       <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
       <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
     </details>
