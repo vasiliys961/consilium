@@ -384,6 +384,9 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
       if ((plan.task === 'management' || plan.task === 'clinical') && written.report) {
         const currentMedications = reportedMedications(cleanedNote.text);
         const clinicalSafety=extractMedicationSafetyContext(cleanedNote.text);
+        // Suggestions are informational only. The medication checker receives exclusively
+        // verified, typed values; no proposed correction is promoted into the case facts.
+        if (clinicalSafety.hints.length) written.report.localContextHints=clinicalSafety.hints;
         for (const option of written.report.management) {
           const checked = checkMedicationRegimen({
             current: currentMedications,

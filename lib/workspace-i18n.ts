@@ -87,3 +87,56 @@ Object.assign(english,{
  'Сохранён':'Saved',
  'Не создан':'Not created'
 });
+
+// W5: action-oriented, unconfirmed context clarification (EN reference; others fallback to English).
+Object.assign(english,{
+  "Возможные уточнения клинических данных": "Suggested clarifications of clinical data",
+  "Это только предположения: медицинские данные не исправлены и не использованы как подтверждённые.": "These are suggestions only. Clinical data have not been changed or treated as confirmed.",
+  "В исходной записи:": "In the original entry:",
+  "Ожидаемый формат:": "Expected format:",
+  "Сверьте данные и исправьте исходную запись вручную; предположение не использовано как факт.": "Verify the original source and edit the case manually. The suggestion was not used as a fact.",
+  "Неподтверждённое уточнение клинических данных:": "Unconfirmed clinical data clarification:",
+  "СКФ": "eGFR",
+  "Калий": "Potassium",
+  "Возраст": "Age",
+  "Активное патологическое кровотечение": "Active pathological bleeding",
+  "Декомпенсированный цирроз": "Decompensated cirrhosis",
+  "Тяжёлая печёночная недостаточность": "Severe hepatic impairment",
+  "Сверьте даты, методы измерения и исходные документы. Не выбирайте одно из значений автоматически.": "Check dates, methods and original reports. Do not automatically select one of the values.",
+  "Это может быть предыдущий результат. Уточните дату и получите актуальное значение для назначения.": "This may be an earlier result. Verify its date and obtain an up-to-date value before prescribing.",
+  "Указан диапазон или неравенство, а не точное число. Уточните исходный результат и клиническое значение ограничения.": "A range or inequality was entered, not an exact value. Verify the original result and the clinical meaning of the limit.",
+  "Проверьте возможную опечатку, десятичный разделитель и исходный документ. Не исправляйте число предположением.": "Check for transcription errors, decimal separators and the source document. Do not guess a replacement number.",
+  "Уточните текущий клинический статус у врача. Не приравнивайте неизвестно к отрицанию.": "Confirm the current clinical status with the physician. Unknown is not the same as absent.",
+  "Возможно перепутаны СКФ и концентрация креатинина либо единицы измерения. Сверьте название анализа и бланк.": "eGFR may have been confused with serum creatinine or its units. Check the test name and original laboratory report.",
+  "Проверьте, не перепутаны секунды и миллисекунды. Сверьте исходную ЭКГ, прежде чем менять запись.": "Check whether seconds and milliseconds were confused. Review the original ECG before editing the entry.",
+  "Возможно ошибочно указаны единицы калия. Сверьте лабораторный бланк, прежде чем интерпретировать число.": "Potassium units may be wrong. Verify the original laboratory report before interpreting the number.",
+  "Уточните возраст по дате рождения и единицам (месяцы или годы). Не считайте число месяцев годами.": "Confirm age using date of birth and the entered unit (months or years). Do not treat a number of months as years.",
+  "Проверьте значение и единицы по исходному документу; автоматической замены нет.": "Verify the value and units against the original record. No automatic replacement is made."
+});
+
+// Additional context-specific advice (rather than generic verification).
+Object.assign(english,{
+ 'Противоречивые сведения о кровотечении. Уточните актуальный статус и время осмотра; неизвестное не равно отсутствию.':'Conflicting bleeding information. Confirm the current status and time of examination; unknown is not absent.',
+ 'Противоречивые сведения о заболевании. Сверьте документы и подтвердите текущий клинический статус.':'Conflicting disease information. Check original records and confirm the current clinical status.',
+ 'Числовой результат не удалось однозначно прочитать. Сверьте точное значение, единицы и дату с первичным документом.':'The numeric result could not be read unambiguously. Verify the exact value, units and date against the original report.'
+});
+
+// Backfill the new W5 keys in each non-RU locale catalog. All clinical advice
+// has an English reference; do not leak untranslated Russian safety instructions.
+const w5TranslatedHeadings:Record<string,Record<string,string>>={
+ es:{'Возможные уточнения клинических данных':'Aclaraciones sugeridas de datos clínicos','В исходной записи:':'En el registro original:','Ожидаемый формат:':'Formato esperado:'},
+ fr:{'Возможные уточнения клинических данных':'Précisions suggérées pour les données cliniques','В исходной записи:':'Dans la saisie initiale :','Ожидаемый формат:':'Format attendu :'},
+ ar:{'Возможные уточнения клинических данных':'توضيحات مقترحة للبيانات السريرية','В исходной записи:':'في السجل الأصلي:','Ожидаемый формат:':'الصيغة المتوقعة:'},
+ hi:{'Возможные уточнения клинических данных':'नैदानिक डेटा के लिए सुझाए गए स्पष्टीकरण','В исходной записи:':'मूल प्रविष्टि में:','Ожидаемый формат:':'अपेक्षित प्रारूप:'},
+ 'pt-BR':{'Возможные уточнения клинических данных':'Esclarecimentos sugeridos para dados clínicos','В исходной записи:':'No registro original:','Ожидаемый формат:':'Formato esperado:'},
+ id:{'Возможные уточнения клинических данных':'Saran klarifikasi data klinis','В исходной записи:':'Pada catatan asli:','Ожидаемый формат:':'Format yang diharapkan:'},
+ tr:{'Возможные уточнения клинических данных':'Klinik veriler için önerilen netleştirmeler','В исходной записи:':'Özgün kayıtta:','Ожидаемый формат:':'Beklenen biçim:'},
+ 'zh-CN':{'Возможные уточнения клинических данных':'建议核实的临床数据','В исходной записи:':'原始记录：','Ожидаемый формат:':'预期格式：'}
+};
+for(const [language,catalog] of Object.entries(workspaceCatalogs)){
+ const strings=catalog as Record<string,string>;
+ const local=w5TranslatedHeadings[language]??{};
+ for(const [key,value] of Object.entries(english)){
+  if(!strings[key])strings[key]=local[key]??value;
+ }
+}
