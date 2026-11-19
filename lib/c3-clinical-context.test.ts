@@ -117,3 +117,85 @@ test('hypokalemia adds clinically relevant QT warning without fabricating ECG re
  assert.ok(checked.organAlerts.some(a=>a.risk.includes('гипокалиемии')));
  assert.equal(checked.organAlerts.some(a=>a.risk.includes('выраженном удлинении QTc')),false);
 });
+
+
+/**
+ * W5 safety fixtures are authored, synthetic counterexamples, not an estimate
+ * of population sensitivity/specificity or a clinical model validation.
+ */
+test('W5: incompatible numeric units must not become contraindication-triggering facts',()=>{
+ const cases=[
+  {note:'Potassium: 6.0 mg/dL', key:'potassium',drug:'spironolactone'},
+  {note:'QTc: 520 s',key:'qtcMs',drug:'moxifloxacin'},
+  {note:'Age: 75 months',key:'ageYears',drug:'moxifloxacin'},
+  {note:'eGFR: 24 mg/dL',key:'egfr',drug:'metformin'},
+ ] as const;
+ for(const item of cases){
+  const result=extractMedicationSafetyContext(item.note);
+  assert.equal(result.context[item.key],undefined,item.note);
+  assert.ok(result.issues.length>=1,item.note);
+  const checked=checkMedicationRegimen({current:item.drug,context:result.context});
+  assert.equal(checked.organAlerts.length,0,'Do not derive organ contraindication from mislabelled measurement: '+item.note);
+ }
+});
+
+test('W5: malformed or out-of-range reading invalidates the whole field, even if another value looks valid',()=>{
+ const cases=[
+  'СКФ: 25 мл/мин/1,73 м²\nСКФ: 999 мл/мин/1,73 м²',
+  'СКФ: 25 мл/мин/1,73 м²\nСКФ: <30 мл/мин/1,73 м²',
+  'Калий: 5,9 ммоль/л\nКалий: неизвестно',
+  'QTc: 520 мс\nQTc: уточнить',
+ ] as const;
+ for(const note of cases){
+  const parsed=extractMedicationSafetyContext(note);
+  assert.equal(Object.values(parsed.context).length,0,note);
+  assert.ok(parsed.issues.length>=1,note);
+ }
+ const egfr=extractMedicationSafetyContext(cases[0]);
+ const checked=checkMedicationRegimen({current:'метформин',context:egfr.context});
+ assert.ok(checked.missing.some(s=>s.includes('СКФ')));
+ assert.equal(checked.organAlerts.length,0,'A contradictory record must not become verified renal failure');
+});
+
+test('W5: stale laboratory evidence and ambiguous bleeding status fail closed',()=>{
+ const dated=extractMedicationSafetyContext('K+: 5.9 mmol/L yesterday\nQTc: 540 ms (previous result)');
+ assert.equal(dated.context.potassium,undefined);
+ assert.equal(dated.context.qtcMs,undefined);
+ assert.equal(dated.issues.length,2);
+ const bleeding=extractMedicationSafetyContext('Active bleeding: yes\nActive bleeding: pending');
+ assert.equal(bleeding.context.activeBleeding,undefined);
+ assert.ok(bleeding.issues.some(s=>s.includes('кровотечение')));
+ const checked=checkMedicationRegimen({current:'apixaban',context:bleeding.context});
+ assert.equal(checked.organAlerts.length,0);
+ const contradictory=extractMedicationSafetyContext('Активное кровотечение: нет\nАктивное кровотечение: да');
+ assert.equal(contradictory.context.activeBleeding,undefined);
+ assert.ok(contradictory.issues.some(s=>s.includes('Противоречивые')));
+});
+
+test('W5: explicit current facts with valid units still drive expected organ safety checks',()=>{
+ const note='Age: 75 years\neGFR: 39 mL/min/1.73 m2\nPotassium: 3.2 mmol/L\nQTc: 525 ms';
+ const extracted=extractMedicationSafetyContext(note);
+ assert.deepEqual(extracted.context,{egfr:39,potassium:3.2,qtcMs:525,ageYears:75});
+ assert.deepEqual(extracted.issues,[]);
+ const result=checkMedicationRegimen({current:'moxifloxacin + metformin',context:extracted.context});
+ for(const needle of ['Метформин: при СКФ','QTc','гипокалиемии','сухожилий']){
+  assert.ok(result.organAlerts.some(a=>a.risk.includes(needle)),needle);
+ }
+});
+
+test('W5: valid duplicate readings and equivalent potassium units are not flagged as contradictions',()=>{
+ const potassium=extractMedicationSafetyContext('Калий: 5,8 ммоль/л\nK+: 5.8 mEq/L');
+ assert.equal(potassium.context.potassium,5.8);
+ assert.deepEqual(potassium.issues,[]);
+ const bleeding=extractMedicationSafetyContext('Active bleeding: no\nАктивное патологическое кровотечение: нет');
+ assert.equal(bleeding.context.activeBleeding,false);
+ assert.deepEqual(bleeding.issues,[]);
+});
+
+test('W5: dose text, a historical note and an unsupported comparison are never guessed as measurements',()=>{
+ const parsed=extractMedicationSafetyContext('Назначен метформин 500 мг\nКалий: <5,0 ммоль/л\nСтарая запись: QTc 550 мс');
+ assert.equal(parsed.context.potassium,undefined);
+ assert.equal(parsed.context.qtcMs,undefined);
+ assert.ok(parsed.issues.some(s=>s.includes('Калий')));
+ assert.equal(checkMedicationRegimen({current:'moxifloxacin',context:parsed.context}).organAlerts.length,0);
+});
