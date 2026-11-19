@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import {newCase,caseContext,caseAnalysisInput} from './casebook.ts';
 import {chooseClinicalFocus} from './clinical-focus.ts';
 import {planAdaptiveCouncil} from './adaptive-council.ts';
@@ -149,4 +150,16 @@ test('W5 clinical routing regression: English cough and hemoptysis select pulmon
   'Hemoptysis must trigger a pulmonary clinical perspective');
  assert.ok(!chooseClinicalFocus('routine dental cleaning',[]).some(item=>item.domain==='pulmonology'),
   'No free-floating pulmonary role without the symptom');
+});
+
+test('W5 offline CLI emits an honest template with all 25 cases unassessed',()=>{
+ const child=spawnSync(process.execPath,
+  ['--experimental-strip-types','scripts/w5-diagnostic-report.mjs','--template'],
+  {encoding:'utf8',timeout:10000});
+ assert.equal(child.status,0,child.stderr);
+ const template=JSON.parse(child.stdout) as {referenceApproved:boolean;reviews:Array<{caseId:string;status:string}>};
+ assert.equal(template.referenceApproved,false);
+ assert.equal(template.reviews.length,25);
+ assert.equal(new Set(template.reviews.map(item=>item.caseId)).size,25);
+ assert.ok(template.reviews.every(item=>item.status==='not_assessed'));
 });
