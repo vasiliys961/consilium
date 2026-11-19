@@ -22,7 +22,7 @@ function usage(){
   'W5 zero-extra-cost diagnostic LLM baseline; only fictional cases are sent.',
   'Default (no network): node --experimental-strip-types scripts/w5-free-model-trial.mjs',
   'Real free trial: OPENROUTER_API_KEY=... node --experimental-strip-types scripts/w5-free-model-trial.mjs --run --model vendor/model:free --max 5 > w5-free-results.jsonl',
-  'Use --max 25 only after a five-case smoke test.',
+  'Use --start 6 --max 20 to run the remaining 20 after the five-case smoke test.',
   'Real runs are not a substitute for blinded clinician grading or Preview/3207 acceptance.',
  ].join('\n');
 }
@@ -37,6 +37,7 @@ function header(){
 const model=value('--model');
 const maximum=value('--max')??'5';
 const n=Number(maximum);
+const startAt=Number(value('--start')??'1');
 const legalName=/^[a-z0-9][a-z0-9._/-]*:free$/i;
 if(has('--help')){
  process.stdout.write(usage()+'\n');
@@ -48,6 +49,8 @@ if(has('--help')){
  error('Model must be an exact ID ending in :free; paid and auto-routing IDs are prohibited.');
 }else if(!Number.isSafeInteger(n)||n<1||n>25){
  error('--max must be an integer in [1,25].');
+}else if(!Number.isSafeInteger(startAt)||startAt<1||startAt>25||startAt+n-1>25){
+ error('--start and --max must select a contiguous range within the 25 synthetic cases.');
 }else if(!process.env.OPENROUTER_API_KEY){
  error('OPENROUTER_API_KEY is not set. The key is never printed or sent to logs.');
 }else{
@@ -82,10 +85,10 @@ if(has('--help')){
 
   // Print headers as JSON lines, never secrets, never clinical reference keys.
   process.stdout.write(JSON.stringify({kind:'W5-free-model-run',
-   model,planned:n,freeQuotaBefore:quota.remaining,referenceRubricHidden:true,
+   model,planned:n,startAt,freeQuotaBefore:quota.remaining,referenceRubricHidden:true,
    promptIncludes:'only fictional note and question',
    validation:'not-performed'})+'\n');
-  const cases=W5_DIAGNOSTIC_CASES.slice(0,n);
+  const cases=W5_DIAGNOSTIC_CASES.slice(startAt-1,startAt-1+n);
   for(let i=0;i<cases.length;i++){
    const item=cases[i];
    if(i>0)await new Promise(resolve=>setTimeout(resolve,4000));
