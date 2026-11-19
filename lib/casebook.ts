@@ -10,7 +10,15 @@ export type Event = { id: string; at: string; kind: 'note' | 'decision' | 'quest
 type VisualEvidence = { key: string; readings: NonNullable<CaseResult['visualReadings']>; items?: Array<{fileKey:string; reading:NonNullable<CaseResult['visualReadings']>[number]}> };
 export type AnalysisKind = 'question' | 'analysis' | 'management' | 'council' | 'summary';
 export type Analysis = { requestOptionsKey?: string; question?:string; kind?:AnalysisKind; clinicalContext?:string; newFacts?:string; reusedSources?:string[]; inputSignature?: string; materialsKey?: string; visualEvidence?: VisualEvidence; id: string; at: string; context: string; result: CaseResult };
+export type GuidelineReview = {
+  id:string; at:string; topic:string; text:string; model:string;
+  mode:'standard'|'detailed'|'online'; language:string;
+  estimatedUsd:number; sourceCaseUpdatedAt:string; physicianEdited:boolean;
+  /** The search output is not an approved guideline, clinical observation or signed physician decision. */
+  status:'requires-review';
+};
 export type ClinicalCase = {
+  guidelineReviews?:GuidelineReview[];
   structuredProtocolDrafts?:Record<string,{source:string;document:import('../packages/protocol/document').ProtocolDocument|null;at:string}>;
   geneticsDraft?:import('./genetics-case-handoff').GeneticsWorkspaceDraft;
   stationDraft?:{note:string;imageProfile:import('../packages/medical-images/profiles').ImageProfile};
@@ -224,6 +232,29 @@ export async function persistStructuredProtocolDraft(caseId:string,key:string,dr
   await writeVaultCase(updated);return updated;
  });
 }
+/** Save independent guideline search output in the originating case, never as a physician event.
+ * The signed clinical case content is checked inside the serialized local write.
+ * Other module results and unsent physician drafts remain untouched. */
+export async function persistGuidelineReview(
+ caseId:string,expectedSignature:string,review:GuidelineReview,
+):Promise<ClinicalCase>{
+ if(!review.id||review.id.length>100||!review.topic.trim()||review.topic.length>550||
+  !review.text.trim()||review.text.length>100000||!review.model||review.model.length>120||
+  !['standard','detailed','online'].includes(review.mode)||!review.language||review.language.length>32||
+  !Number.isFinite(review.estimatedUsd)||review.estimatedUsd<0||
+  review.status!=='requires-review'||typeof review.sourceCaseUpdatedAt!=='string')
+  throw Error('invalid_guideline_review');
+ return serialCaseWrite(caseId,async()=>{
+  const current=await readVaultCaseById(caseId);
+  if(!current||current.deletedAt||current.status==='closed')throw Error('case_not_active');
+  if(caseSignature(current)!==expectedSignature)throw Error('case_sources_changed');
+  if((current.guidelineReviews??[]).some(item=>item.id===review.id))return current;
+  const updated:ClinicalCase={...current,updated:new Date().toISOString(),
+   guidelineReviews:[review,...(current.guidelineReviews??[])]};
+  await writeVaultCase(updated);return updated;
+ });
+}
+
 /** Genetic results and drafts share the case write queue with other modules. */
 export async function persistGeneticsResult(caseId:string,files:readonly CaseFile[],turn?:GeneticsDiscussionTurn):Promise<ClinicalCase>{
  return serialCaseWrite(caseId,async()=>{
@@ -264,6 +295,7 @@ export async function persistCaseAutosave(value:ClinicalCase):Promise<boolean>{
     JSON.stringify(latest.protocolRevisions)!==JSON.stringify(value.protocolRevisions)||
     JSON.stringify(latest.structuredProtocolDrafts)!==JSON.stringify(value.structuredProtocolDrafts)||
     JSON.stringify(latest.geneticsDraft)!==JSON.stringify(value.geneticsDraft)||
+    JSON.stringify(latest.guidelineReviews)!==JSON.stringify(value.guidelineReviews)||
     latest.analyses.length>value.analyses.length||
     latest.events.length>value.events.length||
     latest.files.length>value.files.length||
@@ -417,6 +449,9 @@ export function exportCase(value: ClinicalCase): string {
     `Вопрос: ${value.question}`,
     ...(unfinished.length?['\n## Незавершённый редактор врача · не является заключением',...unfinished]:[]),
     '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
+    ...(value.guidelineReviews??[]).map(r=>'\n## Результат независимого поиска рекомендаций · НЕ ПРОВЕРЕН врачом\n'+
+      [r.at,r.topic,'Модель: '+r.model,'Режим: '+r.mode,'Язык: '+r.language,
+       r.physicianEdited?'Текст редактировался':'Текст модели без изменений',r.text].join('\n\n')),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...Object.values(value.structuredProtocolDrafts??{}).map(draft=>'\n## Незавершённый протокол · не является утверждённым документом\n'+[draft.source,...(draft.document?.sections.map(part=>part.title+'\n'+part.text)??[])].join('\n\n')),
