@@ -1,0 +1,186 @@
+{
+  "description": "Unseen holdout of 30 synthetic physician questions; expert-designated expected tier versus locally executed heuristic prototype, not LLM answers or clinical validation",
+  "prototype": "v2 after tuning on separate 52 cases",
+  "cases": [
+    {
+      "id": "H01",
+      "expectedTier": "haiku",
+      "experimentalTier": "haiku",
+      "question": "Что такое синусовый ритм?"
+    },
+    {
+      "id": "H02",
+      "expectedTier": "haiku",
+      "experimentalTier": "opus",
+      "question": "Define orthostatic hypotension."
+    },
+    {
+      "id": "H03",
+      "expectedTier": "haiku",
+      "experimentalTier": "haiku",
+      "question": "Что такое BNP?"
+    },
+    {
+      "id": "H04",
+      "expectedTier": "haiku",
+      "experimentalTier": "haiku",
+      "question": "What does APTT stand for?"
+    },
+    {
+      "id": "H05",
+      "expectedTier": "haiku",
+      "experimentalTier": "sonnet",
+      "question": "Как расшифровывается ЛПНП?"
+    },
+    {
+      "id": "H06",
+      "expectedTier": "haiku",
+      "experimentalTier": "haiku",
+      "question": "What is CRP as a laboratory biomarker?"
+    },
+    {
+      "id": "H07",
+      "expectedTier": "haiku",
+      "experimentalTier": "sonnet",
+      "question": "Для чего используется шкала CURB-65?"
+    },
+    {
+      "id": "H08",
+      "expectedTier": "haiku",
+      "experimentalTier": "sonnet",
+      "question": "Explain the term hemoptysis, no patient case."
+    },
+    {
+      "id": "H09",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Бессимптомное увеличение щелочной фосфатазы в 1,5 раза, что проверить?"
+    },
+    {
+      "id": "H10",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Stable adult with mild iron deficiency and normal Hb: next diagnostic steps?"
+    },
+    {
+      "id": "H11",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Рецидивирующий ринит без температуры: как уточнить аллергическую причину?"
+    },
+    {
+      "id": "H12",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Mild fatigue and ferritin 18, normal Hb. How would you evaluate?"
+    },
+    {
+      "id": "H13",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "ТТГ 6,2 при нормальном Т4, какие дополнительные данные нужны?"
+    },
+    {
+      "id": "H14",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "What should be checked before starting statin for primary prevention?"
+    },
+    {
+      "id": "H15",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Случайно найден узел 4 мм в лёгком на КТ без симптомов; нужен ли контроль?"
+    },
+    {
+      "id": "H16",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "How to evaluate asymptomatic mild eosinophilia?"
+    },
+    {
+      "id": "H17",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Patient oxygen saturation 87% and drowsy, what is the disposition?"
+    },
+    {
+      "id": "H18",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Сатурация 88, резко появилась одышка, что делать?"
+    },
+    {
+      "id": "H19",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Newborn with 38.3 fever and lethargy: outpatient observation?"
+    },
+    {
+      "id": "H20",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Младенец 2 месяца, температура 38.5, перестал есть."
+    },
+    {
+      "id": "H21",
+      "expectedTier": "opus",
+      "experimentalTier": "sonnet",
+      "question": "Chest tightness at rest with diaphoresis and unstable BP."
+    },
+    {
+      "id": "H22",
+      "expectedTier": "opus",
+      "experimentalTier": "sonnet",
+      "question": "Врач спрашивает о коллапсе после введения лекарства и генерализованной крапивнице."
+    },
+    {
+      "id": "H23",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Sudden severe headache, neck stiffness, fever, anticoagulated."
+    },
+    {
+      "id": "H24",
+      "expectedTier": "opus",
+      "experimentalTier": "sonnet",
+      "question": "ОАК: тромбоциты 15 × 10^9/л, кровоточивость дёсен."
+    },
+    {
+      "id": "H25",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "A 67-year-old has new oxygen requirement, RR 34, and hypotension."
+    },
+    {
+      "id": "H26",
+      "expectedTier": "opus",
+      "experimentalTier": "opus",
+      "question": "Пульс 35, головокружение, давление 85/40 — тактика."
+    },
+    {
+      "id": "H27",
+      "expectedTier": "sonnet",
+      "experimentalTier": "opus",
+      "question": "No syncope, no chest pain: follow-up strategy for stable SVT episode last month?"
+    },
+    {
+      "id": "H28",
+      "expectedTier": "sonnet",
+      "experimentalTier": "sonnet",
+      "question": "Без боли в груди, состояние стабильное, давление дома 145/90. Как уточнить диагноз?"
+    },
+    {
+      "id": "H29",
+      "expectedTier": "opus",
+      "experimentalTier": "sonnet",
+      "question": "What is a normal INR? My patient with cirrhosis has INR 6.2 and melena."
+    },
+    {
+      "id": "H30",
+      "expectedTier": "opus",
+      "experimentalTier": "sonnet",
+      "question": "Что значит QTc? У пациента 610 мс на фоне двух препаратов."
+    }
+  ]
+}
