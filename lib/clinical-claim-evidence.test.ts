@@ -87,8 +87,8 @@ test('W5 source: a cautionary claim should not be misclassified as an affirmativ
  assert.equal(result.restrictionLanguagePresent,false);
 });
 test('W5 source: exact quantities or topic match never certify clinical applicability',()=>{
- const result=reviewClaimEvidence('Start Drug A 5 mg',citation({
-  excerpt:'Drug A 5 mg is not recommended for treatment of this condition.'}));
+ const result=reviewClaimEvidence('Start apixaban 5 mg in pregnancy',citation({
+  excerpt:'Apixaban 5 mg is not recommended in pregnancy for this condition.'}));
  assert.equal(result.restrictionLanguagePresent,true);
  assert.deepEqual(result.missingQuantities,[]);
  assert.equal(result.topicOverlap,true);
