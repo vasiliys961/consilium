@@ -289,6 +289,22 @@ export async function persistNativeProtocol(
   return updated;
  });
 }
+/** Preserve separate unsigned AI-role opinions and explicit missing votes in portable text exports.
+ * The synthesis is not evidence that absent roles agreed with it.
+ */
+function exportCouncilVoices(voices:CaseResult['voices']):string {
+  if(!voices?.length)return '';
+  return ['### AI-роли консилиума · предварительные мнения, не независимые врачи и не решение врача',
+    ...voices.map(voice=>{
+      const perspective=voice.clinicalPerspective?` · AI-перспектива: ${voice.clinicalPerspective}`:'';
+      const label=`Роль ${voice.id}${perspective}`;
+      return voice.status==='done'&&voice.text?.trim()
+        ? `${label} · модель: ${voice.model??'не указана'} · неподписанное мнение:\n${voice.text}`
+        : `${label} · НЕ ОЦЕНЕНО: ответ роли отсутствует, нельзя считать его согласием.`;
+    })
+  ].join('\n\n');
+}
+
 export function exportCase(value: ClinicalCase): string {
   const editor=value.workspaceDraft;
   const unfinished=[
@@ -302,8 +318,8 @@ export function exportCase(value: ClinicalCase): string {
     '\n## Профильные исследования',...(value.moduleReports??[]).map(radiologyEvidenceText),'\n## Материалы', ...value.files.map(f => `${f.name} (${f.bytes ?? 0} байт)`),
     ...(value.protocols??[]).map(p=>'\n## Протокол · черновик\n'+p.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
     ...(value.protocolRevisions??[]).map(r=>'\n## Предыдущая редакция протокола · '+r.savedAt+'\n'+r.document.sections.map(s=>s.title+'\n'+s.text).join('\n\n')),
-    '\n## Хронология', ...value.events.map(e => `${e.at} • ${eventLabel(e.kind)}\n${e.text}`),
-    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
+    '\n## Хронология', ...value.events.map(e => [`${e.at} • ${eventLabel(e.kind)}\n${e.text}`, ...(e.revisions??[]).map(revision=>`Предыдущая редакция, сохранена при исправлении ${revision.at}: ${revision.text}`)].join('\n')),
+    ...value.analyses.map(a => `\n## ${analysisQuestion(a)} · ${a.at} — черновик\n${a.result.draft.summary}\n${a.result.ecgEvidence?ecgEvidenceText(a.result.ecgEvidence):''}\n${studyReportsText(a.result.draft.studyReports??[])}\n${a.result.draft.report?clinicalReportText(a.result.draft.report):""}\n${a.result.draft.statements.map(s => `• ${s.text} [${s.source || 'Без подтверждённого источника'}]`).join('\n')}\n${exportCouncilVoices(a.result.voices)}\nИсточники:\n${a.result.citations.map(c => `${c.title} ${c.url || ''}`).join('\n')}\nНе оценено: ${a.result.unassessed.join(', ') || 'см. журнал обработки'}`),
   ].join('\n\n');
 }
 
