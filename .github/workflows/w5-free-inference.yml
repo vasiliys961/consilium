@@ -1,0 +1,64 @@
+name: W5 free-only synthetic model smoke test
+
+on:
+  pull_request:
+    types: [opened]
+    branches:
+      - chatgpt-dev
+    paths:
+      - '.github/workflows/w5-free-inference.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  free-five-case-smoke:
+    # Only this owned in-repository PR. No pull_request_target and no fork secrets.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'chatgpt/w5-diagnostic-benchmark-20261119' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Five fictional clinical cases on a verified zero-cost model
+        id: trial
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+            echo "::error::NOT RUN: OPENROUTER_API_KEY Actions secret is not available in vasiliys961/consilium."
+            echo "No network inference calls were made; do not count this as a passed model evaluation."
+            exit 1
+          fi
+          # Capture only fictional case IDs and model answers, never the API key.
+          node --experimental-strip-types scripts/w5-free-model-trial.mjs \
+            --run --model nvidia/nemotron-3-ultra-550b-a55b:free --max 5 \
+            > "${RUNNER_TEMP}/w5-free-smoke.jsonl"
+          node --input-type=module - "${RUNNER_TEMP}/w5-free-smoke.jsonl" <<'JS'
+          import {readFileSync} from 'node:fs';
+          const rows=readFileSync(process.argv[2],'utf8').trim().split('\n').map(line=>JSON.parse(line));
+          const answers=rows.filter(row=>row.caseId);
+          console.log('W5 synthetic free-only trial completed:',answers.length,'cases');
+          for(const row of answers){
+            console.log(row.caseId,'status=',row.status,'model=',row.returnedModel,
+              'elapsed_ms=',row.elapsedMs,'reported_cost_usd=',row.usage?.reportedCostUsd??'not reported');
+          }
+          if(answers.length!==5 || answers.some(row=>row.status!=='answered')){
+            console.error('Incomplete free-only trial. Do not claim clinical accuracy.');
+            process.exit(1);
+          }
+          console.log('No diagnosis grades computed; clinician review required.');
+          JS
+      - name: Save fictional answers for clinician review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w5-free-five-fictional-answers
+          path: ${{ runner.temp }}/w5-free-smoke.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
