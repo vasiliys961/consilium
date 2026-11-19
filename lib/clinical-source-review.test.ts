@@ -86,3 +86,14 @@ test('C7: the second excerpt of one retrieved article links only to its own clai
  assert.equal(source.passages[1].citation.chapter,'Safety');
  assert.equal(source.passages[1].citation.paragraph,3);
 });
+
+
+test('guideline search handoff binds the originating case, rejecting malformed cross-case identity',()=>{
+ const item=stage('x','summary',[]);
+ const value={id:'case-synthetic-a',question:'',analyses:[item]} as ClinicalCase;
+ const handoff=makeGuidelineTopicHandoff(value,item,clinicalSourcesForStage(value.analyses,0));
+ assert.equal(handoff.caseId,'case-synthetic-a');
+ assert.equal(parseGuidelineTopicHandoff(JSON.stringify(handoff))?.caseId,'case-synthetic-a');
+ assert.equal(parseGuidelineTopicHandoff(JSON.stringify({...handoff,caseId:42})),null);
+ assert.equal(parseGuidelineTopicHandoff(JSON.stringify({...handoff,caseId:'a'.repeat(151)})),null);
+});
