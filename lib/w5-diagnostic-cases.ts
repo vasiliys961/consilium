@@ -150,7 +150,7 @@ export const W5_DIAGNOSTIC_CASES:readonly W5DiagnosticCase[]=[
   mustNotAssert:['pneumonia confirmed on imaging','fluid status already established'],
   missingEvidence:['SpO2','chest imaging','serial creatinine'],guidelineKeys:['aki','sepsis']},
  {id:'DX18',area:'multimorbidity',locale:'ru',urgency:'emergency',
-  note:'ФП, приём апиксабана. Мелена, анемия: гемоглобин снизился с 110 до 78 г/л, СКФ: 35. Данные о гемодинамике неполные.',
+  note:'ФП, почечная недостаточность, приём апиксабана. Мелена, анемия: гемоглобин снизился с 110 до 78 г/л, СКФ: 35. Данные о гемодинамике неполные.',
   question:'Оценить риск кровотечения на фоне антикоагулянтной терапии.',
   expectedDomains:['cardiology','nephrology','hematology'],mustConsider:['значимое желудочно-кишечное кровотечение','гемодинамическая нестабильность'],
   mustAddress:['неотложная оценка кровопотери','проверка антикоагулянтов и гемодинамики'],
