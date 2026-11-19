@@ -204,7 +204,13 @@ export function localDrugCoverage(current:string,proposed=''){
 
 
 const isMetformin=(value:string)=>/^(?:metformin|glucophage|метформин|глюкофаж)(?!\p{L})/iu.test(value);
-export function checkMedicationRegimen(input:{current:string;proposed?:string;stopped?:string;alternatives?:string;context?:MedicationContext}){
+export type MedicationRegimenResult={
+ alerts:DrugInteractionAlert[];
+ alternatives:Array<{name:string;alerts:DrugInteractionAlert[];organAlerts:OrganSafetyAlert[];missing:string[];unrecognized:string[]}>;
+ organAlerts:OrganSafetyAlert[];missing:string[];stopped:string[];
+ coverage:ReturnType<typeof localDrugCoverage>;
+};
+export function checkMedicationRegimen(input:{current:string;proposed?:string;stopped?:string;alternatives?:string;context?:MedicationContext}):MedicationRegimenResult{
  const stopped=drugEntries(input.stopped??'');
  const canonical=(value:string)=>{
   const aliases:[string,RegExp][]=[
@@ -237,17 +243,9 @@ export function checkMedicationRegimen(input:{current:string;proposed?:string;st
  const current=drugEntries(input.current).filter(retained).join('\n');
  const proposed=drugEntries(input.proposed??'').filter(retained).join('\n');
  const alerts=knownDrugInteractions(current,proposed);
- // Each option is checked with the baseline separately, not against other alternatives.
- // An alternative is a separate complete option, not an addition to another proposed option.
- // Option rows may contain multiple simultaneously intended ingredients joined by "+".
- const alternatives=(input.alternatives??'').split(/[\n|;]/).map(s=>s.trim()).filter(Boolean).slice(0,12).map(name=>{
-  const optionDrugs=drugEntries(name);
-  const alerts=knownDrugInteractions(current,optionDrugs.join('\n')).filter(a=>
-   optionDrugs.some(drug=>a.first===drug||a.second===drug));
-  return {name,alerts};
- });
  const context=input.context??{},organAlerts:OrganSafetyAlert[]=[],missing:string[]=[];
- const active=drugEntries([current,proposed].filter(Boolean).join('\n'));
+ // Exclude explicitly ophthalmic/topical forms from systemic organ-risk checks.
+ const active=drugEntries([current,proposed].filter(Boolean).join('\n')).filter(value=>!nonSystemic.test(value));
  const metformin=active.find(isMetformin),egfr=context.egfr;
  if(metformin){
   const url='https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=498ac5fc-14be-d36a-e063-6394a90a3012';
@@ -294,5 +292,22 @@ export function checkMedicationRegimen(input:{current:string;proposed?:string;st
  }
  if(context.decompensatedCirrhosis&&has(/^(?:simvastatin|zocor|симвастатин|зокор)(?!\p{L})/iu))organAlerts.push({drug:'Симвастатин',severity:'contraindicated',risk:'Симвастатин противопоказан при декомпенсированном циррозе',action:'Пересмотрите назначение по инструкции.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e59bf31f-d880-4d9e-b6c2-5a18a53718f9',section:'4'});
  if(context.severeHepaticImpairment&&has(/^(?:apixaban|eliquis|апиксабан|эликвис)(?!\p{L})/iu))organAlerts.push({drug:'Апиксабан',severity:'major',risk:'Апиксабан при тяжёлой печёночной недостаточности не рекомендуется',action:'Уточните печёночный статус и альтернативы.',url:'https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=7be1f4c1-bb2f-4ded-ae9a-515d2a22f93e',section:'8.7'});
+ // Each alternative is a separate proposed regimen layered onto the retained baseline.
+ // Reuse the context-aware checker: pair checks alone miss renal, K+, QTc and
+ // active-bleeding contraindications for individual medicines in an option.
+ // Alternatives are never checked together or against the primary proposal.
+ const baselineOrganAlerts=new Set(organAlerts.map(a=>a.drug+'|'+a.severity+'|'+a.risk));
+ const baselineMissing=new Set(missing);
+ const alternatives=(input.alternatives??'').split(/[\n|;]/).map(value=>value.trim()).filter(Boolean).slice(0,12).map(name=>{
+  const optionDrugs=drugEntries(name);
+  const checked=checkMedicationRegimen({current,proposed:optionDrugs.join('\n'),context});
+  return {
+   name,
+   alerts:checked.alerts.filter(a=>optionDrugs.some(drug=>a.first===drug||a.second===drug)),
+   organAlerts:checked.organAlerts.filter(a=>!baselineOrganAlerts.has(a.drug+'|'+a.severity+'|'+a.risk)),
+   missing:checked.missing.filter(value=>!baselineMissing.has(value)),
+   unrecognized:checked.coverage.unrecognized.filter(value=>optionDrugs.includes(value)),
+  };
+ });
  return {alerts,alternatives,organAlerts,missing,stopped,coverage:localDrugCoverage(current,proposed)};
 }
