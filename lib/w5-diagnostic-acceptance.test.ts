@@ -163,3 +163,23 @@ test('W5 offline CLI emits an honest template with all 25 cases unassessed',()=>
  assert.equal(new Set(template.reviews.map(item=>item.caseId)).size,25);
  assert.ok(template.reviews.every(item=>item.status==='not_assessed'));
 });
+
+test('W5 free-model runner: default cannot send any paid or free network request',()=>{
+ const p=spawnSync(process.execPath,
+  ['--experimental-strip-types','scripts/w5-free-model-trial.mjs'],
+  {encoding:'utf8',timeout:10000,env:{...process.env,OPENROUTER_API_KEY:''}});
+ assert.equal(p.status,0,p.stderr);
+ const header=JSON.parse(p.stdout) as {mode:string;modelCallsMade:number;costUsd:number};
+ assert.equal(header.mode,'dry-run');
+ assert.equal(header.modelCallsMade,0);
+ assert.equal(header.costUsd,0);
+});
+test('W5 free-model runner: paid model ID rejected before any API request',()=>{
+ const p=spawnSync(process.execPath,
+  ['--experimental-strip-types','scripts/w5-free-model-trial.mjs',
+   '--run','--model','anthropic/claude-opus-4','--max','1'],
+  {encoding:'utf8',timeout:10000,env:{...process.env,OPENROUTER_API_KEY:''}});
+ assert.equal(p.status,1);
+ assert.match(p.stderr,/paid and auto-routing IDs are prohibited/);
+ assert.doesNotMatch(p.stdout,/caseId/);
+});
