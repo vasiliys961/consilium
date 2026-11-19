@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {checkMedicationRegimen, type MedicationContext, type DrugInteractionAlert, type OrganSafetyAlert} from '@/lib/drug-interaction-rules';
 import {useWorkspaceLanguage} from './workspace-language';
+import {readManualMedicationFields} from '@/lib/manual-medication-fields';
 
 export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert[] }) {
   const { t } = useWorkspaceLanguage();
@@ -25,12 +26,13 @@ function OrganSafetyAlerts({alerts}:{alerts:OrganSafetyAlert[]}){
 }
 
 export function DrugInteractionChecker({current,onCurrentChange,disabled=false,initialProposed='',proposed:controlledProposed,onReview,onProposedChange,onDetailsChange,reviewLabel}:{current?:string;onCurrentChange?:(text:string)=>void;disabled?:boolean;initialProposed?:string;proposed?:string;onReview?:(current:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext})=>void;onProposedChange?:(text:string)=>void;onDetailsChange?:()=>void;reviewLabel?:string}){
-  const {t}=useWorkspaceLanguage();
+  const {t,language}=useWorkspaceLanguage();
   const [standalone,setStandalone]=useState(''),[localProposed,setProposed]=useState(initialProposed);
   const [stopped,setStopped]=useState(''),[alternatives,setAlternatives]=useState('');
   const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState(''),[ageText,setAgeText]=useState(''),[qtcText,setQtcText]=useState('');
   const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false),[activeBleeding,setActiveBleeding]=useState(false);
-  const context:MedicationContext={egfr:egfrText.trim()?Number(egfrText):null,potassium:potassiumText.trim()?Number(potassiumText):null,ageYears:ageText.trim()?Number(ageText):null,qtcMs:qtcText.trim()?Number(qtcText):null,decompensatedCirrhosis:decompensatedCirrhosis||undefined,severeHepaticImpairment:severeHepaticImpairment||undefined,activeBleeding:activeBleeding||undefined};
+  const manual=readManualMedicationFields({egfr:egfrText,potassium:potassiumText,ageYears:ageText,qtcMs:qtcText});
+  const context:MedicationContext={...manual.context,decompensatedCirrhosis:decompensatedCirrhosis||undefined,severeHepaticImpairment:severeHepaticImpairment||undefined,activeBleeding:activeBleeding||undefined};
   const proposed=controlledProposed??localProposed;
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
@@ -43,15 +45,16 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
     <details><summary>{t('Отменяемые препараты, альтернативы и данные пациента')}</summary>
       <label>{t('Отменены до новой схемы (не входят в текущий приём)')}<textarea rows={2} disabled={disabled} value={stopped} onChange={e=>{setStopped(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Взаимоисключающие альтернативы, каждая на отдельной строке')}<textarea rows={2} disabled={disabled} value={alternatives} onChange={e=>{setAlternatives(e.target.value);onDetailsChange?.();}}/></label>
-      <label>{t('СКФ, мл/мин/1,73 м² (если известна)')}<input type="number" min="0" max="200" step="0.1" disabled={disabled} value={egfrText} onChange={e=>{setEgfrText(e.target.value);onDetailsChange?.();}}/></label>
-      <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="0" max="15" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{t('СКФ, мл/мин/1,73 м² (если известна)')}<input type="number" min="0" max="130" step="0.1" disabled={disabled} value={egfrText} onChange={e=>{setEgfrText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="1.5" max="10" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Возраст, годы (если известен)')}<input type="number" min="0" max="120" step="1" disabled={disabled} value={ageText} onChange={e=>{setAgeText(e.target.value);onDetailsChange?.();}}/></label>
-      <label>{t('QTc, мс (если известен)')}<input type="number" min="200" max="900" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{t('QTc, мс (если известен)')}<input type="number" min="250" max="800" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
       <label><input type="checkbox" disabled={disabled} checked={activeBleeding} onChange={e=>{setActiveBleeding(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённое активное патологическое кровотечение')}</label>
       <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
       <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
     </details>
-    {onReview&&<button type="button" disabled={disabled||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim()||alternatives.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}<OrganSafetyAlerts alerts={result.organAlerts}/>
+    {manual.issues.length>0&&<p role="status" aria-live="polite">{language==='ru'?'Проверьте или очистите некорректные числовые поля. Неподтверждённые значения не используются: ':'Check or clear invalid numeric fields. Unconfirmed values are not used: '}{manual.issues.map(issue=>({egfr:'eGFR',potassium:language==='ru'?'Калий':'Potassium',ageYears:language==='ru'?'Возраст':'Age',qtcMs:'QTc'}[issue.field])).join(', ')}.</p>}
+    {onReview&&<button type="button" disabled={disabled||manual.issues.length>0||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim()||alternatives.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}<OrganSafetyAlerts alerts={result.organAlerts}/>
       {alerts.length?<DrugInteractionAlerts alerts={alerts}/>:<p>{t('В доступных правилах совпадений нет. Это не подтверждает совместимость; для остальных сочетаний нужен отдельный разбор и проверка источников.')}</p>}
       {result.missing.length>0&&<p>{t('Для решения требуется уточнить:')} {result.missing.join('; ')}</p>}
       {result.stopped.length>0&&<p>{t('Исключены из действующей схемы:')} {result.stopped.join('; ')}</p>}
