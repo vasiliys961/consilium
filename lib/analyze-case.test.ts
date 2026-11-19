@@ -271,3 +271,30 @@ test('C3 automatically applies typed clinical facts to separately proposed manag
  assert.equal(options[1].localInteractions,undefined,'Alternative B must not be combined with A');
  assert.ok(calls>=1);
 });
+
+test('W5: a mock clinical model cannot promote proposed unit fixes into verified medication facts',async()=>{
+ const note=[
+  'Clinical question: review hypothetical anticoagulant and renal risks',
+  'Current medications reported by the physician:\nmetformin\nspironolactone',
+  'eGFR: 25 mg/dL\nK+: 5.8 mmol/L\nQTc: 520 s',
+ ].join('\n\n');
+ const result=await analyzeCase({task:'management',text:note,locale:'en',externalSearch:false},{env,fetch:async(_url,init)=>{
+  const body=JSON.parse(String(init?.body));
+  if(body.messages[0].content.includes('unsigned clinical reasoning draft'))return response({
+   summary:'Synthetic unsigned draft',statements:[],
+   report:{problem:'Hypothetical medication review',management:[
+    {option:'Possible regimen',medications:['moxifloxacin'],conditions:[],safetyChecks:[],monitoring:[]}
+   ]}
+  });
+  return response({text:'Synthetic planning',source:null});
+ }});
+ const report=result.draft.report;
+ assert.ok(report,'a structured unsigned report should exist');
+ assert.ok(report.localContextHints?.some(h=>h.field==='egfr'&&h.kind==='units'));
+ assert.ok(report.localContextHints?.some(h=>h.field==='qtcMs'&&h.kind==='units'));
+ assert.ok(report.localContextHints?.every(h=>h.status==='requires_physician_confirmation'));
+ assert.ok(report.management[0].localSafetyGaps?.some(g=>g.includes('СКФ')));
+ assert.ok(report.management[0].localOrganAlerts?.some(a=>a.risk.includes('гиперкалиемия')));
+ assert.equal(report.management[0].localOrganAlerts?.some(a=>a.risk.includes('Метформин: СКФ')),false);
+ assert.equal(report.management[0].localOrganAlerts?.some(a=>a.risk.includes('выраженном удлинении QTc')),false);
+});
