@@ -1,0 +1,64 @@
+name: W5 free-model recover remaining 19 synthetic cases
+
+on:
+  pull_request:
+    branches: [chatgpt-dev]
+    paths: ['.github/workflows/w5-free-recovery.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  free-model-batches:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'chatgpt/w5-diagnostic-benchmark-20261119' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - {start: 7, count: 4}
+          - {start: 11, count: 5}
+          - {start: 16, count: 5}
+          - {start: 21, count: 5}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Free-only diagnostic review source DX${{ matrix.start }}
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${OPENROUTER_API_KEY:-}" || { echo "::error::Secret not available"; exit 1; }
+          node --experimental-strip-types scripts/w5-free-model-trial.mjs \
+            --run --model nvidia/nemotron-3-ultra-550b-a55b:free \
+            --start ${{ matrix.start }} --max ${{ matrix.count }} \
+            > "${RUNNER_TEMP}/w5-free-batch.jsonl"
+          node --input-type=module - "${RUNNER_TEMP}/w5-free-batch.jsonl" ${{ matrix.start }} ${{ matrix.count }} <<'JS'
+          import {readFileSync} from 'node:fs';
+          const [path,start,limit]=process.argv.slice(2);
+          const rows=readFileSync(path,'utf8').trim().split('\n').map(line=>JSON.parse(line));
+          const cases=rows.filter(row=>row.caseId);
+          if(cases.length!==Number(limit)||cases.some((row,index)=>
+            row.caseId!=='DX'+String(Number(start)+index).padStart(2,'0')||row.status!=='answered')){
+            console.error('Missing/empty diagnostic response. Clinical grading not attempted.');
+            process.exit(1);
+          }
+          for(const row of cases){
+            console.log(row.caseId,'model=',row.returnedModel,
+              'reported_cost_usd=',row.usage?.reportedCostUsd??'unknown','latency_ms=',row.elapsedMs);
+          }
+          console.log('Passed free-only API response checks; clinician grading still NOT DONE.');
+          JS
+      - name: Store fictional responses even if batch stops early
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w5-free-batch-from-DX${{ matrix.start }}
+          path: ${{ runner.temp }}/w5-free-batch.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
