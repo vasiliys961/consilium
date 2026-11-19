@@ -128,3 +128,79 @@ test('C3 post-audit regression: rivaroxaban and warfarin bleeding risks with NSA
  }
  assert.equal(knownDrugInteractions('ривароксабан','ибупрофен гель').length,0);
 });
+
+test('W5: renal and active-bleeding contraindications are assessed in alternatives separately',()=>{
+ const result=checkMedicationRegimen({
+  current:'warfarin',alternatives:'metformin\napixaban',
+  context:{egfr:24,activeBleeding:true},
+ });
+ assert.equal(result.alternatives.length,2);
+ assert.equal(result.organAlerts.length,0);
+ assert.ok(result.alternatives[0].organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('СКФ')));
+ assert.equal(result.alternatives[0].alerts.length,0,'metformin is not combined with the other option');
+ assert.ok(result.alternatives[1].organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('кровотечение')));
+ assert.ok(result.alternatives[1].alerts.some(a=>a.risk.includes('Варфарин и апиксабан')));
+ assert.ok(!result.alternatives[1].organAlerts.some(a=>a.risk.includes('Метформин')));
+});
+
+test('W5: baseline safety warnings are not duplicated in every option',()=>{
+ const result=checkMedicationRegimen({
+  current:'metformin',alternatives:'apixaban\nrivaroxaban',
+  context:{egfr:20,activeBleeding:true},
+ });
+ assert.ok(result.organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('Метформин')));
+ assert.equal(result.alternatives.length,2);
+ for(const option of result.alternatives){
+  assert.ok(option.organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('кровотечение')));
+  assert.equal(option.organAlerts.some(a=>a.risk.includes('Метформин')),false);
+ }
+ assert.equal(result.alternatives.some(a=>a.alerts.some(x=>x.risk.includes('Апиксабан и ривароксабан'))),false);
+});
+
+test('W5: potassium, QTc and hepatic risks reach their own alternative, not other options',()=>{
+ const result=checkMedicationRegimen({
+  current:'',alternatives:'spironolactone\nmoxifloxacin\nsimvastatin',
+  context:{potassium:5.8,qtcMs:530,decompensatedCirrhosis:true},
+ });
+ const [potassium,qt,liver]=result.alternatives;
+ assert.ok(potassium.organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('гиперкалиемия')));
+ assert.ok(qt.organAlerts.some(a=>a.risk.includes('QTc')));
+ assert.ok(liver.organAlerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('Симвастатин')));
+ assert.equal(potassium.organAlerts.some(a=>a.risk.includes('QTc')),false);
+ assert.equal(qt.organAlerts.some(a=>a.risk.includes('Симвастатин')),false);
+});
+
+test('W5: missing renal context and unknown option ingredients remain visible',()=>{
+ const result=checkMedicationRegimen({current:'',alternatives:'metformin\nunknown-synthetic-medicine'});
+ assert.ok(result.alternatives[0].missing.some(v=>v.includes('СКФ')));
+ assert.deepEqual(result.alternatives[1].unrecognized,['unknown-synthetic-medicine']);
+ assert.deepEqual(result.alternatives[0].alerts,[]);
+});
+
+test('W5: a contextual drug pair inside one alternative retains high severity',()=>{
+ const result=checkMedicationRegimen({
+  current:'',alternatives:'колхицин + кларитромицин\nwarfarin',
+  context:{egfr:22},
+ });
+ assert.equal(result.alternatives.length,2);
+ assert.ok(result.alternatives[0].alerts.some(a=>a.severity==='contraindicated'&&a.risk.includes('колхицина')));
+ assert.equal(result.alternatives[1].alerts.length,0);
+});
+
+test('W5: proposed main treatment does not leak into an alternative',()=>{
+ const result=checkMedicationRegimen({
+  current:'warfarin',proposed:'amiodarone',alternatives:'moxifloxacin',
+ });
+ assert.ok(result.alternatives[0].alerts.some(a=>a.risk.includes('варфарин')));
+ assert.equal(result.alternatives[0].alerts.some(a=>a.risk.includes('QT')),false);
+});
+
+test('W5: ophthalmic/topical products cannot trigger systemic single-drug alerts',()=>{
+ const result=checkMedicationRegimen({
+  current:'moxifloxacin eye drops',alternatives:'moxifloxacin ophthalmic\nspironolactone topical',
+  context:{qtcMs:530,potassium:5.8},
+ });
+ assert.equal(result.organAlerts.length,0);
+ assert.ok(result.alternatives.every(a=>a.organAlerts.length===0));
+ assert.ok(result.alternatives.every(a=>a.alerts.length===0));
+});
