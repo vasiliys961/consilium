@@ -2,6 +2,7 @@ name: W5 free-model recover remaining 19 synthetic cases
 
 on:
   pull_request:
+    types: [opened]
     branches: [chatgpt-dev]
     paths: ['.github/workflows/w5-free-recovery.yml']
 
