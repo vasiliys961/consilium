@@ -5,6 +5,7 @@ import {checkMedicationRegimen, type MedicationContext, type DrugInteractionAler
 import {useWorkspaceLanguage} from './workspace-language';
 import {readManualMedicationFields} from '@/lib/manual-medication-fields';
 import {reviewPatientSafetyFactors,type AllergyStatus,type PregnancyStatus} from '@/lib/medication-patient-factors';
+import {reviewOrderDocumentation,type DoseGap} from '@/lib/order-dose-documentation';
 
 export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert[] }) {
   const { t } = useWorkspaceLanguage();
@@ -39,6 +40,7 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
   const factors=reviewPatientSafetyFactors({current:active,proposed,alternatives,stopped,allergyStatus,allergenNames:allergyStatus==='confirmed'?allergenNames:'',pregnancyStatus});
+  const doseReview=reviewOrderDocumentation(proposed,alternatives);
   const alerts=result.alerts,coverage=result.coverage;
   return <section aria-label={t('Локальная проверка сочетаний')}>
     <h3>{t('Бесплатная локальная проверка сочетаний')}</h3>
@@ -67,6 +69,13 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
     {factors.issues.length>0&&<p role="status" aria-live="polite">{language==='ru'?'Уточните противоречивый или неполный анамнез аллергии; результат не проверен.':'Confirm incomplete or contradictory allergy history; screening is unresolved.'}</p>}
     {factors.findings.length>0&&<section aria-label={language==='ru'?'Совпадения аллергенов':'Allergen ingredient matches'}><strong>{language==='ru'?'Возможная связь лекарства с заявленной аллергией — требуется врачебная проверка':'Possible allergy-related medicine match — clinician review required'}</strong><ul>{factors.findings.map((f,i)=><li key={i}>{f.drug} / {f.allergen} · {f.alternative??f.scope} · {f.kind==='class_review'?(language==='ru'?'сходный класс, требует уточнения':'related class, confirm'):(language==='ru'?'то же действующее вещество':'same ingredient')}</li>)}</ul></section>}
     {factors.pregnancyReview.length>0&&<p role="status">{language==='ru'?'Беременность подтверждена: отдельно проверьте применимость инструкции для каждого препарата/альтернативы. Автоматической оценки безопасности для плода нет.':'Pregnancy confirmed: check pregnancy-specific labeling for every drug and alternative. Fetal safety has not been assessed.'} {factors.pregnancyReview.length}</p>}
+    {doseReview.entries.some(entry=>entry.gaps.length>0)&&<details><summary>{language==='ru'?'Неполные данные назначения — требуется уточнение':'Incomplete medication orders — clarification required'}</summary><ul>{doseReview.entries.filter(entry=>entry.gaps.length>0).slice(0,16).map((entry,i)=>{
+       const names:Record<DoseGap,string>=language==='ru'
+        ?{amount_or_unit:'доза/единица',concentration_only:'указана концентрация, не вводимое количество',route:'путь введения',frequency:'кратность',patient_weight:'масса тела для mg/kg',invalid_units:'недопустимая единица'}
+        :{amount_or_unit:'amount/unit',concentration_only:'concentration is not an administered amount',route:'route',frequency:'frequency',patient_weight:'patient weight for mg/kg',invalid_units:'invalid unit'};
+       return <li key={i}><strong>{entry.order}</strong>{entry.alternative?' · '+entry.alternative:''}: {entry.gaps.map(g=>names[g]).join('; ')}</li>;
+      })}</ul></details>}
+    {doseReview.unexaminedAlternatives>0&&<p role="status">{language==='ru'?'Часть альтернатив не проверена: ':'Some alternatives were not checked: '}{doseReview.unexaminedAlternatives}</p>}
     {factors.doseVerificationRequired&&<p>{language==='ru'?'Доза, путь, кратность и противопоказания по беременности/аллергиям не прошли полную проверку.':'Dose, route, frequency, and pregnancy/allergy contraindications have not been fully verified.'}</p>}
     {onReview&&<button type="button" disabled={disabled||manual.issues.length>0||factors.issues.length>0||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context,allergyStatus,allergenNames,pregnancyStatus})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim()||alternatives.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}<OrganSafetyAlerts alerts={result.organAlerts}/>
       {alerts.length?<DrugInteractionAlerts alerts={alerts}/>:<p>{t('В доступных правилах совпадений нет. Это не подтверждает совместимость; для остальных сочетаний нужен отдельный разбор и проверка источников.')}</p>}
