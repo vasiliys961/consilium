@@ -21,7 +21,7 @@ export type PatientSafetyFinding={
  allergen:string;
  scope:'current'|'proposed'|'alternative';
  alternative?:string;
- kind:'same_ingredient';
+ kind:'same_ingredient'|'class_review';
 };
 export type PatientSafetyReview={
  findings:PatientSafetyFinding[];
@@ -108,6 +108,11 @@ export function reviewPatientSafetyFactors(input:PatientSafetyInput):PatientSafe
   if(key&&allergenSet.has(key)){
    findings.push({drug,allergen:allergenSet.get(key)!,scope:stage.scope,
     ...(stage.alternative?{alternative:stage.alternative}:{}),kind:'same_ingredient'});
+  }else if(key&&['amoxicillin','ampicillin'].includes(key)&&allergenSet.has('penicillin')){
+   // Same penicillin family may require clinician source-specific review,
+   // but this does not establish allergy, severity or a contraindication.
+   findings.push({drug,allergen:allergenSet.get('penicillin')!,scope:stage.scope,
+    ...(stage.alternative?{alternative:stage.alternative}:{}),kind:'class_review'});
   }
   if(input.pregnancyStatus==='pregnant'){
    pregnancyReview.push({drug,scope:stage.scope,...(stage.alternative?{alternative:stage.alternative}:{})});

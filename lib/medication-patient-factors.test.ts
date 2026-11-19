@@ -40,9 +40,11 @@ test('W5 allergy: contradictory or missing confirmation is an unresolved issue',
  assert.ok(check({allergyStatus:'confirmed',allergenNames:'',proposed:'amoxicillin'}).issues.includes('confirmed_allergens_missing'));
  assert.ok(check({allergyStatus:'none_reported',allergenNames:'penicillin',proposed:'amoxicillin'}).issues.includes('allergy_status_conflict'));
 });
-test('W5 allergy: unknown class cross-reactivity never becomes a confirmed ingredient match',()=>{
+test('W5 allergy: reported penicillin allergy prompts class review for amoxicillin, not a confirmed contraindication',()=>{
  const r=check({allergyStatus:'confirmed',allergenNames:'penicillin',proposed:'amoxicillin'});
- assert.equal(r.findings.length,0,'Class-level allergy requires clinician/source review');
+ assert.equal(r.findings.length,1);
+ assert.equal(r.findings[0].kind,'class_review');
+ assert.equal(r.findings[0].scope,'proposed');
  assert.equal(r.doseVerificationRequired,true);
 });
 test('W5 allergy: unsupported narrative names require clarification, never silent absence',()=>{
