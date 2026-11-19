@@ -36,7 +36,8 @@ export function ClinicalSourcesPanel({value,analysis,index}:{value:ClinicalCase;
       <p><small>{access}. {assessment.topicOverlap
        ?t('Термины тезиса встречаются в тексте; это не проверка достоверности вывода.')
        :t('Совпадение содержания тезиса с доступным текстом не установлено.')}</small></p>
-      {assessment.missingQuantities.length>0&&<p><small>{t('Числа или дозы из тезиса не найдены в доступном фрагменте:')} {assessment.missingQuantities.join(', ')}.</small></p>}
+      {assessment.missingQuantities.length>0&&<p><small>{assessment.level==='bibliography'?t('Нет текста источника для проверки чисел или доз:'):t('Числа или дозы из тезиса не найдены в доступном фрагменте:')} {assessment.missingQuantities.join(', ')}.</small></p>}
+      {assessment.restrictionLanguagePresent&&<p><small><strong>{t('В доступном тексте есть ограничивающая формулировка. Проверьте показание, популяцию и фрагмент: совпадение числа или темы не подтверждает назначение.')}</strong></small></p>}
       {assessment.unlocatedPopulation.length>0&&<p><small>{t('Условия применимости не обнаружены в доступном тексте:')} {assessment.unlocatedPopulation.join(', ')}.</small></p>}
      </div>;
     })}
