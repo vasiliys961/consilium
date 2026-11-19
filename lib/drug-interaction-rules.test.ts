@@ -127,7 +127,8 @@ test('C3 post-audit regression: rivaroxaban and warfarin bleeding risks with NSA
   assert.ok(alerts[0].source&&alerts[0].section&&alerts[0].mechanism);
  }
  assert.equal(knownDrugInteractions('ривароксабан','ибупрофен гель').length,0);
-});\n
+});
+
 test('W5: renal and active-bleeding contraindications are assessed in alternatives separately',()=>{
  const result=checkMedicationRegimen({
   current:'warfarin',alternatives:'metformin\napixaban',
