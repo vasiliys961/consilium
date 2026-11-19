@@ -113,3 +113,22 @@ Object.assign(english,{
   "Уточните возраст по дате рождения и единицам (месяцы или годы). Не считайте число месяцев годами.": "Confirm age using date of birth and the entered unit (months or years). Do not treat a number of months as years.",
   "Проверьте значение и единицы по исходному документу; автоматической замены нет.": "Verify the value and units against the original record. No automatic replacement is made."
 });
+
+// Backfill the new W5 keys in each non-RU locale catalog. All clinical advice
+// has an English reference; do not leak untranslated Russian safety instructions.
+const w5TranslatedHeadings:Record<string,Record<string,string>>={
+ es:{'Возможные уточнения клинических данных':'Aclaraciones sugeridas de datos clínicos','В исходной записи:':'En el registro original:','Ожидаемый формат:':'Formato esperado:'},
+ fr:{'Возможные уточнения клинических данных':'Précisions suggérées pour les données cliniques','В исходной записи:':'Dans la saisie initiale :','Ожидаемый формат:':'Format attendu :'},
+ ar:{'Возможные уточнения клинических данных':'توضيحات مقترحة للبيانات السريرية','В исходной записи:':'في السجل الأصلي:','Ожидаемый формат:':'الصيغة المتوقعة:'},
+ hi:{'Возможные уточнения клинических данных':'नैदानिक डेटा के लिए सुझाए गए स्पष्टीकरण','В исходной записи:':'मूल प्रविष्टि में:','Ожидаемый формат:':'अपेक्षित प्रारूप:'},
+ 'pt-BR':{'Возможные уточнения клинических данных':'Esclarecimentos sugeridos para dados clínicos','В исходной записи:':'No registro original:','Ожидаемый формат:':'Formato esperado:'},
+ id:{'Возможные уточнения клинических данных':'Saran klarifikasi data klinis','В исходной записи:':'Pada catatan asli:','Ожидаемый формат:':'Format yang diharapkan:'},
+ tr:{'Возможные уточнения клинических данных':'Klinik veriler için önerilen netleştirmeler','В исходной записи:':'Özgün kayıtta:','Ожидаемый формат:':'Beklenen biçim:'},
+ 'zh-CN':{'Возможные уточнения клинических данных':'建议核实的临床数据','В исходной записи:':'原始记录：','Ожидаемый формат:':'预期格式：'}
+};
+for(const [language,catalog] of Object.entries(workspaceCatalogs)){
+ const local=w5TranslatedHeadings[language]??{};
+ for(const [key,value] of Object.entries(english)){
+  if(!catalog[key])catalog[key]=local[key]??value;
+ }
+}
