@@ -97,3 +97,35 @@ The script rejects unknown or duplicate IDs, unapproved reference criteria, miss
 6. Check overlap with draft PRs #86–99 before merging. Leave main/3107 untouched. The separately deferred Radiology and Integration Hub are NOT reopened by these DICOM-safety cases.
 
 **Passing this CI is never a medical release gate.** Independent clinical evaluation, verified sources, end-to-end browser acceptance and privacy/safety review remain required.
+
+
+## Free real-model baseline (no additional API spending)
+
+The project has a standalone *optional* script, scripts/w5-free-model-trial.mjs. It uses OpenRouter's existing API key and the 25 fictional W5 diagnostic notes. It does not call the existing five-role paid council or touch the browser Preview. Therefore it measures only a one-model baseline, NOT the behavior of full Doctor Opus.
+
+**Safety behavior by default**
+- Invoking the script without --run is a network-free dry run.
+- A paid model, non-:free ID or auto router is refused before any network call.
+- With --run, the script checks the current live model catalog for an exact :free ID and zero input/output pricing, then checks the API key's remaining free request quota. No billing setup/top-up is attempted.
+- Only case note + physician question are sent, never hidden gold criteria; all are fictional. No patient documents, image uploads, keys, treatments or other connectors.
+- No retries, no tool calls, no paid fallback, at most 25 requests per run, minimum four seconds between requests. The JSONL result includes raw model output and case ID with reviewStatus=not_assessed. The script halts on provider errors, empty responses and a positive charge reported by the provider.
+- Since free providers can retain/use prompts for training, NEVER send real patient data to this route. For synthetic benchmarking only.
+
+**Dry run (safe without any key):**
+
+~~~bash
+node --experimental-strip-types scripts/w5-free-model-trial.mjs
+~~~
+
+**Real run** (requires a valid existing OPENROUTER_API_KEY set in the local environment and an *exact current* chat model ID ending in :free):
+
+~~~bash
+node --experimental-strip-types scripts/w5-free-model-trial.mjs --run --model vendor/verified-model:free --max 5 > w5-free-smoke.jsonl
+~~~
+
+First run five vignettes, check actual zero billed cost and output quality, then if appropriate run all 25 by changing --max to 25. Identify the real model ID using OpenRouter's current free model catalog; 'vendor/verified-model:free' above is a placeholder and **will not work as written**. Free models and rate limits can change; the key may have fewer than 25 free calls remaining. Never retry failures automatically. A second full 25-case run might exceed 50 free requests/day if the quota is partly consumed.
+
+**No actual free-model calls have been run while authoring this PR.** GitHub CI runs only the no-network dry run and paid-model rejection assertions. Actual free calls require execution in a suitable environment with a key; do not place that key or results in public GitHub logs. A later independent physician must review the model answers by the predeclared rubric; a successful HTTP response is not evidence of medical safety.
+
+Official source: https://openrouter.ai/collections/free-models
+Official quota schema: https://openrouter.ai/docs/api/reference/limits
