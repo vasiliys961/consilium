@@ -27,8 +27,9 @@ function audit(order:string,scope:DoseDocumentationEntry['scope'],alternative?:s
  const withoutConcentration=order.replace(concentration,' ');
  const hasConcentration=concentration.test(order);
  concentration.lastIndex=0;
- const hasAmount=amount.test(withoutConcentration);
- if(invalidUnit.test(order))gaps.push('invalid_units');
+ const badUnit=invalidUnit.test(order);
+ const hasAmount=amount.test(withoutConcentration)&&!badUnit;
+ if(badUnit)gaps.push('invalid_units');
  if(!hasAmount)gaps.push(hasConcentration?'concentration_only':'amount_or_unit');
  if(perWeight.test(order))gaps.push('patient_weight');
  if(!route.test(order))gaps.push('route');
