@@ -28,8 +28,10 @@ export default function StandaloneDrugChecker(){
     alternatives:details.alternatives.split(/[\n;|]/).map(x=>x.trim()).filter(Boolean),
     clinicalContext:context,
     egfr:details.context.egfr??null,potassium:details.context.potassium??null,
-    decompensatedCirrhosis:details.context.decompensatedCirrhosis===true,
-    severeHepaticImpairment:details.context.severeHepaticImpairment===true,
+    qtcMs:details.context.qtcMs??null,ageYears:details.context.ageYears??null,
+    activeBleeding:details.context.activeBleeding===true?true:null,
+    decompensatedCirrhosis:details.context.decompensatedCirrhosis===true?true:null,
+    severeHepaticImpairment:details.context.severeHepaticImpairment===true?true:null,
    });
    const reviewed=await reviewBeforeSending({task:'management',locale:language,sourceLocale:language,retain:false,externalSearch:false,text});
    request.signal.throwIfAborted();
