@@ -1,0 +1,59 @@
+name: W5 free-only 20 remaining synthetic cases
+
+on:
+  pull_request:
+    branches:
+      - chatgpt-dev
+    paths:
+      - '.github/workflows/w5-free-remaining.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  free-remaining-20:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'chatgpt/w5-diagnostic-benchmark-20261119' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run only DX06–DX25 on exact verified zero-price Nemotron
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
+            echo "::error::OpenRouter key secret inaccessible; zero clinical calls made."
+            exit 1
+          fi
+          node --experimental-strip-types scripts/w5-free-model-trial.mjs \
+            --run --model nvidia/nemotron-3-ultra-550b-a55b:free \
+            --start 6 --max 20 > "${RUNNER_TEMP}/w5-free-remaining.jsonl"
+          node --input-type=module - "${RUNNER_TEMP}/w5-free-remaining.jsonl" <<'JS'
+          import {readFileSync} from 'node:fs';
+          const rows=readFileSync(process.argv[2],'utf8').trim().split('\n').map(line=>JSON.parse(line));
+          const completed=rows.filter(x=>x.caseId);
+          const expected=[...Array(20)].map((_,i)=>'DX'+String(i+6).padStart(2,'0'));
+          if(completed.length!==20||completed.some((x,i)=>x.caseId!==expected[i]||x.status!=='answered')){
+            console.error('Incomplete 20-case trial: no diagnosis scores assigned.');
+            process.exit(1);
+          }
+          console.log('Verified 20 responses DX06–DX25 from a strictly :free model');
+          for(const x of completed){
+            console.log(x.caseId,'model=',x.returnedModel,'reported_usd=',x.usage?.reportedCostUsd??'not reported',
+              'latency_ms=',x.elapsedMs);
+          }
+          console.log('Pending clinician adjudication; this CI success does NOT prove clinical accuracy.');
+          JS
+      - name: Retain synthetic model responses for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: w5-free-remaining-20-fictional-answers
+          path: ${{ runner.temp }}/w5-free-remaining.jsonl
+          if-no-files-found: ignore
+          retention-days: 7
