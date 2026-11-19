@@ -4,6 +4,7 @@ import {useState} from 'react';
 import {checkMedicationRegimen, type MedicationContext, type DrugInteractionAlert, type OrganSafetyAlert} from '@/lib/drug-interaction-rules';
 import {useWorkspaceLanguage} from './workspace-language';
 import {readManualMedicationFields} from '@/lib/manual-medication-fields';
+import {reviewPatientSafetyFactors,type AllergyStatus,type PregnancyStatus} from '@/lib/medication-patient-factors';
 
 export function DrugInteractionAlerts({ alerts }: { alerts: DrugInteractionAlert[] }) {
   const { t } = useWorkspaceLanguage();
@@ -25,17 +26,19 @@ function OrganSafetyAlerts({alerts}:{alerts:OrganSafetyAlert[]}){
  </article>)}</>;
 }
 
-export function DrugInteractionChecker({current,onCurrentChange,disabled=false,initialProposed='',proposed:controlledProposed,onReview,onProposedChange,onDetailsChange,reviewLabel}:{current?:string;onCurrentChange?:(text:string)=>void;disabled?:boolean;initialProposed?:string;proposed?:string;onReview?:(current:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext})=>void;onProposedChange?:(text:string)=>void;onDetailsChange?:()=>void;reviewLabel?:string}){
+export function DrugInteractionChecker({current,onCurrentChange,disabled=false,initialProposed='',proposed:controlledProposed,onReview,onProposedChange,onDetailsChange,reviewLabel}:{current?:string;onCurrentChange?:(text:string)=>void;disabled?:boolean;initialProposed?:string;proposed?:string;onReview?:(current:string,proposed:string,details:{stopped:string;alternatives:string;context:MedicationContext;allergyStatus:AllergyStatus;allergenNames:string;pregnancyStatus:PregnancyStatus})=>void;onProposedChange?:(text:string)=>void;onDetailsChange?:()=>void;reviewLabel?:string}){
   const {t,language}=useWorkspaceLanguage();
   const [standalone,setStandalone]=useState(''),[localProposed,setProposed]=useState(initialProposed);
   const [stopped,setStopped]=useState(''),[alternatives,setAlternatives]=useState('');
   const [egfrText,setEgfrText]=useState(''),[potassiumText,setPotassiumText]=useState(''),[ageText,setAgeText]=useState(''),[qtcText,setQtcText]=useState('');
+  const [allergyStatus,setAllergyStatus]=useState<AllergyStatus>('unknown'),[allergenNames,setAllergenNames]=useState(''),[pregnancyStatus,setPregnancyStatus]=useState<PregnancyStatus>('unknown');
   const [decompensatedCirrhosis,setDecompensatedCirrhosis]=useState(false),[severeHepaticImpairment,setSevereHepaticImpairment]=useState(false),[activeBleeding,setActiveBleeding]=useState(false);
   const manual=readManualMedicationFields({egfr:egfrText,potassium:potassiumText,ageYears:ageText,qtcMs:qtcText});
   const context:MedicationContext={...manual.context,decompensatedCirrhosis:decompensatedCirrhosis||undefined,severeHepaticImpairment:severeHepaticImpairment||undefined,activeBleeding:activeBleeding||undefined};
   const proposed=controlledProposed??localProposed;
   const active=current??standalone;
   const result=checkMedicationRegimen({current:active,proposed,stopped,alternatives,context});
+  const factors=reviewPatientSafetyFactors({current:active,proposed,alternatives,stopped,allergyStatus,allergenNames:allergyStatus==='confirmed'?allergenNames:'',pregnancyStatus});
   const alerts=result.alerts,coverage=result.coverage;
   return <section aria-label={t('Локальная проверка сочетаний')}>
     <h3>{t('Бесплатная локальная проверка сочетаний')}</h3>
@@ -49,12 +52,23 @@ export function DrugInteractionChecker({current,onCurrentChange,disabled=false,i
       <label>{t('Калий, ммоль/л (если известен)')}<input type="number" min="1.5" max="10" step="0.1" disabled={disabled} value={potassiumText} onChange={e=>{setPotassiumText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('Возраст, годы (если известен)')}<input type="number" min="0" max="120" step="1" disabled={disabled} value={ageText} onChange={e=>{setAgeText(e.target.value);onDetailsChange?.();}}/></label>
       <label>{t('QTc, мс (если известен)')}<input type="number" min="250" max="800" step="1" disabled={disabled} value={qtcText} onChange={e=>{setQtcText(e.target.value);onDetailsChange?.();}}/></label>
+      <label>{language==='ru'?'Статус лекарственной аллергии':'Drug allergy status'}<select disabled={disabled} value={allergyStatus} onChange={e=>{setAllergyStatus(e.target.value as AllergyStatus);onDetailsChange?.();}}>
+        <option value="unknown">{language==='ru'?'Неизвестен':'Unknown'}</option><option value="confirmed">{language==='ru'?'Подтверждённые аллергены':'Confirmed allergens'}</option><option value="none_reported">{language==='ru'?'Аллергия не заявлена (не проверено)':'None reported (not verified)'}</option>
+      </select></label>
+      {allergyStatus==='confirmed'&&<label>{language==='ru'?'Подтверждённые действующие вещества, по одному в строке':'Confirmed allergen ingredients, one per line'}<textarea rows={2} maxLength={1000} disabled={disabled} value={allergenNames} onChange={e=>{setAllergenNames(e.target.value);onDetailsChange?.();}}/></label>}
+      <label>{language==='ru'?'Статус беременности':'Pregnancy status'}<select disabled={disabled} value={pregnancyStatus} onChange={e=>{setPregnancyStatus(e.target.value as PregnancyStatus);onDetailsChange?.();}}>
+        <option value="unknown">{language==='ru'?'Неизвестен':'Unknown'}</option><option value="pregnant">{language==='ru'?'Подтверждена':'Confirmed pregnant'}</option><option value="not_pregnant">{language==='ru'?'Не беременна (со слов врача)':'Not pregnant (clinician reported)'}</option><option value="not_applicable">{language==='ru'?'Неприменимо':'Not applicable'}</option>
+      </select></label>
       <label><input type="checkbox" disabled={disabled} checked={activeBleeding} onChange={e=>{setActiveBleeding(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённое активное патологическое кровотечение')}</label>
       <label><input type="checkbox" disabled={disabled} checked={decompensatedCirrhosis} onChange={e=>{setDecompensatedCirrhosis(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённый декомпенсированный цирроз')}</label>
       <label><input type="checkbox" disabled={disabled} checked={severeHepaticImpairment} onChange={e=>{setSevereHepaticImpairment(e.target.checked);onDetailsChange?.();}}/>{t('Подтверждённая тяжёлая печёночная недостаточность')}</label>
     </details>
     {manual.issues.length>0&&<p role="status" aria-live="polite">{language==='ru'?'Проверьте или очистите некорректные числовые поля. Неподтверждённые значения не используются: ':'Check or clear invalid numeric fields. Unconfirmed values are not used: '}{manual.issues.map(issue=>({egfr:'eGFR',potassium:language==='ru'?'Калий':'Potassium',ageYears:language==='ru'?'Возраст':'Age',qtcMs:'QTc'}[issue.field])).join(', ')}.</p>}
-    {onReview&&<button type="button" disabled={disabled||manual.issues.length>0||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim()||alternatives.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}<OrganSafetyAlerts alerts={result.organAlerts}/>
+    {factors.issues.length>0&&<p role="status" aria-live="polite">{language==='ru'?'Уточните противоречивый или неполный анамнез аллергии; результат не проверен.':'Confirm incomplete or contradictory allergy history; screening is unresolved.'}</p>}
+    {factors.findings.length>0&&<section aria-label={language==='ru'?'Совпадения аллергенов':'Allergen ingredient matches'}><strong>{language==='ru'?'Возможная связь лекарства с заявленной аллергией — требуется врачебная проверка':'Possible allergy-related medicine match — clinician review required'}</strong><ul>{factors.findings.map((f,i)=><li key={i}>{f.drug} / {f.allergen} · {f.alternative??f.scope} · {f.kind==='class_review'?(language==='ru'?'сходный класс, требует уточнения':'related class, confirm'):(language==='ru'?'то же действующее вещество':'same ingredient')}</li>)}</ul></section>}
+    {factors.pregnancyReview.length>0&&<p role="status">{language==='ru'?'Беременность подтверждена: отдельно проверьте применимость инструкции для каждого препарата/альтернативы. Автоматической оценки безопасности для плода нет.':'Pregnancy confirmed: check pregnancy-specific labeling for every drug and alternative. Fetal safety has not been assessed.'} {factors.pregnancyReview.length}</p>}
+    {factors.doseVerificationRequired&&<p>{language==='ru'?'Доза, путь, кратность и противопоказания по беременности/аллергиям не прошли полную проверку.':'Dose, route, frequency, and pregnancy/allergy contraindications have not been fully verified.'}</p>}
+    {onReview&&<button type="button" disabled={disabled||manual.issues.length>0||factors.issues.length>0||!(active.trim()||proposed.trim())} onClick={()=>onReview(active,proposed,{stopped,alternatives,context,allergyStatus,allergenNames,pregnancyStatus})}>{t(reviewLabel??'Проверить весь список одной недорогой моделью (платный запрос)')}</button>}<p>{t('Охват локального списка:')} {coverage.ruleCount} {t('правила. Это не полная база лекарственных взаимодействий.')}</p>{!!(active.trim()||proposed.trim()||alternatives.trim())&&<div aria-live="polite"><p>{t('Распознано в локальном списке:')} {coverage.recognized.join('; ')||t('нет')}</p>{coverage.unrecognized.length>0&&<p>{t('Не охвачены локальными правилами:')} {coverage.unrecognized.join('; ')}</p>}<OrganSafetyAlerts alerts={result.organAlerts}/>
       {alerts.length?<DrugInteractionAlerts alerts={alerts}/>:<p>{t('В доступных правилах совпадений нет. Это не подтверждает совместимость; для остальных сочетаний нужен отдельный разбор и проверка источников.')}</p>}
       {result.missing.length>0&&<p>{t('Для решения требуется уточнить:')} {result.missing.join('; ')}</p>}
       {result.stopped.length>0&&<p>{t('Исключены из действующей схемы:')} {result.stopped.join('; ')}</p>}
