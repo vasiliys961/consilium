@@ -134,8 +134,9 @@ const w5TranslatedHeadings:Record<string,Record<string,string>>={
  'zh-CN':{'Возможные уточнения клинических данных':'建议核实的临床数据','В исходной записи:':'原始记录：','Ожидаемый формат:':'预期格式：'}
 };
 for(const [language,catalog] of Object.entries(workspaceCatalogs)){
+ const strings=catalog as Record<string,string>;
  const local=w5TranslatedHeadings[language]??{};
  for(const [key,value] of Object.entries(english)){
-  if(!catalog[key])catalog[key]=local[key]??value;
+  if(!strings[key])strings[key]=local[key]??value;
  }
 }
