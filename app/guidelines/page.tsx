@@ -9,6 +9,7 @@ import {useWorkspaceLanguage} from '@/app/components/workspace-language';
 import {LanguageSwitcher} from '@/app/components/language-switcher';
 import {WORKSPACE_LANGUAGES,type WorkspaceLanguage} from '@/lib/workspace-i18n';
 import {guidelineUi} from '@/lib/guideline-ui';
+import {readCases,caseSignature,persistGuidelineReview} from '@/lib/casebook';
 import {guidelineLocalePolicy} from '@/lib/guideline-locale-policy';
 import type {GuidelineMode} from '@/lib/parent-guideline-search';
 import {GUIDELINE_HANDOFF_KEY,parseGuidelineTopicHandoff,type GuidelineTopicHandoff} from '@/lib/clinical-source-review';
@@ -30,18 +31,35 @@ export default function ClinicalGuidelines(){
  const [answerLanguage,setAnswerLanguage]=useState<WorkspaceLanguage>(language),[matchInterface,setMatchInterface]=useState(true);
  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<SearchResult|null>(null),[editing,setEditing]=useState(false);
  const [handoff,setHandoff]=useState<GuidelineTopicHandoff|null>(null);
+ const [binding,setBinding]=useState<{id:string;signature:string;updated:string}|null>(null);
+ const [saving,setSaving]=useState(false),[savedResult,setSavedResult]=useState(false),[physicianEdited,setPhysicianEdited]=useState(false);
  useEffect(()=>{
   const raw=sessionStorage.getItem(GUIDELINE_HANDOFF_KEY);
   if(!raw)return;
   sessionStorage.removeItem(GUIDELINE_HANDOFF_KEY);
   const selected=parseGuidelineTopicHandoff(raw);
-  if(selected){setQuery(selected.topic);setHandoff(selected);}
+  const requested=new URLSearchParams(window.location.search).get('case');
+  if(selected&&(!requested||!selected.caseId||requested===selected.caseId)){
+   setQuery(selected.topic);setHandoff(selected);
+  }else if(selected){setNotice('The imported guideline topic belongs to another case.');}
  },[]);
  useEffect(()=>{if(matchInterface)setAnswerLanguage(language);},[language,matchInterface]);
+ useEffect(()=>{
+  let active=true;
+  const id=new URLSearchParams(window.location.search).get('case')||handoff?.caseId;
+  if(!id){setBinding(null);return;}
+  void readCases(true).then(items=>{
+   if(!active)return;
+   const found=items.find(item=>item.id===id&&!item.deletedAt&&item.status==='active');
+   setBinding(found?{id:found.id,signature:caseSignature(found),updated:found.updated}:null);
+   if(!found)setNotice(legacy('Исходный активный случай недоступен: результат можно экспортировать, но не записать в другой случай.','Originating active case unavailable. You may export the result, but not save it into another case.'));
+  }).catch(()=>{if(active){setBinding(null);setNotice(legacy('Не удалось прочитать локальные случаи.','Unable to read local cases.'));}});
+  return()=>{active=false;};
+ },[handoff?.caseId]);
  const policy=guidelineLocalePolicy(answerLanguage);
  async function search(){
   if(busy||query.trim().length<3)return;
-  setBusy(true);setNotice('');setResult(null);setEditing(false);
+  setBusy(true);setNotice('');setResult(null);setEditing(false);setSavedResult(false);setPhysicianEdited(false);
   try{
    const reviewed=await reviewBeforeSending({
     text:query.trim(),task:'evidence',locale:answerLanguage,sourceLocale:language,
@@ -68,6 +86,24 @@ export default function ClinicalGuidelines(){
    setResult({...data,language:answerLanguage});
   }catch(error){setNotice(error instanceof Error?error.message:legacy('Ошибка запроса.','Search error.'));}
   finally{setBusy(false);}
+ }
+ async function saveToCase(){
+  if(!binding||!result||busy||saving||savedResult)return;
+  setSaving(true);setNotice('');
+  try{
+   await persistGuidelineReview(binding.id,binding.signature,{
+    id:crypto.randomUUID(),at:new Date().toISOString(),topic:query.trim(),text:result.text,
+    model:result.model,mode:result.searchMode,language:result.language,
+    estimatedUsd:result.estimatedUsd,sourceCaseUpdatedAt:binding.updated,
+    physicianEdited,status:'requires-review',
+   });
+   setSavedResult(true);setNotice(t('savedCase'));
+  }catch(error){
+   const reason=error instanceof Error?error.message:'';
+   setNotice(reason==='case_sources_changed'
+    ?legacy('Данные случая изменились. Откройте его заново и проверьте применимость результата.','Case facts changed. Reopen the case and review applicability before saving.')
+    :legacy('Результат не сохранён. Экспортируйте его и проверьте доступность случая.','Result not saved. Export it and check the case is available.'));
+  }finally{setSaving(false);}
  }
  async function share(){
   if(!result)return;
@@ -127,7 +163,7 @@ export default function ClinicalGuidelines(){
    <h2>{t('result')}</h2>
    <p><small>{t('model')}: {result.model} · {t('cost')}: {'$'+result.estimatedUsd.toFixed(5)} · {result.inputTokens+result.outputTokens} tokens · {WORKSPACE_LANGUAGES.find(item=>item.code===result.language)?.name}</small></p>
    {editing?<label>{t('edit')}<textarea rows={24} value={result.text} dir={result.language==='ar'?'rtl':'auto'}
-    onChange={e=>setResult(prev=>prev&&({...prev,text:e.target.value}))}/></label>:
+    onChange={e=>{setResult(prev=>prev&&({...prev,text:e.target.value}));setPhysicianEdited(true);setSavedResult(false);}}/></label>:
     <article className="clinical-guideline-markdown" dir={result.language==='ar'?'rtl':'auto'}
      style={{whiteSpace:'normal',lineHeight:1.75}}><ReactMarkdown remarkPlugins={[remarkGfm]}>{result.text}</ReactMarkdown></article>}
    <div style={{display:'flex',flexWrap:'wrap',gap:10,marginTop:20}}>
@@ -136,7 +172,9 @@ export default function ClinicalGuidelines(){
     <button type="button" onClick={()=>window.print()}>{t('print')}</button>
     <button type="button" onClick={()=>void share()}>{t('share')}</button>
     <button type="button" onClick={()=>void navigator.clipboard.writeText(result.text).then(()=>setNotice(legacy('Скопировано','Copied'))).catch(()=>setNotice('Clipboard unavailable'))}>{t('copy')}</button>
+    {binding&&<button type="button" disabled={busy||saving||savedResult} onClick={()=>void saveToCase()}>{savedResult?t('savedCase'):t('saveCase')}</button>}
    </div>
+   {binding&&<p><small>{t('unverifiedReview')} <Link href={`/workspace?case=${encodeURIComponent(binding.id)}`}>{t('back')}</Link></small></p>}
    <p><small>{t('disclaimer')}</small></p>
   </section>}
   {!busy&&!result&&<section>

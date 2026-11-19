@@ -11,6 +11,7 @@ import {medicationRisksForFeed} from '@/lib/clinical-feed-risks';
 import {councilPerspectiveLabel} from '@/lib/adaptive-council';
 import {useWorkspaceLanguage} from './workspace-language';
 import styles from '@/app/workspace.module.css';
+import {guidelineUi} from '@/lib/guideline-ui';
 
 const roleNames={hypothesis:'Гипотезы',testChooser:'Обследования',challenger:'Критическая проверка',stewardship:'Безопасность лечения',checklist:'Итог консилиума'};
 export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{value:ClinicalCase;busy:boolean;onCouncil:()=>void;onDecision:()=>void}){
@@ -77,6 +78,15 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     {newest&&value.analyses.length>1&&<nav aria-label={t('Перейти к предыдущему разбору')} className={styles.feedIndex}><h4>{t('Ранее в разборе')}</h4>{value.analyses.slice(1).map((earlier,i)=><div key={earlier.id}><a href={`#analysis-${earlier.id}`}>{value.analyses.length-i-1}. {t(analysisQuestion(earlier))}</a>{(earlier.result.draft.studyReports??[]).filter(report=>firstStudy.get(JSON.stringify(report))===earlier.id).map((report,j)=><small key={j}> · {report.source} · {report.modality}</small>)}</div>)}</nav>}
    </article>;
   })}
+  {(value.guidelineReviews?.length??0)>0&&<details className={styles.feedInitial}>
+   <summary>{guidelineUi(language,'savedReviews')} · {value.guidelineReviews?.length}</summary>
+   <p><small>{guidelineUi(language,'unverifiedReview')}</small></p>
+   {value.guidelineReviews?.map(item=><details key={item.id}>
+    <summary>{item.topic} · {new Date(item.at).toLocaleString(language)} · {item.model}</summary>
+    <p><small>{item.mode} · {item.language} · {item.physicianEdited?'Edited':'Model draft'}</small></p>
+    <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{item.text}</pre>
+   </details>)}
+  </details>}
   <details className={styles.feedInitial}><summary>{t('Исходные жалобы, анамнез и данные осмотра')}</summary><p>{value.analyses.at(-1)?.clinicalContext||value.context||t('Не добавлены')}</p><p>{value.question}</p></details>
  </section>;
 });
