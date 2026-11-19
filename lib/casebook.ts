@@ -242,7 +242,8 @@ export async function persistGuidelineReview(
   !review.text.trim()||review.text.length>100000||!review.model||review.model.length>120||
   !['standard','detailed','online'].includes(review.mode)||!review.language||review.language.length>32||
   !Number.isFinite(review.estimatedUsd)||review.estimatedUsd<0||
-  review.status!=='requires-review'||typeof review.sourceCaseUpdatedAt!=='string')
+  review.status!=='requires-review'||typeof review.physicianEdited!=='boolean'||
+  !Number.isFinite(Date.parse(review.at))||!Number.isFinite(Date.parse(review.sourceCaseUpdatedAt)))
   throw Error('invalid_guideline_review');
  return serialCaseWrite(caseId,async()=>{
   const current=await readVaultCaseById(caseId);
