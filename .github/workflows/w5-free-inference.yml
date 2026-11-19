@@ -30,9 +30,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-            echo "NOT RUN: OPENROUTER_API_KEY secret is not available to this job."
-            echo "No network inference calls were made."
-            exit 0
+            echo "::error::NOT RUN: OPENROUTER_API_KEY Actions secret is not available in vasiliys961/consilium."
+            echo "No network inference calls were made; do not count this as a passed model evaluation."
+            exit 1
           fi
           # Capture only fictional case IDs and model answers, never the API key.
           node --experimental-strip-types scripts/w5-free-model-trial.mjs \
