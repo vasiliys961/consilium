@@ -138,3 +138,15 @@ test('W5 diagnosis review metrics: duplicates, invented zeroes and invalid value
  assert.throws(()=>summarizeW5DiagnosticReviews([
   {caseId:'DX01',status:'reviewed',...empty}]),/requires an identified reviewer/);
 });
+
+
+test('W5 clinical routing regression: English cough and hemoptysis select pulmonary review',()=>{
+ const cough=chooseClinicalFocus('Persistent cough with fever but no imaging',[]);
+ const blood=chooseClinicalFocus('Unexplained hemoptysis; respiratory source uncertain',[]);
+ assert.ok(cough.some(item=>item.domain==='pulmonology'),
+  'English cough must route to pulmonology, as Russian кашель does');
+ assert.ok(blood.some(item=>item.domain==='pulmonology'),
+  'Hemoptysis must trigger a pulmonary clinical perspective');
+ assert.ok(!chooseClinicalFocus('routine dental cleaning',[]).some(item=>item.domain==='pulmonology'),
+  'No free-floating pulmonary role without the symptom');
+});
