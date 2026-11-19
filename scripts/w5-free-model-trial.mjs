@@ -105,7 +105,7 @@ if(has('--help')){
        {role:'user',content:'Fictional case '+item.id+'\nClinical note:\n'+item.note+'\n\nPhysician question:\n'+item.question}
       ]
     }),
-    signal:AbortSignal.timeout(65000),
+    signal:AbortSignal.timeout(150000),
    });
    if(!response.ok){
     process.stdout.write(JSON.stringify({caseId:item.id,status:'provider-error',httpStatus:response.status,
