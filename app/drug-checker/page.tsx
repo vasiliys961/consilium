@@ -7,9 +7,10 @@ import {LanguageSwitcher} from '@/app/components/language-switcher';
 import {useWorkspaceLanguage} from '@/app/components/workspace-language';
 import {reviewBeforeSending} from '@/lib/privacy-client';
 import type {MedicationContext} from '@/lib/drug-interaction-rules';
+import type {AllergyStatus,PregnancyStatus} from '@/lib/medication-patient-factors';
 import type {QuickMedicationReport} from '@/lib/medication-review';
 
-type Details={stopped:string;alternatives:string;context:MedicationContext};
+type Details={stopped:string;alternatives:string;context:MedicationContext;allergyStatus:AllergyStatus;allergenNames:string;pregnancyStatus:PregnancyStatus};
 type Result={report:QuickMedicationReport;model:string;estimatedUsd:number|null;evidence:'not_source_verified';inputTokens:number;outputTokens:number};
 
 export default function StandaloneDrugChecker(){
@@ -27,6 +28,7 @@ export default function StandaloneDrugChecker(){
     current:active,proposed:next,stopped:details.stopped,
     alternatives:details.alternatives.split(/[\n;|]/).map(x=>x.trim()).filter(Boolean),
     clinicalContext:context,
+    allergyStatus:details.allergyStatus,allergenNames:details.allergyStatus==='confirmed'?details.allergenNames:'',pregnancyStatus:details.pregnancyStatus,
     egfr:details.context.egfr??null,potassium:details.context.potassium??null,
     qtcMs:details.context.qtcMs??null,ageYears:details.context.ageYears??null,
     activeBleeding:details.context.activeBleeding===true?true:null,
