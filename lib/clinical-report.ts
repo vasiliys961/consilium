@@ -1,6 +1,7 @@
 /** Shared contract for physician-facing reasoning; every entry remains an unsigned proposal. */
 import type { DrugInteractionAlert, OrganSafetyAlert, localDrugCoverage } from './drug-interaction-rules.ts';
 import type { CaseTask } from './case-plan.ts';
+import {medicationContextHintAdvice,type MedicationContextHint} from './medication-context.ts';
 import { separateMissingFromOpposing } from './clinical-integrity.ts';
 
 export interface ClinicalReport {
@@ -9,6 +10,7 @@ export interface ClinicalReport {
   differential: Array<{ hypothesis: string; supporting: string[]; opposing: string[]; missing: string[]; dangerous: boolean }>;
   investigations: Array<{ test: string; rationale: string; priority: string }>;
   management: Array<{ option: string; conditions: string[]; safetyChecks: string[]; monitoring: string[]; sources?: string[]; medications?: string[]; stoppedMedications?: string[]; localInteractions?: DrugInteractionAlert[]; localCoverage?: ReturnType<typeof localDrugCoverage>; localOrganAlerts?: OrganSafetyAlert[]; localSafetyGaps?:string[] }>;
+  localContextHints?: MedicationContextHint[]; // deterministic, unconfirmed suggestions added only after model parsing
   medicationSafety?: { gaps: string[]; alerts: Array<{ combination: string; risk: string; patientFactor: string; mitigation: string; sources: string[] }> };
   tactics?: { nextStep: string; timing: string; reassess: string; escalate: string };
   questions: string[];
@@ -98,6 +100,12 @@ Keep tactics specific to this case. Leave an unsupported timing field empty rath
 Use empty arrays when a section cannot be supported. Never describe an unperformed/unavailable test or unreported symptom as a finding against a diagnosis. Put it in missing, not opposing. Do not infer dyspnea at rest from orthopnea or exertional dyspnea. Never claim that four roles agree when the cited opinions diverge. Never fill sections just to appear complete. No fabricated numerical probabilities, risk scores or drug interactions. Do not claim a medication interaction checker was run. Unknown is not normal. For a full clinical task, include clinically appropriate provisional management options, immediate safety actions and monitoring when useful for the case; prioritize diagnosis and relevant testing, and do not invent doses or imply that a physician accepted any proposal. For a dedicated management task, provide fuller alternatives, specific prerequisites, medication checks and reassessment. A purely interpretive/image-only task must not invent a treatment plan. Keep current and proposed medication separate. Every hypothesis and plan is unsigned and requires physician review.`;
 export function clinicalReportText(report:ClinicalReport,t:(value:string)=>string=value=>value):string{
  return [report.problem,...report.facts.map(text=>`• ${text}`),
+ ...(report.localContextHints??[]).map(hint=>[
+   `${t('Неподтверждённое уточнение клинических данных:')} ${hint.field}: ${hint.observed}`,
+   hint.expectedFormat?`${t('Ожидаемый формат:')} ${hint.expectedFormat}`:'',
+   t(medicationContextHintAdvice(hint)),
+   t('Сверьте данные и исправьте исходную запись вручную; предположение не использовано как факт.')
+  ].filter(Boolean).join(' ')),
  ...report.differential.map(item=>`${item.hypothesis}\n${t('За:')} ${item.supporting.join('; ')}\n${t('Против:')} ${item.opposing.join('; ')}\n${t('Уточнить:')} ${item.missing.join('; ')}`),
  ...report.investigations.map(item=>`${item.test}: ${item.rationale} (${item.priority})`),
  ...report.management.map(item => [
