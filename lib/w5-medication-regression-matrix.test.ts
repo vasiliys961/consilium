@@ -105,8 +105,9 @@ for (const scenario of highRiskCases) {
       assert.ok(hit,
         scenario.id+': missing expected '+requirement.kind+' signal '+requirement.contains+
         '; actual: '+JSON.stringify(values.map(item => item.risk)));
-      if (requirement.kind !== 'missing' && hit && 'url' in hit) {
-        assert.match(hit.url, /^https:\/\/dailymed\.nlm\.nih\.gov\//);
+      if (requirement.kind !== 'missing' && hit) {
+        const evidenceUrl = 'url' in hit && typeof hit.url === 'string' ? hit.url : '';
+        assert.match(evidenceUrl, /^https:\/\/dailymed\.nlm\.nih\.gov\//);
       }
     }
   });
