@@ -114,6 +114,13 @@ Object.assign(english,{
   "Проверьте значение и единицы по исходному документу; автоматической замены нет.": "Verify the value and units against the original record. No automatic replacement is made."
 });
 
+// Additional context-specific advice (rather than generic verification).
+Object.assign(english,{
+ 'Противоречивые сведения о кровотечении. Уточните актуальный статус и время осмотра; неизвестное не равно отсутствию.':'Conflicting bleeding information. Confirm the current status and time of examination; unknown is not absent.',
+ 'Противоречивые сведения о заболевании. Сверьте документы и подтвердите текущий клинический статус.':'Conflicting disease information. Check original records and confirm the current clinical status.',
+ 'Числовой результат не удалось однозначно прочитать. Сверьте точное значение, единицы и дату с первичным документом.':'The numeric result could not be read unambiguously. Verify the exact value, units and date against the original report.'
+});
+
 // Backfill the new W5 keys in each non-RU locale catalog. All clinical advice
 // has an English reference; do not leak untranslated Russian safety instructions.
 const w5TranslatedHeadings:Record<string,Record<string,string>>={
