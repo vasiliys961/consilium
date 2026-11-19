@@ -4,6 +4,7 @@ import type { ClinicalReport } from '@/lib/clinical-report';
 import {citationPassages,type Citation} from '@/lib/literature';
 import {reviewClaimEvidence} from '@/lib/clinical-claim-evidence';
 import {medicationCopy} from '@/lib/medication-copy';
+import {medicationContextHintAdvice} from '@/lib/medication-context';
 import {useId,useState} from 'react';
 import {DrugInteractionAlerts, DrugInteractionChecker} from './drug-interaction-checker';
 
@@ -44,6 +45,17 @@ export function ClinicalReportView({ report, citations = [], medicationCheck }: 
   </section>}
   {report.facts.length > 0 && <><h3>{t("На чём основан разбор")}</h3><ul>{report.facts.map((text, i) => <li key={i}>{text}</li>)}</ul></>}
   {report.differential.length > 0 && <><h3>{t("Дифференциальные гипотезы · проверить врачу")}</h3>{report.differential.map((item, i) => <article key={i} style={{ borderLeft: '2px solid #abc4b3', padding: '4px 16px', margin: '16px 0' }}><strong>{item.hypothesis}{item.dangerous ? ` · ${t('Опасная альтернатива')}` : ''}</strong>{item.supporting.length > 0 && <p>{t("За:")}{item.supporting.join('; ')}</p>}{item.opposing.length > 0 && <p>{t("Против:")}{item.opposing.join('; ')}</p>}{item.missing.length > 0 && <p>{t("Уточнить:")}{item.missing.join('; ')}</p>}</article>)}</>}
+  {Boolean(report.localContextHints?.length)&&<section aria-label={t('Возможные уточнения клинических данных')}>
+   <h3>{t('Возможные уточнения клинических данных')}</h3>
+   <p><strong>{t('Это только предположения: медицинские данные не исправлены и не использованы как подтверждённые.')}</strong></p>
+   <ul>{report.localContextHints!.map((hint,index)=><li key={index}>
+    <strong>{t(hint.field==='egfr'?'СКФ':hint.field==='potassium'?'Калий':hint.field==='qtcMs'?'QTc':hint.field==='ageYears'?'Возраст':hint.field==='activeBleeding'?'Активное патологическое кровотечение':hint.field==='decompensatedCirrhosis'?'Декомпенсированный цирроз':'Тяжёлая печёночная недостаточность')}</strong>
+    <p>{t('В исходной записи:')} {hint.observed}</p>
+    {hint.expectedFormat&&<p>{t('Ожидаемый формат:')} <code>{hint.expectedFormat}</code></p>}
+    <p>{t(medicationContextHintAdvice(hint))}</p>
+    <p><small>{t('Сверьте данные и исправьте исходную запись вручную; предположение не использовано как факт.')}</small></p>
+   </li>)}</ul>
+  </section>}
   {report.investigations.length > 0 && <><h3>{t("Что уточнить и зачем")}</h3>{report.investigations.map((item, i) => <p key={i}><strong>{item.test}</strong> — {item.rationale}{item.priority && ` · ${item.priority}`}</p>)}</>}
   {report.management.length > 0 && <>
     <h3>{t("Лечебная тактика · варианты для решения врача")}</h3>
