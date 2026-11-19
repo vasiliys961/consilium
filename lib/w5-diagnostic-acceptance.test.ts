@@ -183,3 +183,13 @@ test('W5 free-model runner: paid model ID rejected before any API request',()=>{
  assert.match(p.stderr,/paid and auto-routing IDs are prohibited/);
  assert.doesNotMatch(p.stdout,/caseId/);
 });
+
+
+test('W5 free runner: beyond-DX25 range rejected before accessing API',()=>{
+ const p=spawnSync(process.execPath,
+  ['--experimental-strip-types','scripts/w5-free-model-trial.mjs','--run',
+   '--model','nvidia/nemotron-3-ultra-550b-a55b:free','--start','7','--max','20'],
+  {encoding:'utf8',timeout:10000,env:{...process.env,OPENROUTER_API_KEY:''}});
+ assert.equal(p.status,1);
+ assert.match(p.stderr,/contiguous range within the 25 synthetic cases/);
+});
