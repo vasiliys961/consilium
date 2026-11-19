@@ -44,7 +44,7 @@ test('W5 smart clarification: conflicting bleeding statuses stay unknown and inv
  const result=extractMedicationSafetyContext('Active bleeding: yes\nActive bleeding: no');
  assert.equal(result.context.activeBleeding,undefined);
  assert.ok(result.hints.some(h=>h.kind==='conflict'));
- assert.ok(result.hints.some(h=>medicationContextHintAdvice(h).includes('Не выбирайте')));
+ assert.ok(result.hints.some(h=>medicationContextHintAdvice(h).includes('актуальный статус')));
 });
 
 test('W5 smart clarification: correct units and repeated identical values have no false suggestions',()=>{
