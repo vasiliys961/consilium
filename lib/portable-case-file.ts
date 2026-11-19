@@ -34,6 +34,22 @@ function validCase(value:unknown):value is ClinicalCase{
    ||!['note','question','decision'].includes(String(ev.kind))))return false;
  if(value.analyses.some(a=>!isRecord(a)||typeof a.id!=='string'||!isDate(a.at)||typeof a.context!=='string'
    ||!isRecord(a.result)||!isRecord(a.result.draft)||!Array.isArray(a.result.citations)))return false;
+ // Independent guideline-search results are always unverified historical
+ // material, including after encrypted export/import. Never accept malformed
+ // review provenance or a fabricated "approved" status from a local file.
+ if(value.guidelineReviews!==undefined&&(
+  !Array.isArray(value.guidelineReviews)||value.guidelineReviews.length>250||
+  value.guidelineReviews.some(review=>!isRecord(review)
+   ||typeof review.id!=='string'||!review.id||review.id.length>100
+   ||!isDate(review.at)||!isDate(review.sourceCaseUpdatedAt)
+   ||typeof review.topic!=='string'||!review.topic.trim()||review.topic.length>550
+   ||typeof review.text!=='string'||!review.text.trim()||review.text.length>100000
+   ||typeof review.model!=='string'||!review.model||review.model.length>120
+   ||!['standard','detailed','online'].includes(String(review.mode))
+   ||typeof review.language!=='string'||!review.language||review.language.length>32
+   ||typeof review.estimatedUsd!=='number'||!Number.isFinite(review.estimatedUsd)||review.estimatedUsd<0
+   ||typeof review.physicianEdited!=='boolean'||review.status!=='requires-review')
+ ))return false;
  if(value.geneticsDraft!==undefined){
   const draft=value.geneticsDraft;
   if(!isRecord(draft)||typeof draft.context!=='string'||typeof draft.question!=='string'||typeof draft.focus!=='string'
