@@ -2,6 +2,7 @@ name: W5 free-only 20 remaining synthetic cases
 
 on:
   pull_request:
+    types: [opened]
     branches:
       - chatgpt-dev
     paths:

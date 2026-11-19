@@ -2,6 +2,7 @@ name: W5 free-only synthetic model smoke test
 
 on:
   pull_request:
+    types: [opened]
     branches:
       - chatgpt-dev
     paths:
