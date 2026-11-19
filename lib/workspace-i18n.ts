@@ -87,3 +87,14 @@ Object.assign(english,{
  'Сохранён':'Saved',
  'Не создан':'Not created'
 });
+
+// W5: confirmed positive finding; an unchecked box means unknown, not "no bleeding".
+Object.assign(english,{'Подтверждённое активное патологическое кровотечение':'Confirmed active pathological bleeding'});
+Object.assign(es,{'Подтверждённое активное патологическое кровотечение':'Hemorragia patológica activa confirmada'});
+Object.assign(fr,{'Подтверждённое активное патологическое кровотечение':'Saignement pathologique actif confirmé'});
+Object.assign(ar,{'Подтверждённое активное патологическое кровотечение':'نزيف مرضي نشط مؤكد'});
+Object.assign(hi,{'Подтверждённое активное патологическое кровотечение':'सक्रिय रोगजन्य रक्तस्राव की पुष्टि'});
+Object.assign(ptBR,{'Подтверждённое активное патологическое кровотечение':'Sangramento patológico ativo confirmado'});
+Object.assign(id,{'Подтверждённое активное патологическое кровотечение':'Perdarahan patologis aktif yang terkonfirmasi'});
+Object.assign(tr,{'Подтверждённое активное патологическое кровотечение':'Doğrulanmış aktif patolojik kanama'});
+Object.assign(zhCN,{'Подтверждённое активное патологическое кровотечение':'已确认存在活动性病理性出血'});
