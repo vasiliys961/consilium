@@ -60,3 +60,85 @@ export function guardGeneratedClinicalText<T>(generated:T, observedRecord:string
  const value=visit(generated) as T;
  return {value,changed};
 }
+
+
+/** A narrow provenance check at the actual Doctor Opus synthesis boundary.
+ * Only warns; it never rewrites a clinical finding into a verified diagnosis
+ * or claims a medical conclusion. A warning is not a diagnosis or a "failed"
+ * clinical benchmark score. All text is synthetic in regression tests.
+ */
+export type UnverifiedClinicalClaimCode=
+ 'ecg_not_verified'|'imaging_not_verified'|
+ 'discontinued_drug_as_current'|'unsupported_stability';
+export type UnverifiedClinicalClaim={
+ code:UnverifiedClinicalClaimCode;
+ warning:string;
+};
+const deniedClaim=/(?:\b(?:not|never|cannot|can't|should not|must not|do not|no evidence that|avoid assuming)\b|(?:не|нельзя|невозможно|не\s+следует|нет\s+оснований)\s+(?:утверждать|считать|говорить|указывать|делать\s+вывод))/iu;
+function isAsserted(source:string,expression:RegExp):boolean{
+ const found=expression.exec(source);
+ if(!found)return false;
+ const clause=source.slice(Math.max(0,found.index-120),found.index).split(/[.!?;\n]/).pop()??'';
+ return !deniedClaim.test(clause);
+}
+const ecgMissing=/(?:\b(?:no\s+(?:original\s+)?(?:ECG|EKG)(?:\s+(?:file|tracing|provided|available))?|(?:ECG|EKG)\s+(?:is\s+)?(?:not\s+(?:available|supplied|provided|attached|performed|recorded)|unavailable|missing|not yet supplied))\b|ЭКГ\s+(?:не\s+(?:приложена|предоставлена|проведена|выполнена)|отсутствует|неизвестна))/iu;
+const ecgNormal=/\b(?:ECG|EKG)\s+(?:is|was|appears|shows|showed|has been)\s+(?:normal|unremarkable|negative|without abnormalities)\b|ЭКГ\s+(?:нормальна|нормальная|без\s+(?:патологии|отклонений)|в\s+норме)/iu;
+const unreadImaging=/(?:\b(?:CTPA|head CT|brain CT|chest CT|chest X-ray|chest imaging|DICOM)\b.{0,65}\b(?:not\s+(?:reviewed|analy[sz]ed|performed|available)|unread|unverified|missing|not yet assessed)\b|\bno\s+(?:head|chest)?\s*(?:CTPA|CT|imaging)\s+(?:available|performed|provided)\b|КТ[ -]?(?:ангиография|головы)?\s+(?:не\s+(?:выполнена|прочитана|предоставлена)|отсутствует))/iu;
+const imagingNegative=/(?:\b(?:CTPA|head CT|brain CT|chest CT|chest X-ray|chest imaging)\s+(?:is|was|appears|showed|shows)\s+(?:normal|negative|unremarkable|clear|no\s+(?:bleeding|embolism|abnormalities))\b|КТ[ -]?(?:ангиография|головы)?\s+(?:без\s+(?:патологии|кровоизлияния|эмболии)|нормальна))/iu;
+const warfarinStopped=/(?:варфарин.{0,75}(?:НЕ\s+принимает|не\s+принимает|отмен[её]н)|(?:not\s+taking|stopped|discontinued|ceased)\s+warfarin|warfarin\s+(?:stopped|discontinued|ceased))/iu;
+const warfarinCurrent=/\b(?:patient\s+(?:is\s+)?(?:currently\s+)?(?:taking|takes|on)\s+warfarin|warfarin\s+(?:is\s+)?(?:currently\s+)?(?:taken|continued))\b|пациент\s+(?:сейчас\s+)?(?:принимает|получает)\s+варфарин/iu;
+const explicitHypotension=/(?:\b(?:BP|blood pressure)\s*[:=]?\s*(?:7\d|8\d)\s*\/\s*\d{2,3}\b|АД\s*[:=]?\s*(?:7\d|8\d)\s*\/\s*\d{2,3}\b)/iu;
+const claimedStable=/\bhemodynamically\s+stable\b|гемодинамически\s+стабилен/iu;
+const warn:Record<UnverifiedClinicalClaimCode,string>={
+ ecg_not_verified:'В клиническом черновике ЭКГ представлена как нормальная, но исходная ЭКГ отсутствует или не верифицирована. Проверьте документ, не считайте вывод подтверждённым.',
+ imaging_not_verified:'В клиническом черновике КТ/изображение названо отрицательным или нормальным без выполненного анализа. Сверьте первичный источник.',
+ discontinued_drug_as_current:'В клиническом черновике отменённый варфарин упомянут как текущий препарат. Сверьте актуальный лекарственный анамнез.',
+ unsupported_stability:'В клиническом черновике заявлена стабильная гемодинамика при документированной выраженной гипотензии. Требуется врачебная перепроверка.',
+};
+/**
+ * Only supplied source text and generated statements; no model calls,
+ * external medical content, browser globals or patient data persistence.
+ * The processing ledger is authoritative: an assessed result can suppress
+ * an unavailable-test warning only when actual supporting evidence exists.
+ */
+export function auditGeneratedClinicalClaims(
+ sourceRecord:string,
+ generated:unknown,
+ evidence?:{ecgRead?:boolean;imagingRead?:boolean},
+):UnverifiedClinicalClaim[]{
+ if(!generated||typeof generated!=='object')return [];
+ const value=generated as Record<string,unknown>;
+ const strings:string[]=[];
+ if(typeof value.summary==='string')strings.push(value.summary);
+ const report=value.report&&typeof value.report==='object'?value.report as Record<string,unknown>:null;
+ if(report){
+  if(typeof report.problem==='string')strings.push(report.problem);
+  for(const field of ['facts','limitations','questions']){
+   const arr=report[field];if(Array.isArray(arr))strings.push(...arr.filter((x):x is string=>typeof x==='string'));
+  }
+  for(const field of ['tactics']){
+   const section=report[field];
+   if(section&&typeof section==='object')strings.push(...Object.values(section).filter((x):x is string=>typeof x==='string'));
+  }
+  const management=report.management;
+  if(Array.isArray(management))for(const row of management){
+   if(row&&typeof row==='object'){
+    const x=row as Record<string,unknown>;
+    if(typeof x.option==='string')strings.push(x.option);
+   }
+  }
+ }
+ if(Array.isArray(value.statements))for(const row of value.statements){
+  if(row&&typeof row==='object'&&typeof (row as {text?:unknown}).text==='string')strings.push((row as {text:string}).text);
+ }
+ const combined=strings.join('\n').slice(0,50000);
+ const found:UnverifiedClinicalClaim[]=[];
+ function check(code:UnverifiedClinicalClaimCode,condition:boolean){
+  if(condition)found.push({code,warning:warn[code]});
+ }
+ check('ecg_not_verified',!evidence?.ecgRead&&ecgMissing.test(sourceRecord)&&isAsserted(combined,ecgNormal));
+ check('imaging_not_verified',!evidence?.imagingRead&&unreadImaging.test(sourceRecord)&&isAsserted(combined,imagingNegative));
+ check('discontinued_drug_as_current',warfarinStopped.test(sourceRecord)&&isAsserted(combined,warfarinCurrent));
+ check('unsupported_stability',explicitHypotension.test(sourceRecord)&&isAsserted(combined,claimedStable));
+ return found;
+}

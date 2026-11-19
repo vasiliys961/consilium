@@ -8,7 +8,7 @@ import { attachEquipment } from "../packages/attachments/attach.ts";
 import { consiliumFocus, runConsilium, unavailableConsilium } from "./consilium.ts";
 import { conduct, gatewayOf, type CaseResult, type CaseFile, type ConductInput } from "./conductor.ts";
 import { MODELS,creditsFor, priceUsd, totalUsd, chargeForCall, type CostStep, type CostCallStage } from "./cost.ts";
-import { guardGeneratedClinicalText } from "./clinical-integrity.ts";
+import { guardGeneratedClinicalText, auditGeneratedClinicalClaims } from "./clinical-integrity.ts";
 import { imageDataUrl, settleAction, writeLightDraft } from "./draft.ts";
 import { GENETIC_CONSULTATION_INSTRUCTION } from '../packages/genomics/clinical-context.ts';
 import { geneticsCaution } from "../packages/genomics/inspect.ts";
@@ -513,6 +513,14 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
 
   const checkedDraft=guardGeneratedClinicalText(draft,note);
   if(checkedDraft.changed){draft=checkedDraft.value;validationWarnings.push("В черновике утверждалась одышка в покое, хотя в исходных данных она не документирована. Формулировка заменена на неопределённую.");}
+  // Source-verification warnings belong to the actual clinical result, not
+  // an experimental model benchmark. Never rewrite a hypothesis into fact.
+  const sourceAudit=auditGeneratedClinicalClaims(note,draft,{
+    ecgRead:ledger.some(row=>row.modality==='ecg'&&row.status==='read'),
+    imagingRead:ledger.some(row=>row.modality==='radiology'&&row.status==='read')||
+      Boolean(frame?.accounts?.some(item=>item.status==='read')),
+  });
+  validationWarnings.push(...sourceAudit.map(item=>item.warning));
 
   if ((body.consilium === true || /консилиум|several opinions|second opinions/i.test(note)) && note && !blockedInterpretation && clinicalDraft === "generated") {
     emit('stage.started',{stage:'consilium'});
