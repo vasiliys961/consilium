@@ -87,3 +87,29 @@ Object.assign(english,{
  'Сохранён':'Saved',
  'Не создан':'Not created'
 });
+
+// W5: action-oriented, unconfirmed context clarification (EN reference; others fallback to English).
+Object.assign(english,{
+  "Возможные уточнения клинических данных": "Suggested clarifications of clinical data",
+  "Это только предположения: медицинские данные не исправлены и не использованы как подтверждённые.": "These are suggestions only. Clinical data have not been changed or treated as confirmed.",
+  "В исходной записи:": "In the original entry:",
+  "Ожидаемый формат:": "Expected format:",
+  "Сверьте данные и исправьте исходную запись вручную; предположение не использовано как факт.": "Verify the original source and edit the case manually. The suggestion was not used as a fact.",
+  "Неподтверждённое уточнение клинических данных:": "Unconfirmed clinical data clarification:",
+  "СКФ": "eGFR",
+  "Калий": "Potassium",
+  "Возраст": "Age",
+  "Активное патологическое кровотечение": "Active pathological bleeding",
+  "Декомпенсированный цирроз": "Decompensated cirrhosis",
+  "Тяжёлая печёночная недостаточность": "Severe hepatic impairment",
+  "Сверьте даты, методы измерения и исходные документы. Не выбирайте одно из значений автоматически.": "Check dates, methods and original reports. Do not automatically select one of the values.",
+  "Это может быть предыдущий результат. Уточните дату и получите актуальное значение для назначения.": "This may be an earlier result. Verify its date and obtain an up-to-date value before prescribing.",
+  "Указан диапазон или неравенство, а не точное число. Уточните исходный результат и клиническое значение ограничения.": "A range or inequality was entered, not an exact value. Verify the original result and the clinical meaning of the limit.",
+  "Проверьте возможную опечатку, десятичный разделитель и исходный документ. Не исправляйте число предположением.": "Check for transcription errors, decimal separators and the source document. Do not guess a replacement number.",
+  "Уточните текущий клинический статус у врача. Не приравнивайте неизвестно к отрицанию.": "Confirm the current clinical status with the physician. Unknown is not the same as absent.",
+  "Возможно перепутаны СКФ и концентрация креатинина либо единицы измерения. Сверьте название анализа и бланк.": "eGFR may have been confused with serum creatinine or its units. Check the test name and original laboratory report.",
+  "Проверьте, не перепутаны секунды и миллисекунды. Сверьте исходную ЭКГ, прежде чем менять запись.": "Check whether seconds and milliseconds were confused. Review the original ECG before editing the entry.",
+  "Возможно ошибочно указаны единицы калия. Сверьте лабораторный бланк, прежде чем интерпретировать число.": "Potassium units may be wrong. Verify the original laboratory report before interpreting the number.",
+  "Уточните возраст по дате рождения и единицам (месяцы или годы). Не считайте число месяцев годами.": "Confirm age using date of birth and the entered unit (months or years). Do not treat a number of months as years.",
+  "Проверьте значение и единицы по исходному документу; автоматической замены нет.": "Verify the value and units against the original record. No automatic replacement is made."
+});
