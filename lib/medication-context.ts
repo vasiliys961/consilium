@@ -19,7 +19,7 @@ type NumericField={key:NumericKey;name:string;prefix:RegExp;pattern:RegExp;unit:
 const numericFields:ReadonlyArray<NumericField>=[
  {key:'egfr',name:'СКФ',prefix:/^(?:eGFR|СКФ)\s*[:=—–-]/iu,
   pattern:/^(?:eGFR|СКФ)\s*[:=—–-]\s*(\d{1,3}(?:[.,]\d{1,2})?)(?=\s|$)/iu,
-  unit:/^(?:ml\s*\/\s*min|мл\s*\/\s*мин)(?:\s*\/\s*1[.,]73\s*(?:m2|m²|м2|м²))?/iu,min:0,max:130},
+  unit:/^(?:ml\s*\/\s*min|мл\s*\/\s*мин)(?:\s*\/\s*1[.,]73\s*(?:m2|m²|м2|м²))?(?!\s*\/)(?=\s|$|[.,;)])/iu,min:0,max:130},
  {key:'potassium',name:'Калий',prefix:/^(?:Калий|Potassium|K\+)\s*[:=—–-]/iu,
   pattern:/^(?:Калий|Potassium|K\+)\s*[:=—–-]\s*(\d{1,2}(?:[.,]\d{1,2})?)(?=\s|$)/iu,
   unit:/^(?:mmol\s*\/\s*l|meq\s*\/\s*l|ммоль\s*\/\s*л|мэкв\s*\/\s*л)(?=\s|$|[.,;)])/iu,min:1.5,max:10},
