@@ -130,7 +130,11 @@ export async function reviewDrugLabels(
   selections: DrugLabelSelection[], externalEnabled: boolean, fetchImpl: typeof fetch = fetch, signal?: AbortSignal,
 ): Promise<DrugLabelReview> {
   if (!externalEnabled) return {labels:[],unavailable:selections,externalDisabled:true};
-  const unique = [...new Map(selections.slice(0, MAX_DRUG_LABELS).map(item => [item.setId.toLowerCase(), item])).values()];
+  // Never silently truncate selected sources. A partial set could make a
+  // model review appear complete while excluding a medicine or formulation.
+  // Invalid input must fail before any remote label lookup or paid model call.
+  if (!validDrugSelections(selections)) return {labels:[],unavailable:selections,externalDisabled:false};
+  const unique = [...new Map(selections.map(item => [item.setId.toLowerCase(), item])).values()];
   const results = await Promise.all(unique.map(async item => {
     if (!SET_ID.test(item.setId)) return {item,label:null};
     try {
