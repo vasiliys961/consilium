@@ -55,7 +55,7 @@ export interface AnalysisDependencies {
   onEvent?: (event:RunEvent)=>void;
   runId?: string;
   streaming?:boolean;
-  onPreview?:(text:string)=>void;
+  onPreview?:(text:string,id?:string,stage?:string)=>void;
   signal?: AbortSignal;
   env?: Record<string, string | undefined>;
   fetch?: typeof fetch;
@@ -127,14 +127,19 @@ export async function analyzeCase(body: ConductInput, deps: AnalysisDependencies
     const started=Date.now();const isModel=String(input).includes("/chat/completions");
     const request=isModel?JSON.parse(String(init?.body??"{}")):{};
     const provider=String(input).includes("polza.ai")?"polza":"openrouter";
-    if(isModel){emit("model.started",{model:request.model,provider,stage:stage??"unclassified"});if(deps.streaming)deps.onPreview?.("");}
+    const previewId=isModel && deps.streaming?crypto.randomUUID():undefined;
+    if(isModel){emit("model.started",{model:request.model,provider,stage:stage??"unclassified"});if(deps.streaming)deps.onPreview?.("",previewId,stage);}
     let response:Response;
     try{response=await transport(input,{...init,...(isModel?{body:JSON.stringify({...request,usage:{include:true},...(deps.streaming?{stream:true,stream_options:{include_usage:true}}:{})})}:{}),signal:deps.signal ? AbortSignal.any([deps.signal,...(init?.signal ? [init.signal] : [])]) : init?.signal});
-      if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value);}});}}
+      if(isModel&&deps.streaming){let last=0;response=await collectChatStream(response,raw=>{const value=previewText(raw);if(Date.now()-last>100&&value){last=Date.now();deps.onPreview?.(value,previewId,stage);}});}}
     catch(error){if(isModel)emit("model.failed",{model:request.model,provider,durationMs:Date.now()-started,reason:error instanceof Error?error.name:"transport_error"});throw error;}
     if(String(input).includes("/chat/completions")){
 
       const data=await response.clone().json().catch(()=>null);
+      if(deps.streaming && response.ok){
+        const content=data?.choices?.[0]?.message?.content;
+        if(typeof content==='string' && content)deps.onPreview?.(previewText(content),previewId,stage);
+      }
       const usageAvailable=typeof data?.usage?.prompt_tokens==="number"&&typeof data?.usage?.completion_tokens==="number";
       const inputTokens=Number(data?.usage?.prompt_tokens)||0,outputTokens=Number(data?.usage?.completion_tokens)||0;
       const charged=chargeForCall(String(data?.model??request.model??"unknown"),data?.usage);

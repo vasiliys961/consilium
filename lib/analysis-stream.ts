@@ -27,7 +27,7 @@ export async function collectChatStream(response:Response,onText:(text:string)=>
  await response.body.cancel().catch(()=>{});
  return new Response(JSON.stringify({model,choices:[{message:{content:text},finish_reason:finish??'length'}],usage}),{status:200,headers:{'content-type':'application/json'}});
 }
-export async function requestStreamedJson<T>(url:string,body:unknown,options:{signal?:AbortSignal;onProgress?:(event:AnalysisProgressEvent)=>void;onPreview?:(text:string)=>void;fetch?:typeof fetch}={}):Promise<T>{
+export async function requestStreamedJson<T>(url:string,body:unknown,options:{signal?:AbortSignal;onProgress?:(event:AnalysisProgressEvent)=>void;onPreview?:(text:string,id?:string,stage?:string)=>void;fetch?:typeof fetch}={}):Promise<T>{
  if(url==='/api/protocol'){const value=body as Record<string,unknown>;const approved=await reviewBeforeSending({text:String(value.source??'')});body={...value,source:approved.text,privacyReview:approved};}
  const response=await (options.fetch??fetch)(url,{method:'POST',headers:{'content-type':'application/json',accept:'text/event-stream'},body:JSON.stringify(body),signal:options.signal});
  if(response.status===428){const value=await response.clone().json().catch(()=>null);if(value?.error==='gemini_choice_required'){window.dispatchEvent(new CustomEvent('concilium-gemini-choice-required',{detail:value.policy}));throw new Error('Выберите модель Gemini в открывшемся окне и повторите разбор.');}}
@@ -39,7 +39,10 @@ export async function requestStreamedJson<T>(url:string,body:unknown,options:{si
   for await(const event of sseEvents(response.body)){
    let value:unknown;try{value=JSON.parse(event.data);}catch{continue;}
    if(event.event==='progress'&&value&&typeof value==='object')options.onProgress?.(value as AnalysisProgressEvent);
-   if(event.event==='preview'&&value&&typeof value==='object')options.onPreview?.(String((value as {text?:unknown}).text??''));
+   if(event.event==='preview'&&value&&typeof value==='object'){
+     const part=value as {text?:string;id?:string;stage?:string};
+     options.onPreview?.(String(part.text??''),part.id,part.stage);
+   }
    if(event.event==='result'){
     // The server emits result only after completing analysis. This is the terminal
     // commit point: a dropped TCP connection while closing the stream must not
