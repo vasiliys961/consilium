@@ -146,6 +146,20 @@ type ParsedCsv =
   | { ok: true; samplingRate: number | null; leads: Record<EcgLead, number[]> }
   | { ok: false; code: "none" | "short" | "repeated" | "ragged" | "nan" | "missing" | "empty"; lead?: string; missing?: string };
 
+function csvTimeRate(header: string[], rows: string[][]): number | null {
+  const units = header.map(name => /^time[ _(\[]+(ms|s)[)\]]?$/i.exec(name)?.[1]?.toLowerCase());
+  const index = units.findIndex(Boolean);
+  if (index < 0 || units.filter(Boolean).length !== 1 || rows.length < 3) return null;
+  const times = rows.map(row => row[index]?.trim() ? Number(row[index]) : NaN);
+  const step = (times[times.length - 1] - times[0]) / (times.length - 1);
+  if (!Number.isFinite(step) || step <= 0) return null;
+  for (let i = 1; i < times.length; i++) {
+    const delta = times[i] - times[i - 1];
+    if (!Number.isFinite(delta) || Math.abs(delta - step) > step * 0.01) return null;
+  }
+  return (units[index] === "ms" ? 1000 : 1) / step;
+}
+
 function parseCsv(text: string): ParsedCsv {
   if (/\bnone\b/i.test(text)) return { ok: false, code: "none" };
   const rows = text
@@ -163,6 +177,7 @@ function parseCsv(text: string): ParsedCsv {
     header = data[0] ?? [];
     data = data.slice(1);
   }
+  if (header === rows[0]) samplingRate = csvTimeRate(header, data);
   const columns = new Map<EcgLead, number[]>();
   for (const name of header) {
     const lead = leadOf(name);
