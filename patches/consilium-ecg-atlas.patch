@@ -1,0 +1,137 @@
+diff --git a/app/components/clinical-workspace.tsx b/app/components/clinical-workspace.tsx
+index 2ae16e4..c8010a5 100644
+--- a/app/components/clinical-workspace.tsx
++++ b/app/components/clinical-workspace.tsx
+@@ -10,4 +10,5 @@ import {consumeSpecialistCaseDraft} from '@/lib/copilot-case-handoff';
+ import {PortableCaseExport,PortableCaseImport} from './portable-case-file';
+ import {LibrarySuggestions} from './library-suggestions';
++import {EcgAtlas} from './ecg-atlas';
+ import {CaseFeed} from './case-feed';
+ import Link from 'next/link';
+@@ -508,4 +509,5 @@ export default function ClinicalWorkspace({home=false}:{home?:boolean}) {
+         <label>{t('На какой вопрос нужно ответить?')}<textarea rows={3} disabled={busy} value={current.analyses.length||caseQuestion?caseQuestion:current.question} placeholder={t('Что нужно выяснить?')} onChange={event=>current.analyses.length||caseQuestion?setCaseQuestion(event.target.value):update({question:event.target.value})}/></label>
+         <CaseVoiceInput key={current.id+'-voice-question'} disabled={busy||uploading||current.status==='closed'} onText={text=>setCaseQuestion(previous=>[(previous||(!current.analyses.length?current.question:'')).trim(),text].filter(Boolean).join('\n'))}/>
++        <EcgAtlas key={current.id} files={current.files} locale={answerLocale} training={training}/>
+         <details><summary>{t('Выбрать источник из библиотеки')}</summary>
+         <LibrarySuggestions onOptionsChange={setLibraryOptions} key={current.id} context={caseContext(current).slice(0,3500)} query={caseQuestion.trim()||current.events.slice().reverse().find(event=>event.kind==='question')?.text||current.question||caseContext(current).slice(0,1000)} onSelectionChange={(files,question)=>setSelectedLibrary({question,files})} disabled={busy||current.status==='closed'}/>
+diff --git a/app/components/ecg-atlas.tsx b/app/components/ecg-atlas.tsx
+new file mode 100644
+index 0000000..198808b
+--- /dev/null
++++ b/app/components/ecg-atlas.tsx
+@@ -0,0 +1,115 @@
++'use client';
++import {useEffect,useRef,useState} from 'react';
++import {getAllDocuments,getDocumentSourceFile,checkLibraryFolderSource,type LibraryDocument} from '@/lib/library-db';
++import {getBookVisualRegions} from '@/lib/library-visual-db';
++import {embedBookImage} from '@/lib/visual-embeddings';
++import {rankVisualRegions} from '@/lib/library-retrieval';
++import {renderLibraryPdfPage} from '@/lib/library-import';
++import {requestAnalysis} from '@/lib/analysis-stream';
++import {traceCsv} from '@/packages/ecg/inspect';
++import type {CaseFile} from '@/lib/conductor';
++import type {Locale} from '@/lib/locale';
++
++function surface(width:number,height:number){
++  const canvas=document.createElement('canvas');
++  canvas.width=width;canvas.height=height;
++  const ctx=canvas.getContext('2d');
++  if(!ctx)throw Error('Canvas unavailable');
++  ctx.fillStyle='white';ctx.fillRect(0,0,width,height);
++  ctx.fillStyle='black';
++  return {canvas,ctx};
++}
++
++function tracing(file:CaseFile){
++  if(file.image)return file.image;
++  const wave=traceCsv(file.text??'');
++  if(!wave)return null;
++  const {canvas,ctx}=surface(1200,840);
++  const leads=Object.entries(wave.leads);
++  let peak=0;
++  for(const [,samples] of leads)for(const n of samples)peak=Math.max(peak,Math.abs(n));
++  if(!peak)return null;
++  ctx.font='18px sans-serif';ctx.lineWidth=1.3;
++  leads.forEach(([name,samples],i)=>{
++    const y=35+70*i;
++    ctx.fillText(name,5,y);ctx.beginPath();
++    samples.forEach((n,j)=>{
++      const x=50+1140*j/Math.max(1,samples.length-1),v=y-30*n/peak;
++      if(j)ctx.lineTo(x,v);else ctx.moveTo(x,v);
++    });
++    ctx.stroke();
++  });
++  return canvas.toDataURL('image/png');
++}
++
++async function pairedImage(patient:string,page:string,pageNo:number,bounds:[number,number,number,number]){
++  const images=await Promise.all([patient,page].map(async src=>{
++    const img=new Image();img.src=src;await img.decode();return img;
++  }));
++  const {canvas,ctx}=surface(1800,1260);
++  images.forEach((img,i)=>{
++    const [x,y,w,h]=i?bounds:[0,0,1,1];
++    const width=img.width*w,height=img.height*h;
++    const scale=Math.min(880/width,1190/height);
++    ctx.font='bold 24px sans-serif';ctx.fillText(i?'ATLAS  |  PDF '+pageNo:'PATIENT ECG',10+900*i,34);
++    ctx.drawImage(img,img.width*x,img.height*y,width,height,10+i*900,52,width*scale,height*scale);
++  });
++  return canvas.toDataURL('image/jpeg',.86);
++}
++
++export function EcgAtlas({files,locale,training=false}:{files:CaseFile[];locale:Locale;training?:boolean}){
++  const ru=locale==='ru',t=(r:string,e:string)=>ru?r:e;
++  const inputs=files.filter(f=>f.image||(/\.csv$/i.test(f.name)&&f.text&&/(?:^|,)\s*(?:aVR|V1)\s*(?:,|$)/im.test(f.text.slice(0,800))));
++  const [docs,setDocs]=useState<LibraryDocument[]>([]),[docId,setDoc]=useState(''),[key,setKey]=useState('');
++  const [status,setStatus]=useState(''),[view,setView]=useState<{src:string;title:string}|null>(null);
++  const [answer,setAnswer]=useState(''),[busy,setBusy]=useState(false),controller=useRef<AbortController|null>(null);
++  const [opened,setOpened]=useState(false);
++  useEffect(()=>()=>controller.current?.abort(),[]);
++  useEffect(()=>{
++    if(!opened)return;
++    let live=true;
++    getAllDocuments().then(all=>{if(live)setDocs(all.filter(d=>/\.pdf$/i.test(d.name)));}).catch(()=>{if(live)setStatus(t('Не удалось открыть библиотеку.','Could not open the library.'));});
++    return ()=>{live=false;};
++  },[opened]);
++  const input=inputs.find(f=>(f.sha256||f.name)===key)??inputs[0];
++  const book=docs.find(d=>d.id===docId)??(docs.length===1?docs[0]:undefined);
++  async function compare(){
++    if(!input||!book||controller.current)return;
++    const run=new AbortController();controller.current=run;
++    setBusy(true);setView(null);setAnswer('');
++    try{
++      setStatus(t('Ищем похожий рисунок в атласе…','Searching atlas figures…'));
++      if(book.storage==='folder'&&['modified','unavailable'].includes(await checkLibraryFolderSource(book)))throw Error(t('Обновите копию книги в библиотеке.','Refresh the library copy.'));
++      const regions=await getBookVisualRegions(book.id);
++      if(!regions.length)throw Error(t('В библиотеке откройте атлас и запустите индексацию иллюстраций.','Index this atlas’s illustrations in the library.'));
++      const patient=tracing(input);
++      if(!patient)throw Error(t('Не удалось построить кривую по этой записи.','Could not draw this tracing.'));
++      const vector=await embedBookImage(patient);
++      const match=rankVisualRegions(regions,vector,1)[0];
++      if(!match)throw Error(t('Похожий рисунок среди индексированных страниц не найден.','No candidate among indexed pages.'));
++      const source=await getDocumentSourceFile(book.id);
++      if(!source)throw Error(t('Оригинал PDF недоступен.','Original PDF unavailable.'));
++      const number=match.region.pageId,page=await renderLibraryPdfPage(source,number);
++      const image=await pairedImage(patient,page.image,number,match.region.bounds);
++      run.signal.throwIfAborted();
++      setView({src:image,title:book.name+' · PDF '+number});
++      setStatus(t('Сопоставляем признаки…','Comparing features…'));
++      const body={analysisMode:training?'training':'clinical',locale,task:'interpret' as const,externalSearch:false,retain:false,
++        text:'Compare the two labeled panels. Left is the patient ECG; right is an atlas reference page. The automatically retrieved example may be irrelevant. Name the visible leads and specific similarities and differences. If no convincing correspondence or illegible, say so. Never transfer a reference diagnosis to the patient. Do not measure intervals or amplitudes from the resized panels.',
++        files:[{name:'ecg-atlas-comparison.jpg',image,imageProfile:'ecg' as const}]};
++      const result=await requestAnalysis(body,{signal:run.signal});
++      if(result.clinicalDraft!=='generated')throw Error(t('Сравнение не завершено.','Comparison incomplete.'));
++      setAnswer(result.draft.summary);setStatus('');
++    }catch(e){if(!run.signal.aborted)setStatus(e instanceof Error?e.message:t('Сравнение недоступно.','Comparison unavailable.'));}
++    finally{controller.current=null;if(!run.signal.aborted)setBusy(false);}
++  }
++  if(!inputs.length)return null;
++  return <details onToggle={e=>setOpened(e.currentTarget.open)}><summary>{t('Сравнить ЭКГ с атласом','Compare ECG with an atlas')}</summary>
++    {inputs.length>1&&<label>{t('Запись ЭКГ','ECG recording')}<select disabled={busy} value={input.sha256||input.name} onChange={e=>{setKey(e.target.value);setView(null);setAnswer('');setStatus('');}}>{inputs.map(f=><option key={f.sha256||f.name} value={f.sha256||f.name}>{f.name}</option>)}</select></label>}
++    <label>{t('Атлас из библиотеки','Library atlas')}<select disabled={busy} value={book?.id??''} onChange={e=>{setDoc(e.target.value);setView(null);setAnswer('');setStatus('');}}><option value="">{t('Выберите PDF атласа','Choose an atlas PDF')}</option>{docs.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select></label>
++    <button disabled={busy||!book} onClick={()=>void compare()}>{t('Найти пример и сравнить','Find example and compare')}</button>
++    {book&&!book.imagesIndexed&&<small>{t('Поиск охватывает проиндексированные страницы.','Search covers indexed pages.')}</small>}
++    <p role="status">{status}</p>{view&&<figure><img src={view.src} alt={t('Слева ЭКГ, справа страница атласа','ECG at left and reference page at right')} style={{width:'100%'}}/><figcaption>{view.title}</figcaption></figure>}
++    {answer&&<p style={{whiteSpace:'pre-wrap'}}>{answer}</p>}
++  </details>;
++}
