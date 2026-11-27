@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { existsSync } from "node:fs";
 import { settleAction, type DraftStatement } from "../../lib/draft.ts";
 import { moduleLocale, type Locale } from "../../lib/locale.ts";
-import { traceCsv, traceXml } from "./inspect.ts";
+import { inspectEcg, traceCsv, traceXml } from "./inspect.ts";
 import { traceBinary } from "./open.ts";
 
 export const NETWORK_BAR = 0.5;
@@ -143,12 +143,13 @@ function runNetwork(home: string, stdin: string) {
     });
     child.on("error", () => {
       clearTimeout(timer);
-      resolve(null);
+      resolve(JSON.stringify({ok:false,code:"runner"}));
     });
     child.on("close", () => {
       clearTimeout(timer);
-      resolve(out.trim() || null);
+      resolve(out.trim() || JSON.stringify({ok:false,code:"runtime"}));
     });
+    child.stdin.on("error", () => { /* A failed or early-exiting runner closes its input. */ });
     child.stdin.write(stdin);
     child.stdin.end();
   });
@@ -177,7 +178,9 @@ export async function assessTracing(
       cleared: [],
       top: null,
       names,
-      reason: (binaryName || xmlName) && !trace
+      reason: !trace && lower.endsWith(".csv")
+        ? inspectEcg(file, moduleLocale(locale) === "ru" ? "ru" : "en")?.reason ?? say(locale, "Cannot read this ECG table.", "Не удалось прочитать таблицу отведений ЭКГ.")
+        : (binaryName || xmlName) && !trace
         ? say(locale, "The ECG file did not open, so the network was not run.", "Файл ЭКГ не открылся, сеть не запускалась.")
         : say(locale, "The sampling rate is absent, so the ECG network was not run.", "Частоты в файле нет, сеть ЭКГ не запускалась."),
     };
@@ -240,7 +243,11 @@ export async function assessTracing(
   } : undefined;
   if (!parsed.ok) {
     const reason =
-      parsed.code === "weights"
+      parsed.code === "runner"
+        ? say(locale, "The local ECGFounder interpreter could not start.", "Не удалось запустить локальный интерпретатор ECGFounder.")
+        : parsed.code === "runtime" || parsed.code === "error"
+        ? say(locale, "ECGFounder failed while processing the recording.", "Ошибка исполнения ECGFounder при обработке записи.")
+        : parsed.code === "weights"
         ? say(locale, "The ECG network weights were not found.", "Веса сети ЭКГ не найдены.")
         : parsed.code === "signal"
           ? say(locale, "The ECG network refused this tracing.", "Сеть ЭКГ эту запись не приняла.")
