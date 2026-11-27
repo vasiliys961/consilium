@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         const beat=setInterval(()=>send('keepalive',{}),15000);
         timer=setTimeout(()=>{controller.abort();writeTerminalEvent(terminalEvent(runId,'run.failed',{reason:'deadline',durationMs:deadline}));send('error',{code:'deadline'});if(!closed){closed=true;output.close();}},deadline);
         const abort=()=>controller.abort();request.signal.addEventListener('abort',abort,{once:true});
-        const work=body.equipment?.name&&body.draft?.summary?Promise.resolve(attachedCase(body,env)).then(response=>response.json()):analyzeCase(body,{env,reviewed:true,runId,signal:controller.signal,streaming:true,onEvent:event=>{writeTerminalEvent(event);send('progress',event);},onPreview:text=>send('preview',{text})});
+        const work=body.equipment?.name&&body.draft?.summary?Promise.resolve(attachedCase(body,env)).then(response=>response.json()):analyzeCase(body,{env,reviewed:true,runId,signal:controller.signal,streaming:true,onEvent:event=>{writeTerminalEvent(event);send('progress',event);},onPreview:(text,id,stage)=>send('preview',{text,id,stage})});
         finished=work.then(result=>{if(!controller.signal.aborted)send('result',result);}).catch(error=>{writeTerminalEvent(terminalEvent(runId,'run.failed',{reason:error instanceof Error?error.name:'unknown'}));send('error',{code:'analysis'});}).finally(()=>{if(timer)clearTimeout(timer);clearInterval(beat);request.signal.removeEventListener('abort',abort);release();if(!closed){closed=true;output.close();}});
       },cancel(){closed=true;controller.abort();}});
       return new Response(stream,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','X-Accel-Buffering':'no'}});

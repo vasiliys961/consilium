@@ -81,3 +81,7 @@
 @media(max-width:1150px){.caseGrid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:850px){.content{padding-inline:18px}.caseGrid>.panel{padding:20px}}
 @media(max-width:540px){.content{padding-inline:12px}.caseGrid>.panel{padding:16px}}
+
+.runJournal { margin-block: 1.5rem; padding: 1rem 1.25rem; border-inline-start: 3px solid var(--green); }
+.runJournal article { margin-block: 1rem; max-inline-size: 78ch; }
+.runJournal article p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }

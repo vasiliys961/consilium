@@ -13,6 +13,16 @@ import zhCN from "./workspace-locales/zh-CN.json" with {type:"json"};
 export const WORKSPACE_LANGUAGES=[{code:'ru',name:'Русский'},{code:'en',name:'English'},{code:'es',name:'Español'},{code:'fr',name:'Français'},{code:'ar',name:'العربية'},{code:'hi',name:'हिन्दी'},{code:'pt-BR',name:'Português'},{code:'id',name:'Bahasa Indonesia'},{code:'tr',name:'Türkçe'},{code:'zh-CN',name:'简体中文'}] as const;
 export type WorkspaceLanguage=(typeof WORKSPACE_LANGUAGES)[number]['code'];
 export const english:Record<string,string>={
+  'Действия со случаем': 'Case actions',
+  'Экспорт и хранение': 'Export and storage',
+  'Переместить случай в корзину': 'Move case to trash',
+  'Препараты и взаимодействия': 'Medications and interactions',
+  'Выбрать источник из библиотеки': 'Choose a library source',
+  'Варианты разбора': 'Analysis options',
+  'Ответ на вопрос': 'Answer to your question',
+  'Предварительный текст': 'Provisional text',
+  'Подготовка заключения': 'Preparing the conclusion',
+  'Обработка материалов': 'Processing materials',
   'Фрагмент полного текста': 'Excerpt from full text',
   'Фрагмент источника': 'Source excerpt',
   'Аннотация': 'Abstract',

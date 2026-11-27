@@ -1,6 +1,7 @@
 'use client';
 import {imageModelLabel} from '@/packages/medical-images/routing';
 import {memo} from 'react';
+import ReactMarkdown from 'react-markdown';
 import {analysisQuestion,type ClinicalCase} from '@/lib/casebook';
 import {ClinicalReportView} from './clinical-report';
 import {GenomicReviewView} from './genomic-review';
@@ -30,7 +31,10 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
     <h3>{t(analysisQuestion(analysis))}</h3>
     <small>{result.clinicalDraft==='generated'?t('ЧЕРНОВИК · ПРОВЕРИТЬ ВРАЧУ'):t('РАЗБОР НЕ ЗАВЕРШЁН')}</small>
     {analysis.newFacts&&<details><summary>{t('Новые данные этого этапа')}</summary><p className={styles.voiceText}>{analysis.newFacts}</p></details>}
-    <div className={styles.feedAnswer}><p>{result.draft.summary}</p></div>
+    <section className={styles.feedAnswer}>
+      <h4>{t(result.clinicalDraft==='generated'?'Ответ на вопрос':'Разбор не завершён')}</h4>
+      <ReactMarkdown skipHtml disallowedElements={['img','a']} unwrapDisallowed>{result.draft.summary}</ReactMarkdown>
+    </section>
     {medicationRisks.risks.length>0&&<section aria-label={t('Лекарственные риски · проверить врачу')} style={{borderLeft:'3px solid #b07c42',padding:'7px 14px',margin:'12px 0',background:'rgba(184,129,57,.06)'}}>
       <h4 style={{margin:'0 0 5px'}}>{t('Перед назначением: важные лекарственные риски')}</h4>
       <ul style={{margin:'6px 0'}}>{medicationRisks.risks.map((risk,i)=><li key={i}><strong>{risk.option}:</strong> {risk.severity==='contraindicated'?t('Противопоказание: '):''}{risk.risk}</li>)}</ul>
@@ -65,7 +69,7 @@ export const CaseFeed=memo(function CaseFeed({value,busy,onCouncil,onDecision}:{
      </section>}
     {result.ledger.filter(entry=>entry.genetics?.review).map(entry=><details key={entry.source}><summary>{entry.source} · {t('Генетический разбор')}</summary><GenomicReviewView finding={entry.genetics!}/></details>)}
     {result.medicationReview&&<details><summary>{t('Проверка инструкций к препаратам')}</summary><MedicationReviewView review={result.medicationReview}/></details>}
-    {analysis.kind==='summary'&&result.draft.report&&<section aria-label={t('Краткое резюме')}><h4>{t('Следующий шаг')}</h4><p>{result.draft.report.tactics?.nextStep||result.draft.report.problem}</p>{result.draft.report.questions.length>0&&<><h4>{t('Уточнить перед решением')}</h4><ul>{result.draft.report.questions.map((question,i)=><li key={i}>{question}</li>)}</ul></>}</section>}
+    {result.clinicalDraft==='generated'&&result.draft.report&&<section aria-label={t('Краткое резюме')}><h4>{t('Следующий шаг')}</h4><p>{result.draft.report.tactics?.nextStep||result.draft.report.problem}</p>{result.draft.report.questions.length>0&&<><h4>{t('Уточнить перед решением')}</h4><ul>{result.draft.report.questions.map((question,i)=><li key={i}>{question}</li>)}</ul></>}</section>}
     {result.draft.report&&<details className={styles.feedDetails}><summary>{t('Обоснование, тактика и уточняющие вопросы')}</summary><ClinicalReportView report={result.draft.report} citations={result.citations}/></details>}
 {result.readings?.filter(r=>r.secondOpinion).map(r=><section key={'opinion-'+r.source}><h4>{t('Второе мнение')} · {imageModelLabel(r.secondOpinion?.model??'')} · {r.source}</h4>{r.secondOpinion?.mode==='informed'&&<small>{t('Проверка с учётом первого ответа')}</small>}<p>{r.secondOpinion?.status==='completed'?r.secondOpinion.text:t('Второе мнение не получено. Основное заключение сохранено.')}</p></section>)}
     {studies.length>0&&<section className={styles.feedStudies} aria-label={t('Исследования этого этапа')}><StudyReports reports={studies}/></section>}
