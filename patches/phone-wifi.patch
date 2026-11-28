@@ -1,0 +1,246 @@
+diff --git a/app/api/phone/next/route.ts b/app/api/phone/next/route.ts
+new file mode 100644
+index 0000000..88eb24a
+--- /dev/null
++++ b/app/api/phone/next/route.ts
+@@ -0,0 +1,20 @@
++import {phoneFilesSince} from '@/packages/phone/bridge';
++
++export const runtime = 'nodejs';
++
++// Desktop only. The phone relay deliberately does not expose this endpoint.
++export async function POST(request: Request) {
++  const body = await request.json().catch(() => null);
++  if (typeof body?.token !== 'string' || !Number.isSafeInteger(body.since) || body.since < 0)
++    return new Response(null, {status: 400});
++  const files = phoneFilesSince(body.token, body.since);
++  const headers = new Headers({'cache-control': 'no-store'});
++  if (!files?.length) return new Response(null, {status: files ? 204 : 404, headers});
++  const file = files[0];
++  headers.set('content-type', 'application/octet-stream');
++  headers.set('x-content-type-options', 'nosniff');
++  headers.set('x-phone-type', encodeURIComponent(file.mimeType));
++  headers.set('x-phone-name', encodeURIComponent(file.name));
++  headers.set('x-phone-id', String(file.id));
++  return new Response(new Uint8Array(file.bytes), {headers});
++}
+diff --git a/app/components/phone-import.tsx b/app/components/phone-import.tsx
+index 2b2fcbe..327e5e4 100644
+--- a/app/components/phone-import.tsx
++++ b/app/components/phone-import.tsx
+@@ -2,4 +2,6 @@
+ import { useWorkspaceLanguage } from "@/app/components/workspace-language";
+ import { useEffect, useRef, useState } from 'react';
++import {inboxUpdate,inboxWake} from './phone-inbox-receiver';
++import {receiveNextPhoneFile} from '@/lib/phone-receive';
+ import type { Locale } from '@/lib/locale';
+ export function PhoneImport({ onFile, locale = 'ru', disabled = false,purpose='case' }: {
+@@ -21,38 +23,48 @@ export function PhoneImport({ onFile, locale = 'ru', disabled = false,purpose='c
+     useEffect(()=>{const saved=sessionStorage.getItem(storageKey);if(saved)try{const value=JSON.parse(saved);setToken(value.token);setLink(value.link);setQr(value.qr);setMessage('Подключение к телефону восстановлено.');}catch{/* Invalid local session is ignored. */}},[storageKey]);
+     useEffect(() => {
+-        if (!token)
+-            return;
+-        let stopped = false;
+-        let since = Number(sessionStorage.getItem('concilium-phone-since:'+token))||0;
+-        let pulling = false;
+-        const poll = async () => { if (stopped || pulling || blocked.current)
+-            return; pulling = true; try {
+-            const response = await fetch(`/api/phone/events?token=${encodeURIComponent(token)}&since=${since}`);
+-            const data = await response.json();
+-            if (!response.ok) {
+-                sessionStorage.removeItem(storageKey);setToken('');setQr('');setMessage('Сессия телефона недоступна или истекла после перезапуска сервера. Откройте новую.');
+-                return;
+-            }
+-            for (const item of data.files ?? []) {
+-                if (stopped)
+-                    return;
+-                const match = /^data:([^;,]+);base64,(.*)$/.exec(item.dataUrl);
+-                if (!match)
+-                    continue;
+-                const bytes = Uint8Array.from(atob(match[2]), c => c.charCodeAt(0));
+-                await receiver.current(new File([bytes], item.name, { type: match[1] }));
+-                since = Math.max(since, item.id);sessionStorage.setItem('concilium-phone-since:'+token,String(since));
+-                setMessage(purpose==='inbox'?'Файл с телефона сохранён в папке приёма.':'Материал с телефона добавлен в текущий случай.');
+-            }
++        if (!token) return;
++        if (purpose === 'inbox') {
++            const update = (event: Event) => {
++                const detail = (event as CustomEvent).detail;
++                if (detail.token !== token) return;
++                setMessage(detail.message);
++                if (detail.expired) { setToken(''); setQr(''); setLink(''); }
++            };
++            window.addEventListener(inboxUpdate, update);
++            window.dispatchEvent(new Event(inboxWake));
++            return () => window.removeEventListener(inboxUpdate, update);
+         }
+-        catch {
+-            setMessage('Связь с телефоном прервалась. Повторяем подключение.');
++        const controller = new AbortController();
++        const cursor = 'concilium-phone-since:' + token;
++        let since = Number(sessionStorage.getItem(cursor)) || 0;
++        let pulling = false;
++        async function poll() {
++            if (pulling || blocked.current || controller.signal.aborted) return;
++            pulling = true;
++            try {
++                while (!blocked.current && !controller.signal.aborted) {
++                    const next = await receiveNextPhoneFile(token, since, controller.signal);
++                    if (!next || controller.signal.aborted) break;
++                    try {
++                        await receiver.current(next.file);
++                    } catch (error) {
++                        setMessage('Файл получен на Mac, но его не удалось добавить в случай. ' + (error instanceof Error ? error.message : ''));
++                        break;
++                    }
++                    since = next.id;
++                    sessionStorage.setItem(cursor, String(since));
++                    setMessage('Материал с телефона добавлен в текущий случай.');
++                }
++            } catch (error) {
++                if (controller.signal.aborted) return;
++                if (error instanceof Error && error.message === 'phone_session_expired') {
++                    sessionStorage.removeItem(storageKey); setToken(''); setLink(''); setQr('');
++                    setMessage('Сессия телефона истекла. Откройте новый QR-код.');
++                } else setMessage('Mac ожидает ответа сервера передачи.');
++            } finally { pulling = false; }
+         }
+-        finally {
+-            pulling = false;
+-        } };
+         void poll();
+         const timer = setInterval(() => void poll(), 2500);
+-        return () => { stopped = true; clearInterval(timer); };
++        return () => { controller.abort(); clearInterval(timer); };
+     }, [token,storageKey,purpose]);
+     useEffect(()=>{if(!token||!link)return;let active=true;try{const url=new URL(link),params=new URLSearchParams(url.hash.slice(1));if(params.get('locale')===locale&&params.get('purpose')===purpose)return;params.set('locale',locale);params.set('purpose',purpose);url.hash=params.toString();const next=url.toString();void import('qrcode').then(async loaded=>{const image=await loaded.toDataURL(next,{width:200,margin:1});if(active){setLink(next);setQr(image);sessionStorage.setItem(storageKey,JSON.stringify({token,link:next,qr:image}));}}).catch(()=>{});}catch{}return()=>{active=false;};},[token,link,locale,purpose,storageKey]);
+diff --git a/app/components/phone-inbox-receiver.tsx b/app/components/phone-inbox-receiver.tsx
+new file mode 100644
+index 0000000..672a76d
+--- /dev/null
++++ b/app/components/phone-inbox-receiver.tsx
+@@ -0,0 +1,66 @@
++'use client';
++import {useEffect} from 'react';
++import {receiveInboxFile} from '@/lib/file-inbox';
++import {receiveNextPhoneFile} from '@/lib/phone-receive';
++
++export const inboxSessionKey = 'concilium-phone-inbox-session';
++export const inboxUpdate = 'concilium-phone-inbox-update';
++export const inboxWake = 'concilium-phone-inbox-wake';
++
++// Lives in the unlocked app shell, so navigation does not detach the scanner inbox.
++export function PhoneInboxReceiver() {
++  useEffect(() => {
++    if (location.pathname.startsWith('/phone/')) return;
++    const controller = new AbortController();
++    let running = false;
++    async function poll() {
++      if (running || controller.signal.aborted) return;
++      running = true;
++      let token = '';
++      function notify(message: string, expired = false) {
++        window.dispatchEvent(new CustomEvent(inboxUpdate, {detail: {message, expired, token}}));
++      }
++      try {
++        const raw = sessionStorage.getItem(inboxSessionKey);
++        if (!raw) return;
++        token = JSON.parse(raw).token;
++        if (!token) return;
++        const cursor = 'concilium-phone-since:' + token;
++        let since = Number(sessionStorage.getItem(cursor)) || 0;
++        while (!controller.signal.aborted) {
++          const next = await receiveNextPhoneFile(token, since, controller.signal);
++          if (!next || controller.signal.aborted) break;
++          try {
++            await receiveInboxFile(next.file);
++          } catch {
++            notify('На Mac не удалось сохранить файл в папку приёма. Файл остаётся в очереди.');
++            break;
++          }
++          since = next.id;
++          sessionStorage.setItem(cursor, String(since));
++          notify('Файл с телефона сохранён в папке приёма.');
++        }
++      } catch (error) {
++        if (controller.signal.aborted) return;
++        const expired = error instanceof Error && error.message === 'phone_session_expired';
++        if (expired && JSON.parse(sessionStorage.getItem(inboxSessionKey) || '{}').token === token)
++          sessionStorage.removeItem(inboxSessionKey);
++        notify(expired ? 'Сессия истекла. Откройте новый QR-код.' : 'Mac ожидает ответа сервера передачи.', expired);
++      } finally {
++        running = false;
++      }
++    }
++    const resume = () => void poll();
++    resume();
++    const timer = setInterval(resume, 2500);
++    window.addEventListener(inboxWake, resume);
++    window.addEventListener('online', resume);
++    return () => {
++      controller.abort();
++      clearInterval(timer);
++      window.removeEventListener(inboxWake, resume);
++      window.removeEventListener('online', resume);
++    };
++  }, []);
++  return null;
++}
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 0fc2ae7..02fde17 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -1,2 +1,3 @@
++import {PhoneInboxReceiver} from './components/phone-inbox-receiver';
+ import {LocalVault} from './components/local-vault';
+ import {PrivacyReview} from './components/privacy-review';
+@@ -13,5 +14,5 @@ export default function RootLayout({ children }: { children: ReactNode }) {
+   return (
+     <html lang="ru">
+-      <body><LocalVault><PrivacyReview/><GeminiModelChoice/>{children}</LocalVault></body>
++      <body><LocalVault><PhoneInboxReceiver/><PrivacyReview/><GeminiModelChoice/>{children}</LocalVault></body>
+     </html>
+   );
+diff --git a/app/scanner/page.tsx b/app/scanner/page.tsx
+index 54ed4ad..397afa7 100644
+--- a/app/scanner/page.tsx
++++ b/app/scanner/page.tsx
+@@ -3,4 +3,5 @@ import Link from 'next/link';
+ import {useEffect,useState} from 'react';
+ import {PhoneScanGuide} from '@/app/components/phone-scan-guide';
++import {inboxUpdate} from '@/app/components/phone-inbox-receiver';
+ import {PhoneImport} from '@/app/components/phone-import';
+ import {LanguageSwitcher} from '@/app/components/language-switcher';
+@@ -12,8 +13,8 @@ export default function ScannerPage(){
+  const {t,language}=useWorkspaceLanguage();const [files,setFiles]=useState<InboxFile[]>([]),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[trash,setTrash]=useState(false);
+  const refresh=async()=>setFiles(await readInboxFiles());
+- useEffect(()=>{void refresh().catch(()=>setNotice('Не удалось открыть папку приёма в браузере.'));},[]);
++ useEffect(()=>{const reload=()=>void refresh().catch(()=>setNotice('Не удалось открыть папку приёма в браузере.')); reload();window.addEventListener(inboxUpdate,reload);return ()=>window.removeEventListener(inboxUpdate,reload);},[]);
+  async function receive(file:File){try{await receiveInboxFile(file);await refresh();setNotice('Файл сохранён в приложении. Его можно скачать на компьютер.');}catch(error){setNotice(error instanceof Error?error.message:'Не удалось сохранить файл.');throw error;}}
+  async function add(list:FileList|null){if(!list)return;setBusy(true);try{for(const file of Array.from(list))await receive(file);}catch{}finally{setBusy(false);}}
+  async function folder(){const picker=(window as Window&{showDirectoryPicker?:(options:{mode:'readwrite'})=>Promise<InboxDirectory>}).showDirectoryPicker;if(!picker){setNotice('В этом браузере используйте «Скачать»: файлы попадут в выбранную вами папку загрузок.');return;}try{const directory=await picker({mode:'readwrite'});setBusy(true);for(const file of files.filter(file=>!file.deletedAt)){const safe=file.name.replace(/[\\/:\u0000-\u001f]/g,'_')||'material';let name=safe;try{await directory.getFileHandle(name,{create:false});const dot=safe.lastIndexOf('.');const suffix='-'+crypto.randomUUID().slice(0,8);name=dot>0?safe.slice(0,dot)+suffix+safe.slice(dot):safe+suffix;}catch(error){if(!(error instanceof DOMException&&error.name==='NotFoundError'))throw error;}const handle=await directory.getFileHandle(name,{create:true}),writer=await handle.createWritable();await writer.write(file.blob);await writer.close();}setNotice('Файлы сохранены в выбранную папку компьютера.');}catch(error){if(!(error instanceof DOMException&&error.name==='AbortError'))setNotice('Не удалось сохранить в папку. Скачайте нужные файлы по отдельности.');}finally{setBusy(false);}}
+- return <main className="module-page" style={{maxWidth:1050,margin:'auto',padding:28,fontSize:18,lineHeight:1.7}}><Link href="/workspace">← {t('Клинические случаи')}</Link><LanguageSwitcher/><h1>{t('Сканер и передача файлов')}</h1><p>{t('Самостоятельный помощник без привязки к случаю. Подключите телефон по QR, снимайте документы и фото, передавайте видео, PDF и другие файлы на компьютер.')}</p><PhoneScanGuide desktop connection={<PhoneImport purpose="inbox" locale={language} disabled={busy} onFile={receive}/>}/><p>{t('Компьютер и телефон должны находиться в одной Wi-Fi сети. Для приёма оставьте это окно открытым. До 8 МБ на файл.')}</p><section><h2>{t('Папка приёма')}</h2><p>{t('Здесь хранятся исходные файлы в этом браузере. Они не отправляются моделям и не добавляются в случаи автоматически. Скачайте их для хранения на компьютере; эта папка не входит в резервную копию клинических случаев.')}</p><label>{t('Добавить файлы с компьютера')}<input disabled={busy} type="file" multiple onChange={event=>{void add(event.target.files);event.target.value='';}}/></label><button disabled={busy||!files.some(file=>!file.deletedAt)} onClick={()=>void folder()}>{t('Сохранить все файлы в папку компьютера')}</button>{' '}<button disabled={busy} onClick={()=>setTrash(value=>!value)}>{t(trash?'Вернуться к файлам':'Корзина')}</button>{notice&&<p role="status">{t(notice)}</p>}{files.filter(file=>Boolean(file.deletedAt)===trash).map(file=><article key={file.id} style={{borderTop:'1px solid #d7e4db',padding:'16px 0'}}><strong>{file.name}</strong><p>{Math.ceil(file.size/1024)} KB · {new Date(file.created).toLocaleString(language)}</p><button onClick={()=>downloadInboxFile(file)}>{t('Скачать')}</button>{' '}<button disabled={busy} onClick={()=>void trashInboxFile(file.id,trash).then(refresh).catch(()=>setNotice('Не удалось изменить файл.'))}>{t(trash?'Восстановить':'В корзину')}</button></article>)}{!files.some(file=>Boolean(file.deletedAt)===trash)&&<p>{t(trash?'Корзина пуста':'Пока нет принятых файлов')}</p>}</section></main>;
++ return <main className="module-page" style={{maxWidth:1050,margin:'auto',padding:28,fontSize:18,lineHeight:1.7}}><Link href="/workspace">← {t('Клинические случаи')}</Link><LanguageSwitcher/><h1>{t('Сканер и передача файлов')}</h1><p>{t('Самостоятельный помощник без привязки к случаю. Подключите телефон по QR, снимайте документы и фото, передавайте видео, PDF и другие файлы на компьютер.')}</p><PhoneScanGuide desktop connection={<PhoneImport purpose="inbox" locale={language} disabled={busy} onFile={receive}/>}/><p>{t('Компьютер и телефон должны находиться в одной Wi-Fi сети. Можно перейти в другой раздел этой вкладки. До 8 МБ на файл.')}</p><section><h2>{t('Папка приёма')}</h2><p>{t('Здесь хранятся исходные файлы в этом браузере. Они не отправляются моделям и не добавляются в случаи автоматически. Скачайте их для хранения на компьютере; эта папка не входит в резервную копию клинических случаев.')}</p><label>{t('Добавить файлы с компьютера')}<input disabled={busy} type="file" multiple onChange={event=>{void add(event.target.files);event.target.value='';}}/></label><button disabled={busy||!files.some(file=>!file.deletedAt)} onClick={()=>void folder()}>{t('Сохранить все файлы в папку компьютера')}</button>{' '}<button disabled={busy} onClick={()=>setTrash(value=>!value)}>{t(trash?'Вернуться к файлам':'Корзина')}</button>{notice&&<p role="status">{t(notice)}</p>}{files.filter(file=>Boolean(file.deletedAt)===trash).map(file=><article key={file.id} style={{borderTop:'1px solid #d7e4db',padding:'16px 0'}}><strong>{file.name}</strong><p>{Math.ceil(file.size/1024)} KB · {new Date(file.created).toLocaleString(language)}</p><button onClick={()=>downloadInboxFile(file)}>{t('Скачать')}</button>{' '}<button disabled={busy} onClick={()=>void trashInboxFile(file.id,trash).then(refresh).catch(()=>setNotice('Не удалось изменить файл.'))}>{t(trash?'Восстановить':'В корзину')}</button></article>)}{!files.some(file=>Boolean(file.deletedAt)===trash)&&<p>{t(trash?'Корзина пуста':'Пока нет принятых файлов')}</p>}</section></main>;
+ }
+diff --git a/lib/phone-receive.ts b/lib/phone-receive.ts
+new file mode 100644
+index 0000000..ab55ec4
+--- /dev/null
++++ b/lib/phone-receive.ts
+@@ -0,0 +1,16 @@
++export async function receiveNextPhoneFile(token: string, since: number, signal: AbortSignal) {
++  const response = await fetch('/api/phone/next', {
++    method: 'POST', cache: 'no-store', signal,
++    headers: {'content-type': 'application/json'},
++    body: JSON.stringify({token, since}),
++  });
++  if (response.status === 404) throw new Error('phone_session_expired');
++  if (response.status === 204) return null;
++  if (!response.ok) throw new Error('phone_receive_failed');
++  const id = Number(response.headers.get('x-phone-id'));
++  if (!Number.isSafeInteger(id) || id <= since) throw new Error('phone_receive_failed');
++  const name = decodeURIComponent(response.headers.get('x-phone-name') ?? '');
++  const blob = await response.blob();
++  if (!name || !blob.size) throw new Error('phone_receive_failed');
++  return {id, file: new File([blob], name, {type: decodeURIComponent(response.headers.get('x-phone-type') ?? '')})};
++}
